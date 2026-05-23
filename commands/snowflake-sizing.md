@@ -6,3 +6,9 @@ skill: snowflake-sizing
 ---
 
 Generate a Snowflake sizing estimate and interactive HTML proposal. Pass `$ARGUMENTS` to the skill.
+
+**Prerequisites (skill will hard-fail without these):**
+- Glean MCP configured: `cortex mcp add glean https://snowflake-be.glean.com/mcp/default --transport http`
+- Active SNOWHOUSE connection with `GONG_SHARE.GONG_DATA_CLOUD` access: `cortex connections set snowhouse`
+
+The skill emits two artifacts: `temp/<slug>-<N>year-sizing.html` (the interactive proposal) and `temp/<slug>-research-evidence.md` (the Glean + Gong audit trail).

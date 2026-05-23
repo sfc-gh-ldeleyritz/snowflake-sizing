@@ -8,28 +8,64 @@ Customer slug: lowercase, hyphens only. E.g. `acme-corp-3year-sizing.html`.
 
 The file MUST be completely self-contained. No external files. No server required. Send directly to customer.
 
+**Self-contained constraint**: The HTML must render correctly with no network access except `cdn.jsdelivr.net` for Chart.js. No font CDN, no remote images — all fonts and logos are inlined as base64 data URIs / inline SVG.
+
 ---
 
 ## Required CDN Scripts (in `<head>`)
 
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 ```
 
+Do **not** add a Google Fonts link. Brand fonts are inlined via base64 (see Brand Assets below).
+
 ---
 
-## CSS Variables (`:root`)
+## Brand Assets
+
+When generating the HTML, read two pre-built files from the plugin's `assets/branding/` directory and inline them:
+
+### Fonts (inside `<style>`)
+
+Use the `Read` tool to read `assets/branding/_brand_fonts.css`. Paste its **entire contents** verbatim as the first block inside `<style>` in `<head>`, before the `:root` block. This inlines Texta, Lato, and Source Code Pro as base64 data URIs — no font CDN required.
+
+### Logo (inside the header div)
+
+Use the `Read` tool to read `assets/branding/_brand_logo.svg`. Paste its contents verbatim where the logo SVG placeholder is. In the header, wrap it as:
+
+```html
+<div style="height:36px; display:flex; align-items:center;">
+  <!-- paste full contents of _brand_logo.svg here, with height="36" added to the root <svg> element -->
+</div>
+```
+
+### Favicon (in `<head>`, before `</head>`)
+
+Add this favicon using the Snowflake mark (a small blue snowflake):
+
+```html
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2329B5E8'/%3E%3Cpath d='M16 4v24M8 8l16 16M24 8L8 24M4 16h24' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+```
+
+---
+
+## CSS Variables (`:root`) and Font Stack
 
 ```css
 :root {
-  --sf-blue: #29B5E8;
-  --sf-blue-dark: #1398C9;
-  --sf-navy: #11567F;
-  --sf-navy-deep: #043C5C;
-  --sf-teal: #00C8D7;
-  --sf-orange: #FF9F36;
+  /* Primary brand — sourced from snowflake.com canonical tokens */
+  --sf-blue:      #29B5E8;  /* --ui-04 brand cyan */
+  --sf-blue-dark: #249EDC;  /* --ui-01 deeper primary */
+  --sf-navy:      #11567F;  /* --ui-02 navy */
+  --sf-navy-deep: #003545;  /* legacy hero deep navy */
+  --sf-sky:       #76D0F1;  /* --ui-11 sky accent */
+  --sf-teal:      #76D0F1;  /* alias: same as --sf-sky */
+  --sf-orange:    #FF9F36;  /* warning badges only */
+  /* Surfaces */
+  --sf-surface:   #ECF1F5;  /* --ui-08 */
+  --sf-divider:   #A0BBCC;  /* --divider-01 */
   --gray-800: #2d3748;
   --gray-700: #4a5568;
   --gray-600: #718096;
@@ -39,20 +75,35 @@ The file MUST be completely self-contained. No external files. No server require
   --success: #38a169;
   --warning: #ED7D31;
 }
+
+/* Font stack — brand fonts are inlined via _brand_fonts.css */
+body {
+  font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+h1, h2, h3, .kpi-value, .scenario-tcv {
+  font-family: 'Texta', 'Lato', sans-serif;
+  font-weight: 800;
+}
+.workload-calc, code, pre {
+  font-family: 'Source Code Pro', monospace;
+}
 ```
 
 ---
 
 ## Snowflake Logo (inline SVG — use in header)
 
+Read `assets/branding/_brand_logo.svg` and inline it verbatim in the header. Set `height="36"` on the root `<svg>` element and remove any fixed `width` attribute (let it scale proportionally). The logo is white-on-transparent, designed for the dark navy header.
+
+Example wrapper:
+
 ```html
-<svg width="140" height="32" viewBox="0 0 140 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0zm0 28.8C8.941 28.8 3.2 23.059 3.2 16S8.941 3.2 16 3.2 28.8 8.941 28.8 16 23.059 28.8 16 28.8z" fill="white"/>
-  <text x="38" y="22" font-family="Open Sans, sans-serif" font-size="18" font-weight="700" fill="white">snowflake</text>
-</svg>
+<div style="height:36px; display:flex; align-items:center;">
+  <!-- _brand_logo.svg contents here, with height="36" on root svg -->
+</div>
 ```
 
-Note: For a more accurate logo, read and inline the SVG from `snowflake-branding/snowflake.com/images/logo-white.svg` if accessible.
+Note: Do **not** use the old hand-drawn placeholder circle SVG. Always inline `_brand_logo.svg`.
 
 ---
 
@@ -75,7 +126,7 @@ Note: For a more accurate logo, read and inline the SVG from `snowflake-branding
 </div>
 ```
 
-CSS: `background: linear-gradient(135deg, var(--sf-navy-deep) 0%, #0d3a5f 100%); border-radius: 8px; padding: 32px; color: white;`
+CSS: `background: linear-gradient(140.86deg, var(--sf-navy-deep) 0%, var(--sf-navy) 100%); border-radius: 8px; padding: 32px; color: white;`
 
 ### 2. Executive Summary KPI Tiles
 
@@ -94,12 +145,18 @@ All tiles update live via `id="kpi-tcv"` etc.
 
 ### 3. Year-by-Year Chart + Table
 
-**Chart**: Stacked bar chart (Chart.js). One bar per year. Segments (bottom to top):
-- Compute Warehouses (var(--sf-blue))
-- Serverless (var(--sf-teal))
-- AI/Cortex (#8B5CF6)
-- Storage (#F59E0B)
-- Other (var(--gray-600))
+**Chart**: Stacked bar chart (Chart.js). One bar per year. Monochromatic Snowflake-blue palette — define once at the top of `<script>`:
+
+```javascript
+const SF_CHART_PALETTE = ['#11567F', '#1B7BAE', '#29B5E8', '#76D0F1', '#A0BBCC'];
+```
+
+Segments (bottom to top), using `SF_CHART_PALETTE[0..4]`:
+- Compute Warehouses (`SF_CHART_PALETTE[0]` — deep navy)
+- Serverless (`SF_CHART_PALETTE[1]` — mid blue)
+- AI/Cortex (`SF_CHART_PALETTE[2]` — brand cyan)
+- Storage (`SF_CHART_PALETTE[3]` — sky)
+- Other (`SF_CHART_PALETTE[4]` — muted blue-grey)
 
 Chart dataset IDs: `chartCompute`, `chartServerless`, `chartAI`, `chartStorage`, `chartOther`
 
@@ -107,7 +164,7 @@ Chart dataset IDs: `chartCompute`, `chartServerless`, `chartAI`, `chartStorage`,
 
 ### 4. Workload Breakdown Donut
 
-Chart.js doughnut showing credit % by workload. Labels show workload name + percentage. Colours cycle through Snowflake palette.
+Chart.js doughnut showing credit % by workload. Labels show workload name + percentage. Colours cycle through `SF_CHART_PALETTE` (starting from index 0, wrapping).
 
 ### 5. Configuration Panel (Accordion Tabs)
 
@@ -313,6 +370,13 @@ Each `confirm_required` item renders with an orange warning badge and the quanti
 
 ```html
 <div class="footer">
+  <div style="margin-bottom:8px;">
+    <svg height="20" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:6px;">
+      <circle cx="16" cy="16" r="16" fill="#29B5E8"/>
+      <path d="M16 4v24M8 8l16 16M24 8L8 24M4 16h24" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <span style="font-weight:700;">Snowflake Confidential</span>
+  </div>
   <p>Prepared by Snowflake · This estimate is based on stated requirements and industry benchmarks.
   Actual consumption may vary. All prices are list price on-demand rates.
   Credit rates effective [PDF_VERSION].</p>
