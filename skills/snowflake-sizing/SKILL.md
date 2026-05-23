@@ -300,33 +300,42 @@ TCV: $XXX,XXX
 
 ## Phase 5 — Generate interactive HTML
 
-Using `html-spec.md` as the exact specification, write the complete HTML file to:
-`temp/<customer-slug>-<N>year-sizing.html`
+Read the committed template and substitute all placeholder tokens to produce the output file:
+
+```
+Input:   skills/snowflake-sizing/references/_template.html
+Output:  temp/<customer-slug>-<N>year-sizing.html
+```
 
 Where `customer-slug` = customer name lowercased, spaces replaced with hyphens.
 
-**Snowflake Brand Assets (REQUIRED)** — before writing the HTML:
+**Steps:**
 
-1. Read `assets/branding/_brand_fonts.css` and paste its entire contents verbatim as the first block inside `<style>` (before `:root`). This inlines Texta, Lato, and Source Code Pro — no font CDN.
-2. Read `assets/branding/_brand_logo.svg` and paste its contents verbatim in the header logo slot. Set `height="36"` on the root `<svg>` element (remove any explicit `width`).
+1. Read `skills/snowflake-sizing/references/_template.html`
+2. Read `assets/branding/_brand_fonts.css`
+3. Substitute every token below — replace the exact token string with its value:
 
-See the **Brand Assets** section in `html-spec.md` for the full instructions, including the favicon snippet.
+| Token | Value |
+|---|---|
+| `__BRAND_FONTS_CSS__` | full contents of `assets/branding/_brand_fonts.css` |
+| `__PRICING_DATA__` | JSON object of credit/storage rates (from Phase 2) |
+| `__SIZING_SPEC__` | complete SIZING_SPEC JSON object (from Phase 4) |
+| `__CUSTOMER__` | customer display name |
+| `__EDITION__` | Snowflake edition (`Enterprise` / `Business Critical`) |
+| `__CLOUD__` | cloud provider (`AWS` / `Azure` / `GCP`) |
+| `__REGION__` | deployment region (e.g. `us-east-1`) |
+| `__YEARS__` | contract length as integer |
+| `__CREDIT_RATE__` | per-credit dollar rate |
+| `__DATE__` | today's date (YYYY-MM-DD) |
+| `__PDF_VERSION__` | version string from SIZING_SPEC metadata |
 
-The file MUST:
+4. Write the result to `temp/<customer-slug>-<N>year-sizing.html`
 
-1. Be completely self-contained (no external file dependencies beyond CDN scripts)
-2. Embed `PRICING_DATA` as the full parsed pricing JSON constant (all keys)
-3. Embed `SIZING_SPEC` as the complete spec JSON constant
-4. Implement all functions from `html-spec.md` verbatim (exact names matter for the HTML event handlers)
-5. Call `recalculate()` on page load
-6. Use Snowflake brand colours from `html-spec.md` CSS variables
-7. Include all 8 configuration tabs (Warehouses, Serverless, AI/Cortex, SPCS, Openflow, Storage, Collaboration, Global Settings)
-8. Include the 3-scenario comparison panel
-9. Show assumptions and confirm_required items
+Do **not** modify any other part of the template. The template already contains official Snowflake branding (wordmark, fonts, favicon, crystal mark footer) — do not regenerate or alter those sections.
 
 **Quality check before writing the file:**
 
-- Count workload cards in the JS → must match number of workloads in SIZING_SPEC
+- Confirm no `__TOKEN__` strings remain in the output (all 11 substituted)
 - Verify `growth_rates` array length = `contract_years`
 - Verify `credit_rate` in spec matches the region in the header
 

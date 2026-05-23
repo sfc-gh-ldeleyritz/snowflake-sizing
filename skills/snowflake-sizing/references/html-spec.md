@@ -1,5 +1,27 @@
 # Snowflake Sizing HTML Specification
 
+> **Note:** The canonical HTML output is `skills/snowflake-sizing/references/_template.html`. This document describes its structure, data contracts (SIZING_SPEC schema, PRICING_DATA schema), and token substitution table. When modifying the template, keep this spec in sync.
+
+## Token Substitution Table
+
+The template contains 11 placeholder tokens. All must be substituted before writing the output file:
+
+| Token | Value |
+|---|---|
+| `__BRAND_FONTS_CSS__` | full contents of `assets/branding/_brand_fonts.css` |
+| `__PRICING_DATA__` | JSON object of credit/storage rates |
+| `__SIZING_SPEC__` | complete SIZING_SPEC JSON object |
+| `__CUSTOMER__` | customer display name |
+| `__EDITION__` | Snowflake edition (`Enterprise` / `Business Critical`) |
+| `__CLOUD__` | cloud provider (`AWS` / `Azure` / `GCP`) |
+| `__REGION__` | deployment region (e.g. `us-east-1`) |
+| `__YEARS__` | contract length as integer |
+| `__CREDIT_RATE__` | per-credit dollar rate |
+| `__DATE__` | generation date (YYYY-MM-DD) |
+| `__PDF_VERSION__` | version string from SIZING_SPEC metadata |
+
+---
+
 ## Output File
 
 `temp/<customer-slug>-<N>year-sizing.html`
@@ -19,35 +41,15 @@ The file MUST be completely self-contained. No external files. No server require
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 ```
 
-Do **not** add a Google Fonts link. Brand fonts are inlined via base64 (see Brand Assets below).
+Do **not** add a Google Fonts link. Brand fonts are inlined via the `__BRAND_FONTS_CSS__` token (see Token Substitution Table above).
 
 ---
 
 ## Brand Assets
 
-When generating the HTML, read two pre-built files from the plugin's `assets/branding/` directory and inline them:
+The template already contains official Snowflake branding — wordmark, favicon, crystal mark footer — baked in. Do not regenerate or alter those sections when performing token substitution.
 
-### Fonts (inside `<style>`)
-
-Use the `Read` tool to read `assets/branding/_brand_fonts.css`. Paste its **entire contents** verbatim as the first block inside `<style>` in `<head>`, before the `:root` block. This inlines Texta, Lato, and Source Code Pro as base64 data URIs — no font CDN required.
-
-### Logo (inside the header div)
-
-Use the `Read` tool to read `assets/branding/_brand_logo.svg`. Paste its contents verbatim where the logo SVG placeholder is. In the header, wrap it as:
-
-```html
-<div style="height:36px; display:flex; align-items:center;">
-  <!-- paste full contents of _brand_logo.svg here, with height="36" added to the root <svg> element -->
-</div>
-```
-
-### Favicon (in `<head>`, before `</head>`)
-
-Add this favicon using the Snowflake mark (a small blue snowflake):
-
-```html
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2329B5E8'/%3E%3Cpath d='M16 4v24M8 8l16 16M24 8L8 24M4 16h24' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
-```
+Reference: `assets/branding/` contains `_brand_fonts.css`, `_brand_logo.svg`, `_brand_favicon.b64`, `snowflake-mark.svg`, and `apply_brand.py` (idempotent post-processor for upgrading older files).
 
 ---
 
