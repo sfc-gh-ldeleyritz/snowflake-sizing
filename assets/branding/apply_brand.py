@@ -128,9 +128,10 @@ def apply_brand(html, fonts_css, logo_svg, favicon_b64, mark_svg):
         flags=re.DOTALL
     )
 
-    # 11. Replace chart segment colors — only on fresh files (palette not yet injected).
-    #     On re-runs the colors are already done; just fix any self-reference in the constant.
-    if 'SF_CHART_PALETTE' not in html:
+    # 11. Replace chart segment colors — only on files missing the palette constant.
+    #     On re-runs (const already defined) just fix any self-reference; skip replacements
+    #     so the palette's own '#29B5E8' literal doesn't get clobbered.
+    if 'const SF_CHART_PALETTE' not in html:
         html = html.replace("'#8B5CF6'", "SF_CHART_PALETTE[2]")
         html = html.replace('"#8B5CF6"', "SF_CHART_PALETTE[2]")
         html = html.replace("'#F59E0B'", "SF_CHART_PALETTE[3]")
@@ -156,7 +157,7 @@ def apply_brand(html, fonts_css, logo_svg, favicon_b64, mark_svg):
         )
 
     # 12. NOW inject SF_CHART_PALETTE constant (after color replacements so its literals stay clean)
-    if 'SF_CHART_PALETTE' not in html:
+    if 'const SF_CHART_PALETTE' not in html:
         palette_line = "const SF_CHART_PALETTE = ['#11567F', '#1B7BAE', '#29B5E8', '#76D0F1', '#A0BBCC'];\n\n"
         if 'const WH_CREDITS' in html:
             html = html.replace('const WH_CREDITS', palette_line + 'const WH_CREDITS')
