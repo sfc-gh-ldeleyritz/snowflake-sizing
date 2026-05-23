@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>__CUSTOMER__ — Snowflake Consumption Estimate</title>
+<title>__CUSTOMER__ - Snowflake Consumption Estimate</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 __BRAND_FONTS_CSS__
 :root {
-  /* Primary brand — sourced from snowflake.com canonical tokens */
+  /* Primary brand - sourced from snowflake.com canonical tokens */
   --sf-blue:      #29B5E8;
   --sf-blue-dark: #249EDC;
   --sf-navy:      #11567F;
@@ -127,6 +127,78 @@ body {
 .controls-grid input[type="range"] { width: 100%; margin-top: 8px; }
 .justification { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--gray-200); font-size: 12px; color: var(--gray-700); font-style: italic; }
 
+/* Add / Delete buttons */
+.add-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: var(--sf-blue);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.add-btn:hover { background: var(--sf-blue-dark); }
+.add-btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.add-btn-group .add-btn { margin-top: 0; }
+.delete-btn {
+  padding: 4px 10px;
+  background: white;
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: auto;
+}
+.delete-btn:hover { background: #fff5f5; color: #c53030; border-color: #fc8181; }
+.card-label-edit {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--sf-navy-deep);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  border-radius: 4px;
+  flex: 1;
+  min-width: 120px;
+  font-family: inherit;
+}
+.card-label-edit:hover { border-color: var(--gray-200); background: white; }
+.card-label-edit:focus { outline: none; border-color: var(--sf-blue); background: white; }
+.account-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 8px;
+}
+.account-type-reader { background: #e6f4fb; color: var(--sf-navy); }
+.account-type-managed { background: #fef0e0; color: #b35900; }
+
+/* Print button (top-right floating) */
+.print-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  padding: 8px 14px;
+  background: var(--sf-navy);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.print-btn:hover { background: var(--sf-navy-deep); }
+
 /* Serverless rows */
 .serverless-row {
   display: grid;
@@ -188,10 +260,56 @@ body {
 .ai-section { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--gray-200); }
 .ai-section h4 { margin: 0 0 8px 0; color: var(--sf-navy); font-size: 14px; }
 .ai-row { display: grid; grid-template-columns: 2fr 1fr 1fr 100px; gap: 8px; align-items: center; padding: 6px 0; font-size: 13px; }
+
+/* Print / PDF layout */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  body { background: white; font-size: 10.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+  .container { max-width: 100%; padding: 0; }
+  .section { box-shadow: none; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; padding: 16px; }
+  .header { background: var(--sf-navy-deep) !important; padding: 20px; }
+  .header h1 { font-size: 26px; }
+  .header-subtitle { font-size: 14px; }
+  .kpi-grid { gap: 8px; }
+  .kpi-tile { box-shadow: none; padding: 14px; border: 1px solid var(--gray-200); }
+  .kpi-value { font-size: 20px; }
+  .tab-nav, .print-btn, .add-btn, .add-btn-group, .delete-btn { display: none !important; }
+  .tab-content { display: block !important; page-break-before: auto; margin-top: 12px; }
+  .tab-content + .tab-content { page-break-before: always; }
+  .tab-content::before {
+    content: attr(data-print-title);
+    display: block;
+    font-family: 'Texta', 'Lato', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sf-navy-deep);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--sf-divider);
+  }
+  input[type="range"] { display: none !important; }
+  input[type="number"], input[type="text"], select {
+    border: none; background: transparent; padding: 0;
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    pointer-events: none; color: var(--gray-800);
+  }
+  select { padding-right: 0; }
+  .workload-card, .scenario-card { box-shadow: none; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; }
+  .controls-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .scenario-grid { page-break-inside: avoid; }
+  .scenario-controls { display: none; }
+  .footer { page-break-before: avoid; }
+  h2, h3 { page-break-after: avoid; }
+  .card-label-edit { font-weight: 700; }
+  .account-type-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .chart-row { grid-template-columns: 1fr; gap: 12px; }
+  .chart-container { height: 240px; }
+}
 </style>
 <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,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JjXttiQc5rQlKem0Jn7ptCZ+5rQlKe22JBznsyY26LQosee0KejotSno6LUnb/KzJhTotShZ6LUp5ui1KfXotSjd6LQpWOm0KH7otSjA6LUowOm0KH7otCZY6LUo3ei1KfXotijm6LUoWfKzJhTysyYU6LUoWei1KebotSn16LUo3ei1KFnptCh+57Qowei1KMDptCh+6LUoWei1KN3otSn16LYp5ui1KFnysyYU6LUnb+i1KejotCno6LYoseezJjblsCMd5rQlKee1Jn/nsyZ/5rQlKe22JBznsyY26LYosei0KejntSjp6LUnb+mzKVHotSm05rMmUOa1KR/lsiQy6LUnqei1KLrquCMk6rgjJOi1KLrotSep5bIkMua1KR/msyZQ57UptOmzKVHfvyAI3bsiD+e3KCDptSmK6LUo3ui1KfjotSjq57ImNeu1JzTotSjq6LUp+Oi1KN7ntSmK57coIN27Ig/fvyAIAAAAAP+zGgrptiiu6bUp7ue0KejntSjj6LUo6uezKjbstyY157Uo6ui2KeLptSnn6bUp7um2KK7/sxoKAAAAAAAAAADouS4L6bQodOi1J5DnsiQ/6LQosei1Kefnsyo27LImNei1KefotCix57IkP+i1J5DptCh06LkuCwAAAAAAAAAAAAAAAP+2JAfMmTMF68QnDem1J6Lotini67IkMuq2JDHotSni6bUnouvEJw3MmTMF/7YkBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+ZMwXotidC57Qnd+q1KhjqtSoY57Qnd+i2J0L/mTMFAAAAAAAAAAAAAAAAAAAAAPAPAADAAwAAgAEAAIABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIABAACAAQAAwAMAAPAPAAA=">
 </head>
 <body>
+<button class="print-btn" onclick="window.print()" title="Print or Save as PDF">Print / Save as PDF</button>
 <div class="container">
 
 <!-- 1. Header -->
@@ -285,39 +403,43 @@ body {
     <button class="tab-btn" data-tab="global">Global Settings</button>
   </div>
 
-  <div class="tab-content active" id="tab-warehouses">
+  <div class="tab-content active" id="tab-warehouses" data-print-title="Warehouses">
     <div id="workloads-container"></div>
+    <button class="add-btn" onclick="addWorkload()">+ Add Workload</button>
   </div>
 
-  <div class="tab-content" id="tab-serverless">
+  <div class="tab-content" id="tab-serverless" data-print-title="Serverless Features">
     <div id="serverless-container"></div>
   </div>
 
-  <div class="tab-content" id="tab-ai">
+  <div class="tab-content" id="tab-ai" data-print-title="AI / Cortex">
     <p style="color: var(--gray-600); font-style: italic; margin-bottom: 16px;">No AI/Cortex features enabled in current scope. Enable specific functions below to model future expansion.</p>
     <div id="ai-container"></div>
   </div>
 
-  <div class="tab-content" id="tab-spcs">
-    <p style="color: var(--gray-600); font-style: italic;">SPCS not enabled for this customer. Add instances below to enable.</p>
+  <div class="tab-content" id="tab-spcs" data-print-title="Snowpark Container Services (SPCS)">
     <div id="spcs-container"></div>
-    <button onclick="addSPCSInstance()" style="margin-top: 12px; padding: 8px 16px; background: var(--sf-blue); color: white; border: none; border-radius: 4px; cursor: pointer;">+ Add SPCS Instance</button>
+    <button class="add-btn" onclick="addSPCSInstance()">+ Add SPCS Instance</button>
   </div>
 
-  <div class="tab-content" id="tab-openflow">
-    <p style="color: var(--gray-600); font-style: italic;">Openflow not enabled for this customer.</p>
+  <div class="tab-content" id="tab-openflow" data-print-title="OpenFlow">
     <div id="openflow-container"></div>
+    <button class="add-btn" onclick="addOpenflowInstance()">+ Add OpenFlow Instance</button>
   </div>
 
-  <div class="tab-content" id="tab-storage">
+  <div class="tab-content" id="tab-storage" data-print-title="Storage">
     <div id="storage-container"></div>
   </div>
 
-  <div class="tab-content" id="tab-collab">
+  <div class="tab-content" id="tab-collab" data-print-title="Collaboration: Reader / Managed Accounts">
     <div id="collab-container"></div>
+    <div class="add-btn-group">
+      <button class="add-btn" onclick="addAccount('reader')">+ Add Reader Account</button>
+      <button class="add-btn" onclick="addAccount('managed')">+ Add Managed Account</button>
+    </div>
   </div>
 
-  <div class="tab-content" id="tab-global">
+  <div class="tab-content" id="tab-global" data-print-title="Global Settings">
     <div id="global-container"></div>
   </div>
 </div>
@@ -391,6 +513,58 @@ const WH_CREDITS = { XS:1, S:2, M:4, L:8, XL:16, '2XL':32, '3XL':64, '4XL':128 }
 
 let chartStacked = null;
 let chartDonut = null;
+let _nextId = 1;
+function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random().toString(36).slice(2, 6); }
+
+// Normalize legacy SIZING_SPEC shapes to the list-based form used by the UI.
+(function normalizeSpec() {
+  if (SIZING_SPEC.openflow && !Array.isArray(SIZING_SPEC.openflow.instances)) {
+    const o = SIZING_SPEC.openflow;
+    SIZING_SPEC.openflow = {
+      enabled: !!o.enabled,
+      instances: o.enabled ? [{
+        id: 'of-1',
+        label: 'OpenFlow',
+        deployment: o.deployment || 'BYOC',
+        source_connections: o.source_connections || 0,
+        vcpu_per_connection: o.vcpu_per_connection || 0,
+        hours_monthly: o.hours_monthly || 0,
+      }] : [],
+    };
+  }
+  if (!SIZING_SPEC.openflow) SIZING_SPEC.openflow = { enabled: false, instances: [] };
+
+  const c = SIZING_SPEC.collaboration;
+  if (c && !Array.isArray(c.accounts)) {
+    const r = c.reader_accounts;
+    c.accounts = (r && r.enabled) ? [{
+      id: 'rd-1',
+      type: 'reader',
+      label: 'Reader Account',
+      warehouse_size: r.warehouse_size || 'XS',
+      hours_per_day: r.hours_per_day || 0,
+      days_per_month: r.days_per_month || 0,
+    }] : [];
+  }
+  if (!SIZING_SPEC.collaboration) SIZING_SPEC.collaboration = { accounts: [] };
+
+  // Workloads must each have a unique id for delete to work.
+  if (Array.isArray(SIZING_SPEC.workloads)) {
+    const seen = new Set();
+    SIZING_SPEC.workloads.forEach(w => {
+      if (!w.id || seen.has(w.id)) w.id = nextId('wl');
+      seen.add(w.id);
+    });
+  }
+  // SPCS instances likewise need ids.
+  if (SIZING_SPEC.spcs && Array.isArray(SIZING_SPEC.spcs.instances)) {
+    const seen = new Set();
+    SIZING_SPEC.spcs.instances.forEach(inst => {
+      if (!inst.id || seen.has(inst.id)) inst.id = nextId('sp');
+      seen.add(inst.id);
+    });
+  }
+})();
 
 // ========== Calculation engine ==========
 function whMonthlyCredits(w) {
@@ -525,12 +699,21 @@ function calcTransferCost() {
 
 function calcCollabCost() {
   const c = SIZING_SPEC.collaboration;
-  let total = 0;
-  if (c.reader_accounts && c.reader_accounts.enabled) {
-    const rate = WH_CREDITS[c.reader_accounts.warehouse_size] || 1;
-    total += rate * (c.reader_accounts.hours_per_day || 0) * (c.reader_accounts.days_per_month || 0);
-  }
-  return total;
+  if (!c || !Array.isArray(c.accounts)) return 0;
+  return c.accounts.reduce((sum, a) => {
+    if (a.enabled === false) return sum;
+    const rate = WH_CREDITS[a.warehouse_size] || 1;
+    return sum + rate * (a.hours_per_day || 0) * (a.days_per_month || 0);
+  }, 0);
+}
+
+function calcOpenflowCost(cr, ramp) {
+  const of = SIZING_SPEC.openflow;
+  if (!of || !of.enabled || !Array.isArray(of.instances)) return 0;
+  return of.instances.reduce((sum, inst) => {
+    return sum + (inst.source_connections || 0) * (inst.vcpu_per_connection || 0) *
+                 (inst.hours_monthly || 0) * 0.0225 * cr * 12 * ramp;
+  }, 0);
 }
 
 function recalculate() {
@@ -548,10 +731,7 @@ function recalculate() {
     const aiCredits = calcAICredits() * 12 * ramp;
     const storageCost = storageForYear(y) * sr * 12;
     const spcsCost = calcSPCSCost() * 12 * ramp;
-    const of = SIZING_SPEC.openflow;
-    const ofCost = of.enabled
-      ? (of.source_connections || 0) * (of.vcpu_per_connection || 0) * (of.hours_monthly || 0) * 0.0225 * cr * 12 * ramp
-      : 0;
+    const ofCost = calcOpenflowCost(cr, ramp);
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled
       ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * 110 * 12
       : 0;
@@ -806,8 +986,10 @@ function populateWorkloadCards() {
     const sizeOpts = sizes.map(s => `<option value="${s}" ${s===w.size?'selected':''}>${s} - ${WH_CREDITS[s]} cr/hr</option>`).join('');
     return `<div class="workload-card" data-id="${w.id}">
       <div class="workload-header">
-        <span class="workload-label">${w.label}</span>
+        <input type="text" class="card-label-edit" value="${(w.label || '').replace(/"/g, '&quot;')}"
+               onchange="updateWorkload('${w.id}', 'label', this.value)" aria-label="Workload label">
         <span class="workload-calc" id="calc-${w.id}"></span>
+        <button class="delete-btn" onclick="removeWorkload('${w.id}')" title="Delete this workload">Delete</button>
       </div>
       <div class="controls-grid">
         <label>Warehouse Size
@@ -830,10 +1012,33 @@ function populateWorkloadCards() {
           </div>
         </label>
       </div>
-      <div class="justification"><strong>${w.source}:</strong> ${w.justification}</div>
+      <div class="justification"><strong>${w.source || 'ASSUMPTION'}:</strong> ${w.justification || ''}</div>
     </div>`;
   }).join('');
-  document.getElementById('workloads-container').innerHTML = html;
+  document.getElementById('workloads-container').innerHTML = html ||
+    '<p style="color: var(--gray-600); font-style: italic;">No workloads. Click + Add Workload to create one.</p>';
+}
+
+function addWorkload() {
+  SIZING_SPEC.workloads.push({
+    id: nextId('wl'),
+    label: 'New workload',
+    size: 'M',
+    hours_per_day: 4,
+    days_per_month: 22,
+    clusters_min: 1,
+    clusters_max: 1,
+    source: 'ASSUMPTION',
+    justification: 'Added manually during sizing session',
+  });
+  populateWorkloadCards();
+  recalculate();
+}
+
+function removeWorkload(id) {
+  SIZING_SPEC.workloads = SIZING_SPEC.workloads.filter(w => w.id !== id);
+  populateWorkloadCards();
+  recalculate();
 }
 
 function populateServerlessPanel() {
@@ -991,47 +1196,153 @@ function populateAIPanel() {
 
 function populateSPCSPanel() {
   const sp = SIZING_SPEC.spcs;
-  document.getElementById('spcs-container').innerHTML = sp.instances.length === 0
-    ? '<p style="color: var(--gray-600);">No SPCS instances configured.</p>'
-    : sp.instances.map((inst, i) => `<div>${inst.label} - ${inst.instance_type} x ${inst.count}</div>`).join('');
+  if (!sp || !Array.isArray(sp.instances) || sp.instances.length === 0) {
+    document.getElementById('spcs-container').innerHTML =
+      '<p style="color: var(--gray-600); font-style: italic;">No SPCS instances configured. Click + Add SPCS Instance to create one.</p>';
+    return;
+  }
+  const gen2Families = (PRICING_DATA.spcs && PRICING_DATA.spcs.spcs_gen2 && PRICING_DATA.spcs.spcs_gen2.data || []).map(r => r.family);
+  const gen1Types = ['XS_MEM', 'S_MEM', 'M_MEM', 'L_MEM', 'XS_HIPU', 'S_HIPU', 'M_HIPU'];
+  const html = sp.instances.map(inst => {
+    const isGen2 = inst.generation === 'gen2';
+    const typeOpts = (isGen2 ? gen2Families : gen1Types)
+      .map(t => `<option value="${t}" ${t===inst.instance_type?'selected':''}>${t}</option>`).join('');
+    return `<div class="workload-card" data-id="${inst.id}">
+      <div class="workload-header">
+        <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
+               onchange="updateSPCSInstance('${inst.id}', 'label', this.value)" aria-label="SPCS instance label">
+        <button class="delete-btn" onclick="removeSPCSInstance('${inst.id}')" title="Delete this SPCS instance">Delete</button>
+      </div>
+      <div class="controls-grid">
+        <label>Generation
+          <select onchange="updateSPCSInstance('${inst.id}', 'generation', this.value)">
+            <option value="gen1" ${!isGen2?'selected':''}>gen1</option>
+            <option value="gen2" ${isGen2?'selected':''}>gen2</option>
+          </select>
+        </label>
+        <label>Instance type
+          <select onchange="updateSPCSInstance('${inst.id}', 'instance_type', this.value)">${typeOpts}</select>
+        </label>
+        <label>Count
+          <input type="number" value="${inst.count || 1}" min="0" step="1"
+                 onchange="updateSPCSInstance('${inst.id}', 'count', +this.value)">
+        </label>
+        <label>Hours/month
+          <input type="number" value="${inst.hours_monthly || 0}" min="0" max="744" step="1"
+                 onchange="updateSPCSInstance('${inst.id}', 'hours_monthly', +this.value)">
+        </label>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('spcs-container').innerHTML = html;
 }
 
 function addSPCSInstance() {
-  if (!SIZING_SPEC.spcs.enabled) {
-    SIZING_SPEC.spcs.enabled = true;
-  }
+  if (!SIZING_SPEC.spcs) SIZING_SPEC.spcs = { enabled: true, instances: [] };
+  if (!Array.isArray(SIZING_SPEC.spcs.instances)) SIZING_SPEC.spcs.instances = [];
+  SIZING_SPEC.spcs.enabled = true;
   SIZING_SPEC.spcs.instances.push({
-    label: 'New instance', generation: 'gen2', instance_type: 'GEN_X64_G2_4', count: 1, hours_monthly: 730
+    id: nextId('sp'),
+    label: 'New instance',
+    generation: 'gen2',
+    instance_type: 'GEN_X64_G2_4',
+    count: 1,
+    hours_monthly: 730,
   });
   populateSPCSPanel();
   recalculate();
 }
 
+function removeSPCSInstance(id) {
+  if (!SIZING_SPEC.spcs || !Array.isArray(SIZING_SPEC.spcs.instances)) return;
+  SIZING_SPEC.spcs.instances = SIZING_SPEC.spcs.instances.filter(x => x.id !== id);
+  if (SIZING_SPEC.spcs.instances.length === 0) SIZING_SPEC.spcs.enabled = false;
+  populateSPCSPanel();
+  recalculate();
+}
+
+function updateSPCSInstance(id, field, value) {
+  const inst = SIZING_SPEC.spcs.instances.find(x => x.id === id);
+  if (!inst) return;
+  inst[field] = value;
+  if (field === 'generation') {
+    // Re-render so the instance-type select shows the right options.
+    inst.instance_type = (value === 'gen2') ? 'GEN_X64_G2_4' : 'XS_MEM';
+    populateSPCSPanel();
+  }
+  recalculate();
+}
+
 function populateOpenflowPanel() {
   const of = SIZING_SPEC.openflow;
+  const enabled = !!(of && of.enabled);
+  const instances = (of && Array.isArray(of.instances)) ? of.instances : [];
+  const cards = instances.map(inst => `
+    <div class="workload-card" data-id="${inst.id}">
+      <div class="workload-header">
+        <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
+               onchange="updateOpenflowInstance('${inst.id}', 'label', this.value)" aria-label="OpenFlow instance label">
+        <button class="delete-btn" onclick="removeOpenflowInstance('${inst.id}')" title="Delete this OpenFlow instance">Delete</button>
+      </div>
+      <div class="controls-grid">
+        <label>Deployment
+          <select onchange="updateOpenflowInstance('${inst.id}', 'deployment', this.value)">
+            <option value="BYOC" ${inst.deployment==='BYOC'?'selected':''}>BYOC</option>
+            <option value="SPCS" ${inst.deployment==='SPCS'?'selected':''}>SPCS</option>
+          </select>
+        </label>
+        <label>Source connections
+          <input type="number" value="${inst.source_connections || 0}" min="0" step="1"
+                 onchange="updateOpenflowInstance('${inst.id}', 'source_connections', +this.value)">
+        </label>
+        <label>vCPU per connection
+          <input type="number" value="${inst.vcpu_per_connection || 0}" min="0" step="1"
+                 onchange="updateOpenflowInstance('${inst.id}', 'vcpu_per_connection', +this.value)">
+        </label>
+        <label>Hours/month
+          <input type="number" value="${inst.hours_monthly || 0}" min="0" max="744" step="1"
+                 onchange="updateOpenflowInstance('${inst.id}', 'hours_monthly', +this.value)">
+        </label>
+      </div>
+    </div>`).join('');
+  const empty = '<p style="color: var(--gray-600); font-style: italic;">No OpenFlow instances configured. Click + Add OpenFlow Instance to create one.</p>';
   document.getElementById('openflow-container').innerHTML = `
-    <div class="storage-form">
-      <label><input type="checkbox" ${of.enabled ? 'checked' : ''}
-             onchange="SIZING_SPEC.openflow.enabled = this.checked; recalculate();"> Enable Openflow</label>
-      <label>Deployment
-        <select onchange="SIZING_SPEC.openflow.deployment = this.value; recalculate();">
-          <option value="BYOC" ${of.deployment === 'BYOC' ? 'selected' : ''}>BYOC</option>
-          <option value="SPCS" ${of.deployment === 'SPCS' ? 'selected' : ''}>SPCS</option>
-        </select>
-      </label>
-      <label>Source connections
-        <input type="number" value="${of.source_connections}" min="0"
-               onchange="SIZING_SPEC.openflow.source_connections = +this.value; recalculate();">
-      </label>
-      <label>vCPU per connection
-        <input type="number" value="${of.vcpu_per_connection}" min="1"
-               onchange="SIZING_SPEC.openflow.vcpu_per_connection = +this.value; recalculate();">
-      </label>
-      <label>Hours/month
-        <input type="number" value="${of.hours_monthly}" min="0"
-               onchange="SIZING_SPEC.openflow.hours_monthly = +this.value; recalculate();">
-      </label>
-    </div>`;
+    <div class="storage-form" style="grid-template-columns: auto;">
+      <label class="toggle"><input type="checkbox" ${enabled?'checked':''}
+             onchange="SIZING_SPEC.openflow.enabled = this.checked; recalculate();"> Enable OpenFlow billing</label>
+    </div>
+    ${instances.length ? cards : empty}`;
+}
+
+function addOpenflowInstance() {
+  if (!SIZING_SPEC.openflow) SIZING_SPEC.openflow = { enabled: true, instances: [] };
+  if (!Array.isArray(SIZING_SPEC.openflow.instances)) SIZING_SPEC.openflow.instances = [];
+  SIZING_SPEC.openflow.enabled = true;
+  SIZING_SPEC.openflow.instances.push({
+    id: nextId('of'),
+    label: 'New connector',
+    deployment: 'BYOC',
+    source_connections: 1,
+    vcpu_per_connection: 4,
+    hours_monthly: 730,
+  });
+  populateOpenflowPanel();
+  recalculate();
+}
+
+function removeOpenflowInstance(id) {
+  if (!SIZING_SPEC.openflow || !Array.isArray(SIZING_SPEC.openflow.instances)) return;
+  SIZING_SPEC.openflow.instances = SIZING_SPEC.openflow.instances.filter(x => x.id !== id);
+  if (SIZING_SPEC.openflow.instances.length === 0) SIZING_SPEC.openflow.enabled = false;
+  populateOpenflowPanel();
+  recalculate();
+}
+
+function updateOpenflowInstance(id, field, value) {
+  const inst = SIZING_SPEC.openflow.instances.find(x => x.id === id);
+  if (!inst) return;
+  inst[field] = value;
+  recalculate();
 }
 
 function populateStoragePanel() {
@@ -1086,24 +1397,69 @@ function updateStorageBreakdown() {
 
 function populateCollabPanel() {
   const c = SIZING_SPEC.collaboration;
-  document.getElementById('collab-container').innerHTML = `
-    <div class="storage-form">
-      <label><input type="checkbox" ${c.reader_accounts.enabled ? 'checked' : ''}
-             onchange="SIZING_SPEC.collaboration.reader_accounts.enabled = this.checked; recalculate();"> Reader Accounts</label>
-      <label>Reader WH size
-        <select onchange="SIZING_SPEC.collaboration.reader_accounts.warehouse_size = this.value; recalculate();">
-          ${['XS','S','M','L'].map(s => `<option value="${s}" ${s===c.reader_accounts.warehouse_size?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </label>
-      <label>Hours/day
-        <input type="number" value="${c.reader_accounts.hours_per_day}" min="0" max="24"
-               onchange="SIZING_SPEC.collaboration.reader_accounts.hours_per_day = +this.value; recalculate();">
-      </label>
-      <label>Days/month
-        <input type="number" value="${c.reader_accounts.days_per_month}" min="0" max="31"
-               onchange="SIZING_SPEC.collaboration.reader_accounts.days_per_month = +this.value; recalculate();">
-      </label>
-    </div>`;
+  const accounts = (c && Array.isArray(c.accounts)) ? c.accounts : [];
+  const cards = accounts.map(a => `
+    <div class="workload-card" data-id="${a.id}">
+      <div class="workload-header">
+        <input type="text" class="card-label-edit" value="${(a.label || '').replace(/"/g, '&quot;')}"
+               onchange="updateAccount('${a.id}', 'label', this.value)" aria-label="Account label">
+        <span class="account-type-badge account-type-${a.type}">${a.type === 'managed' ? 'Managed' : 'Reader'}</span>
+        <button class="delete-btn" onclick="removeAccount('${a.id}')" title="Delete this account">Delete</button>
+      </div>
+      <div class="controls-grid">
+        <label>Account type
+          <select onchange="updateAccount('${a.id}', 'type', this.value)">
+            <option value="reader" ${a.type==='reader'?'selected':''}>Reader Account</option>
+            <option value="managed" ${a.type==='managed'?'selected':''}>Managed Account</option>
+          </select>
+        </label>
+        <label>Warehouse size
+          <select onchange="updateAccount('${a.id}', 'warehouse_size', this.value)">
+            ${['XS','S','M','L','XL','2XL'].map(s => `<option value="${s}" ${s===a.warehouse_size?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </label>
+        <label>Hours/day
+          <input type="number" value="${a.hours_per_day || 0}" min="0" max="24" step="0.5"
+                 onchange="updateAccount('${a.id}', 'hours_per_day', +this.value)">
+        </label>
+        <label>Days/month
+          <input type="number" value="${a.days_per_month || 0}" min="0" max="31" step="1"
+                 onchange="updateAccount('${a.id}', 'days_per_month', +this.value)">
+        </label>
+      </div>
+    </div>`).join('');
+  const empty = '<p style="color: var(--gray-600); font-style: italic;">No reader or managed accounts configured. Click + Add Reader / + Add Managed to create one.</p>';
+  document.getElementById('collab-container').innerHTML = accounts.length ? cards : empty;
+}
+
+function addAccount(type) {
+  if (!SIZING_SPEC.collaboration) SIZING_SPEC.collaboration = { accounts: [] };
+  if (!Array.isArray(SIZING_SPEC.collaboration.accounts)) SIZING_SPEC.collaboration.accounts = [];
+  SIZING_SPEC.collaboration.accounts.push({
+    id: nextId('ac'),
+    type: type === 'managed' ? 'managed' : 'reader',
+    label: type === 'managed' ? 'New managed account' : 'New reader account',
+    warehouse_size: 'XS',
+    hours_per_day: 4,
+    days_per_month: 22,
+  });
+  populateCollabPanel();
+  recalculate();
+}
+
+function removeAccount(id) {
+  if (!SIZING_SPEC.collaboration || !Array.isArray(SIZING_SPEC.collaboration.accounts)) return;
+  SIZING_SPEC.collaboration.accounts = SIZING_SPEC.collaboration.accounts.filter(x => x.id !== id);
+  populateCollabPanel();
+  recalculate();
+}
+
+function updateAccount(id, field, value) {
+  const a = SIZING_SPEC.collaboration.accounts.find(x => x.id === id);
+  if (!a) return;
+  a[field] = value;
+  if (field === 'type') populateCollabPanel();
+  recalculate();
 }
 
 function populateGlobalSettings() {
@@ -1203,6 +1559,21 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAssumptions();
   recalculate();
 });
+
+// ========== Print / PDF reflow ==========
+// Chart.js canvases need an explicit resize when @media print changes the
+// container width, otherwise they keep their on-screen pixel dimensions and
+// either clip or shrink in the PDF.
+function _reflowCharts() {
+  if (chartStacked) chartStacked.resize();
+  if (chartDonut) chartDonut.resize();
+}
+window.addEventListener('beforeprint', _reflowCharts);
+window.addEventListener('afterprint', _reflowCharts);
+if (window.matchMedia) {
+  const mql = window.matchMedia('print');
+  if (mql.addEventListener) mql.addEventListener('change', _reflowCharts);
+}
 </script>
 </body>
 </html>

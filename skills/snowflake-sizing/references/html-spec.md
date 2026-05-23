@@ -221,6 +221,10 @@ For each workload in `SIZING_SPEC.workloads`, render a card:
 Live calculation shown in `.workload-calc`:
 `4 cr/hr × 2.0 hrs × 22 days × 1.0 avg clusters = 176 cr/mo → 2,112 cr/yr`
 
+The card label is rendered as an editable `<input>` so the SE can rename a workload during a live session. Each card also has a `Delete` button, and the tab footer has a `+ Add Workload` button which appends a card with default values (M / 4 hrs / 22 days / 1 cluster) and triggers `recalculate()`. Every workload entry MUST have a stable `id` field; new workloads are issued ids by `nextId('wl')`.
+
+Card mutation handlers: `addWorkload()`, `removeWorkload(id)`, `updateWorkload(id, field, value)`.
+
 #### Serverless Tab
 
 For each feature in `SIZING_SPEC.serverless`, render a row:
@@ -247,11 +251,17 @@ Each feature: toggle + model selector (where applicable) + token/message/GB inpu
 
 #### SPCS Tab
 
-Table of SPCS instances from `SIZING_SPEC.spcs.instances`. Each row: label, generation (gen1/gen2), instance type selector, count, hours/month, live credit cost. "+ Add instance" button clones the last row.
+`SIZING_SPEC.spcs.instances[]` rendered as one card per instance. Each card has an editable label, generation (gen1/gen2), instance type selector, count, hours/month, and a `Delete` button. A `+ Add SPCS Instance` button at the bottom of the tab appends a new instance with sensible defaults (gen2 / `GEN_X64_G2_4` / 1 / 730 hrs) and triggers `recalculate()`. When the last instance is deleted, `spcs.enabled` is set to false automatically.
 
-#### Openflow Tab
+Card mutation handlers: `addSPCSInstance()`, `removeSPCSInstance(id)`, `updateSPCSInstance(id, field, value)`.
 
-Deployment selector (BYOC / SPCS), source connections, vCPU/connection, hours/month, live cost. Plus Oracle Connector toggle with licensed cores.
+#### OpenFlow Tab
+
+`SIZING_SPEC.openflow.instances[]` rendered as one card per connector. Each card has an editable label, deployment (BYOC / SPCS), source connections, vCPU per connection, hours/month, and a `Delete` button. A `+ Add OpenFlow Instance` button at the bottom appends a new connector. The tab also exposes a master `Enable OpenFlow billing` checkbox bound to `openflow.enabled`. The Oracle Connector remains a separate `openflow_oracle` object with licensed cores.
+
+Legacy single-object specs (`openflow.source_connections` / `vcpu_per_connection` / `hours_monthly` directly on `openflow`) are auto-migrated by the template's `normalizeSpec()` IIFE on load — but freshly generated specs MUST emit the array form.
+
+Card mutation handlers: `addOpenflowInstance()`, `removeOpenflowInstance(id)`, `updateOpenflowInstance(id, field, value)`.
 
 #### Storage Tab
 
@@ -264,9 +274,13 @@ Deployment selector (BYOC / SPCS), source connections, vCPU/connection, hours/mo
 
 #### Collaboration Tab
 
-Reader accounts toggle + warehouse size + hours/day + days/month.
-Native Apps toggle + monthly subscription fee.
-Marketplace toggle + monthly subscription fee.
+`SIZING_SPEC.collaboration.accounts[]` rendered as one card per account, with a coloured badge indicating type (`Reader` or `Managed`). Each card has an editable label, type selector (`reader` / `managed`), warehouse size, hours/day, days/month, and a `Delete` button. Two add buttons at the bottom: `+ Add Reader Account` and `+ Add Managed Account`. The `type` field is display-only — both reader and managed accounts use the same compute cost model (warehouse size × hours × days × credit rate).
+
+Native Apps and Marketplace remain separate subscription objects on `collaboration.native_apps` / `collaboration.marketplace`.
+
+Legacy `collaboration.reader_accounts` (single object) is auto-migrated by the template's `normalizeSpec()` IIFE on load.
+
+Card mutation handlers: `addAccount(type)`, `removeAccount(id)`, `updateAccount(id, field, value)`.
 
 #### Global Settings Tab
 
@@ -316,8 +330,7 @@ function calcScenarioTCV(growthRate, rampYear1) {
     const aiCredits  = calcAICredits() * 12 * ramp;
     const storageCost = storageForYear(y) * sr * 12;
     const spcsCost   = calcSPCSCost() * 12 * ramp;
-    const of = SIZING_SPEC.openflow;
-    const ofCost = of.enabled ? of.source_connections * of.vcpu_per_connection * of.hours_monthly * 0.0225 * cr * 12 * ramp : 0;
+    const ofCost     = calcOpenflowCost(cr, ramp);
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled ? SIZING_SPEC.openflow_oracle.licensed_cores * 110 * 12 : 0;
     const yearTotal = (whCredits + slCredits) * cr + aiCredits * aiCr + storageCost + spcsCost + ofCost + oracleCost;
     yearCosts.push(yearTotal);
@@ -388,6 +401,37 @@ Each `confirm_required` item renders with an orange warning badge and the quanti
 
 ---
 
+## Print / PDF Layout
+
+The proposal must be printable to a clean PDF without any external tooling — SEs hand the file to customers and click `Print → Save as PDF` in the browser.
+
+### Print button
+
+A floating `<button class="print-btn">Print / Save as PDF</button>` is rendered at fixed top-right. `onclick="window.print()"`. Hidden by `@media print` so it never appears in the output.
+
+### `@media print` rules (essentials)
+
+- `@page { size: A4 portrait; margin: 12mm; }`
+- `body` set to `print-color-adjust: exact` so the navy header background and badge colours render in the PDF.
+- `.tab-nav`, `.print-btn`, `.add-btn`, `.add-btn-group`, `.delete-btn` are all `display: none !important`.
+- `.tab-content { display: block !important; }` — every tab is shown in flow. `.tab-content + .tab-content { page-break-before: always; }` puts each tab on its own page.
+- Each `.tab-content` carries a `data-print-title` attribute (e.g. `"Warehouses"`, `"Snowpark Container Services (SPCS)"`); a `::before` rule renders that title as a section heading in print mode only.
+- `input[type="range"] { display: none; }` — sliders disappear; the inline value `<span>`s next to each slider remain visible.
+- `input[type="number"]`, `input[type="text"]`, `select` are stripped of their borders/background and made non-interactive so they read as plain values, not form controls.
+- `.scenario-controls` hidden (the scenario toggles are interaction-only); the year/TCV figures stay.
+- `.workload-card`, `.scenario-card`, `.section` use `page-break-inside: avoid` to prevent splits.
+- `.chart-row { grid-template-columns: 1fr; }` and `.chart-container { height: 240px; }` so charts reflow to a single-column layout.
+
+### Chart canvas reflow
+
+Chart.js canvases keep their on-screen pixel dimensions across the media query change unless explicitly resized. The template wires three handlers — `beforeprint`, `afterprint`, and a `matchMedia('print').change` listener — that all call `chartStacked.resize()` and `chartDonut.resize()` to force a layout pass at the new container width.
+
+### What appears in the PDF
+
+Per project direction, the printed PDF contains the full proposal: header, KPI tiles, year-by-year chart and table, every configuration tab (warehouses / serverless / AI / SPCS / OpenFlow / storage / collaboration / global), scenarios, assumptions, and confirm-required items. Sliders and buttons are hidden; their values stay inline.
+
+---
+
 ## JS Calculation Engine
 
 ### Constants (at top of `<script>`)
@@ -445,11 +489,8 @@ function recalculate() {
     // SPCS cost (annual)
     const spcsCost = calcSPCSCost() * 12 * ramp;
 
-    // Openflow cost (annual)
-    const of = SIZING_SPEC.openflow;
-    const ofCost = of.enabled
-      ? of.source_connections * of.vcpu_per_connection * of.hours_monthly * 0.0225 * cr * 12 * ramp
-      : 0;
+    // OpenFlow cost (annual) - sums across openflow.instances[]
+    const ofCost = calcOpenflowCost(cr, ramp);
 
     // Oracle Openflow (annual, not credit-based)
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled
@@ -641,16 +682,33 @@ function calcTransferCost() {
 
 ### `calcCollabCost()` — returns monthly collaboration credits
 
+Iterates `SIZING_SPEC.collaboration.accounts[]` (the new list shape; legacy `reader_accounts` is auto-migrated by the template's `normalizeSpec()` IIFE on load). `type` (`reader` | `managed`) is display-only; both bill identically against the named warehouse.
+
 ```javascript
 function calcCollabCost() {
   const c = SIZING_SPEC.collaboration;
-  let total = 0;
-  if (c.reader_accounts.enabled) {
-    const rate = WH_CREDITS[c.reader_accounts.warehouse_size] || 1;
-    total += rate * c.reader_accounts.hours_per_day * c.reader_accounts.days_per_month;
-  }
-  // Native apps and marketplace are subscription fees, not credits — added to otherCost directly
-  return total;
+  if (!c || !Array.isArray(c.accounts)) return 0;
+  return c.accounts.reduce((sum, a) => {
+    if (a.enabled === false) return sum;
+    const rate = WH_CREDITS[a.warehouse_size] || 1;
+    return sum + rate * (a.hours_per_day || 0) * (a.days_per_month || 0);
+  }, 0);
+  // Native apps and marketplace are subscription fees, not credits - added to otherCost directly.
+}
+```
+
+### `calcOpenflowCost(cr, ramp)` — returns annual OpenFlow cost in dollars
+
+Iterates `SIZING_SPEC.openflow.instances[]`; each connector contributes `connections × vcpu × hours × 0.0225 × credit_rate × 12 × ramp`.
+
+```javascript
+function calcOpenflowCost(cr, ramp) {
+  const of = SIZING_SPEC.openflow;
+  if (!of || !of.enabled || !Array.isArray(of.instances)) return 0;
+  return of.instances.reduce((sum, inst) => {
+    return sum + (inst.source_connections || 0) * (inst.vcpu_per_connection || 0) *
+                 (inst.hours_monthly || 0) * 0.0225 * cr * 12 * ramp;
+  }, 0);
 }
 ```
 

@@ -245,6 +245,14 @@ If the customer is in a data science or AI-forward industry, flag relevant featu
 
 Enable only if explicitly mentioned. For Openflow, always ask about source database server count.
 
+**SPCS shape:** `spcs.instances[]`, each entry `{ id, label, generation, instance_type, count, hours_monthly }`. Set `spcs.enabled=true` whenever the array is non-empty.
+
+**OpenFlow shape:** `openflow.instances[]`, each entry `{ id, label, deployment, source_connections, vcpu_per_connection, hours_monthly }`. Create one instance per distinct connector (e.g. one for "Salesforce CDC", one for "Postgres logical replication"). Set `openflow.enabled=true` whenever the array is non-empty. The legacy single-object shape (`source_connections` / `vcpu_per_connection` / `hours_monthly` directly on `openflow`) is auto-normalized by the template — but new specs MUST emit the array form.
+
+### Collaboration: Reader / Managed accounts
+
+`collaboration.accounts[]`, each entry `{ id, type, label, warehouse_size, hours_per_day, days_per_month }`. `type` is either `"reader"` or `"managed"` and is display-only (same compute cost model). Create one entry per distinct account the customer plans to provision. Native Apps and Marketplace remain on `collaboration.native_apps` / `collaboration.marketplace` as subscription objects.
+
 ### Storage
 
 Use stated data volumes from context. Apply compression defaults from `sizing-methodology.md`. Set time_travel_days=1 (default) and churn_rate=10% unless stated otherwise.
@@ -333,11 +341,18 @@ Where `customer-slug` = customer name lowercased, spaces replaced with hyphens.
 
 Do **not** modify any other part of the template. The template already contains official Snowflake branding (wordmark, fonts, favicon, crystal mark footer) — do not regenerate or alter those sections.
 
-**Quality check before writing the file:**
+**Quality check before reporting success (BLOCKING):**
 
-- Confirm no `__TOKEN__` strings remain in the output (all 11 substituted)
-- Verify `growth_rates` array length = `contract_years`
-- Verify `credit_rate` in spec matches the region in the header
+1. Confirm no `__TOKEN__` strings remain in the output (all 11 substituted).
+2. Verify `growth_rates` array length = `contract_years`.
+3. Verify `credit_rate` in spec matches the region in the header.
+4. **Em-dash gate.** Run:
+
+   ```bash
+   python3 assets/emdash-check.py temp/<slug>-<N>year-sizing.html temp/<slug>-research-evidence.md
+   ```
+
+   If exit code is non-zero, the script prints `file:line:col` for each U+2014 occurrence. Replace each em-dash with ` - ` (space hyphen space) in the source artifact and re-run the gate until it exits 0. Do NOT proceed to Phase 6 until the gate passes.
 
 ---
 
@@ -349,6 +364,8 @@ Print to terminal:
 ✅ Generated:
    temp/[filename].html              (interactive sizing proposal)
    temp/[slug]-research-evidence.md  (Glean + Gong audit trail)
+
+🛡  emdash check: PASS
 
 📊 [CUSTOMER] — [N]-Year Consumption Estimate
   Edition: [EDITION] · [CLOUD] [REGION] · $[CREDIT_RATE]/credit
@@ -370,4 +387,6 @@ Print to terminal:
   ...
 
 Open in browser: open temp/[filename]
+Print / Save as PDF: click the "Print / Save as PDF" button in the top-right of the proposal,
+or in the SE's terminal: open temp/[filename] (then Cmd-P → "Save as PDF").
 ```
