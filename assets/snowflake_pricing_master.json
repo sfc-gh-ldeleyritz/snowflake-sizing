@@ -1,0 +1,493 @@
+{
+  "metadata": {
+    "effective_date": "2026-05-12",
+    "source": "Snowflake Service Consumption Table",
+    "description": "Complete Snowflake Pricing Reference - All Components",
+    "version": "2.0",
+    "last_updated": "2026-05-22"
+  },
+
+  "credit_pricing": {
+    "description": "On-Demand Credit Pricing by Cloud Provider, Region, and Edition ($/Credit)",
+    "data": [
+      {"cloud": "AWS", "region": "US East (Northern Virginia)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "AWS", "region": "US West (Oregon)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "AWS", "region": "US East 2 (Ohio)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "AWS", "region": "AP Mumbai", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "AWS", "region": "Canada Central", "standard": 2.25, "enterprise": 3.50, "business_critical": 4.50, "vps": 6.75},
+      {"cloud": "AWS", "region": "AP Singapore", "standard": 2.50, "enterprise": 3.70, "business_critical": 5.00, "vps": 7.50},
+      {"cloud": "AWS", "region": "EU Dublin", "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "AWS", "region": "EU Frankfurt", "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "AWS", "region": "Europe (London)", "standard": 2.70, "enterprise": 4.00, "business_critical": 5.40, "vps": 8.10},
+      {"cloud": "AWS", "region": "AP Sydney", "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
+      {"cloud": "AWS", "region": "Asia Pacific (Seoul)", "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
+      {"cloud": "AWS", "region": "AP Northeast 1 (Tokyo)", "standard": 2.85, "enterprise": 4.30, "business_critical": 5.70, "vps": 8.55},
+      {"cloud": "AWS", "region": "US East 1 Commercial Gov", "standard": null, "enterprise": null, "business_critical": 4.80, "vps": 7.20},
+      {"cloud": "Azure", "region": "East US 2 (Virginia)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "West US 2 (Washington)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "Canada Central (Toronto)", "standard": 2.25, "enterprise": 3.50, "business_critical": 4.50, "vps": 6.75},
+      {"cloud": "Azure", "region": "Southeast Asia (Singapore)", "standard": 2.50, "enterprise": 3.70, "business_critical": 5.00, "vps": 7.50},
+      {"cloud": "Azure", "region": "West Europe (Netherlands)", "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "Azure", "region": "North Europe (Ireland)", "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "Azure", "region": "UK South (London)", "standard": 2.70, "enterprise": 4.00, "business_critical": 5.40, "vps": 8.10},
+      {"cloud": "Azure", "region": "Australia East (New South Wales)", "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
+      {"cloud": "Azure", "region": "Japan East (Tokyo)", "standard": 2.85, "enterprise": 4.30, "business_critical": 5.70, "vps": 8.55},
+      {"cloud": "GCP", "region": "US Central 1 (Iowa)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "GCP", "region": "US East 4 (N. Virginia)", "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "GCP", "region": "Europe West 4 (Netherlands)", "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "GCP", "region": "Europe West 3 (Frankfurt)", "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "GCP", "region": "Europe West 2 (London)", "standard": 2.70, "enterprise": 4.00, "business_critical": 5.40, "vps": 8.10},
+      {"cloud": "AWS", "region": "Africa (Cape Town)",         "standard": 2.80, "enterprise": 4.20, "business_critical": 5.60, "vps": 8.40},
+      {"cloud": "AWS", "region": "Middle East (UAE)",          "standard": 2.70, "enterprise": 4.00, "business_critical": 5.40, "vps": 8.10},
+      {"cloud": "AWS", "region": "Asia Pacific (Malaysia)",    "standard": 2.40, "enterprise": 3.60, "business_critical": 4.80, "vps": 7.20},
+      {"cloud": "AWS", "region": "Asia Pacific (Thailand)",    "standard": 2.40, "enterprise": 3.60, "business_critical": 4.80, "vps": 7.20},
+      {"cloud": "AWS", "region": "Europe (Stockholm)",         "standard": 2.40, "enterprise": 3.60, "business_critical": 4.80, "vps": 7.20},
+      {"cloud": "AWS", "region": "Asia Pacific (Osaka)",       "standard": 2.85, "enterprise": 4.30, "business_critical": 5.70, "vps": 8.55},
+      {"cloud": "AWS", "region": "South America East 1 (São Paulo)", "standard": 3.10, "enterprise": 4.65, "business_critical": 6.20, "vps": 9.30},
+      {"cloud": "AWS", "region": "EU (Paris)",                 "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
+      {"cloud": "AWS", "region": "Asia Pacific (Jakarta)",     "standard": 2.50, "enterprise": 3.70, "business_critical": 5.00, "vps": 7.50},
+      {"cloud": "AWS", "region": "EU (Zurich)",                "standard": 3.10, "enterprise": 4.65, "business_critical": 6.20, "vps": 9.30},
+      {"cloud": "GCP", "region": "Middle East Central 2 (Dammam)", "standard": 3.25, "enterprise": 4.90, "business_critical": 6.50, "vps": 9.75},
+      {"cloud": "GCP", "region": "Australia Southeast 2 (Melbourne)", "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
+      {"cloud": "Azure", "region": "East US (Virginia)",       "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "Korea Central",            "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
+      {"cloud": "Azure", "region": "Sweden Central",           "standard": 2.40, "enterprise": 3.60, "business_critical": 4.80, "vps": 7.20},
+      {"cloud": "Azure", "region": "Mexico Central",           "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00}
+    ]
+  },
+
+  "ai_credit_pricing": {
+    "description": "Table 2(b) - AI Credit Pricing. Separate from Snowflake Compute Credits.",
+    "on_demand": {
+      "global": 2.00,
+      "regional": 2.20
+    },
+    "capacity_tiers": [
+      {"tier": 1, "acv_range": "$0-$1,199,999",         "global": 2.00, "regional": 2.20},
+      {"tier": 2, "acv_range": "$1,200,000-$2,999,999", "global": 1.96, "regional": 2.16},
+      {"tier": 3, "acv_range": "$3,000,000-$4,999,999", "global": 1.96, "regional": 2.16},
+      {"tier": 4, "acv_range": "$5,000,000-$9,999,999", "global": 1.94, "regional": 2.13},
+      {"tier": 5, "acv_range": "$10,000,000-$19,999,999","global": 1.92, "regional": 2.11},
+      {"tier": 6, "acv_range": "$20,000,000-$39,999,999","global": 1.90, "regional": 2.09},
+      {"tier": 7, "acv_range": "$40,000,000+",           "global": 1.88, "regional": 2.07}
+    ]
+  },
+
+  "warehouses": {
+    "standard": {
+      "description": "Table 1(a) - Standard Warehouse Credits/Hour",
+      "data": [
+        {"size": "XS", "credits_per_hour": 1},
+        {"size": "S", "credits_per_hour": 2},
+        {"size": "M", "credits_per_hour": 4},
+        {"size": "L", "credits_per_hour": 8},
+        {"size": "XL", "credits_per_hour": 16},
+        {"size": "2XL", "credits_per_hour": 32},
+        {"size": "3XL", "credits_per_hour": 64},
+        {"size": "4XL", "credits_per_hour": 128},
+        {"size": "5XL", "credits_per_hour": 256},
+        {"size": "6XL", "credits_per_hour": 512}
+      ]
+    },
+    "gen2": {
+      "description": "Table 1(b) - Gen2 Warehouse Credits/Hour by Cloud",
+      "data": [
+        {"cloud": "AWS", "XS": 1.35, "S": 2.70, "M": 5.40, "L": 10.80, "XL": 21.60, "2XL": 43.20, "3XL": 86.40, "4XL": 172.80},
+        {"cloud": "Azure", "XS": 1.25, "S": 2.50, "M": 5.00, "L": 10.00, "XL": 20.00, "2XL": 40.00, "3XL": 80.00, "4XL": 160.00},
+        {"cloud": "GCP", "XS": 1.35, "S": 2.70, "M": 5.40, "L": 10.80, "XL": 21.60, "2XL": 43.20, "3XL": 86.40, "4XL": 172.80}
+      ]
+    },
+    "interactive": {
+      "description": "Table 1(d) - Interactive Warehouse Credits/Hour",
+      "data": [
+        {"size": "XS", "credits_per_hour": 0.60},
+        {"size": "S", "credits_per_hour": 1.20},
+        {"size": "M", "credits_per_hour": 2.40},
+        {"size": "L", "credits_per_hour": 4.80},
+        {"size": "XL", "credits_per_hour": 9.60},
+        {"size": "2XL", "credits_per_hour": 19.20},
+        {"size": "3XL", "credits_per_hour": 38.40},
+        {"size": "4XL", "credits_per_hour": 76.80}
+      ]
+    },
+    "adaptive": {
+      "description": "Table 1(e) - Adaptive Compute Services. Credit consumption scales dynamically based on compute usage, software optimizations, and active queries.",
+      "note": "Cannot be pre-sized; modelled as a standard warehouse with auto-scaling behaviour. Use standard warehouse rates as upper bound."
+    }
+  },
+
+  "snowpark_optimized": {
+    "description": "Table 1(c) - Snowpark Optimized Warehouse Credits/Hour",
+    "data": [
+      {"constraint": "MEMORY_1X", "XS": 1.00, "S": 2.00, "M": 4.00, "L": 8.00, "XL": 16.00, "2XL": 32.00, "3XL": 64.00, "4XL": 128.00},
+      {"constraint": "MEMORY_1X_x86", "XS": 1.10, "S": 2.20, "M": 4.40, "L": 8.80, "XL": 17.60, "2XL": 35.20, "3XL": 70.40, "4XL": 140.80},
+      {"constraint": "MEMORY_16X", "M": 6.00, "L": 12.00, "XL": 24.00, "2XL": 48.00, "3XL": 96.00, "4XL": 192.00, "5XL": 384.00},
+      {"constraint": "MEMORY_16X_x86", "M": 6.25, "L": 12.50, "XL": 25.00, "2XL": 50.00, "3XL": 100.00, "4XL": 200.00},
+      {"constraint": "MEMORY_64X", "L": 15.00, "XL": 30.00, "2XL": 60.00, "3XL": 120.00, "4XL": 240.00, "notes": "Preview"},
+      {"constraint": "MEMORY_64X_x86", "L": 16.00, "XL": 32.00, "2XL": 64.00, "3XL": 128.00, "4XL": 256.00, "notes": "Preview"}
+    ]
+  },
+
+  "spcs": {
+    "cpu": {
+      "description": "Table 1(e) - SPCS CPU Compute Credits/Hour",
+      "data": [
+        {"family": "CPU_X64_XS", "credits_per_hour": 0.06},
+        {"family": "CPU_X64_S", "credits_per_hour": 0.11},
+        {"family": "CPU_X64_M", "credits_per_hour": 0.22},
+        {"family": "CPU_X64_SL", "credits_per_hour": 0.41},
+        {"family": "CPU_X64_L", "credits_per_hour": 0.83}
+      ]
+    },
+    "highmem": {
+      "description": "Table 1(f) - SPCS High-Memory Compute Credits/Hour",
+      "data": [
+        {"family": "HIGHMEM_X64_S", "credits_per_hour": 0.28},
+        {"family": "HIGHMEM_X64_M", "credits_per_hour": 1.11},
+        {"family": "HIGHMEM_X64_SL", "credits_per_hour": 2.93},
+        {"family": "HIGHMEM_X64_L", "credits_per_hour": 4.44}
+      ]
+    },
+    "gpu": {
+      "description": "Table 1(g) - SPCS GPU Compute Credits/Hour",
+      "data": [
+        {"family": "GPU_NV_XS", "credits_per_hour": 0.25},
+        {"family": "GPU_GCP_NV_L4_1_24G", "credits_per_hour": 0.43},
+        {"family": "GPU_NV_S", "credits_per_hour": 0.57},
+        {"family": "GPU_NV_SM", "credits_per_hour": 1.70},
+        {"family": "GPU_GCP_NV_L4_4_24G", "credits_per_hour": 1.94},
+        {"family": "GPU_NV_M", "credits_per_hour": 2.68},
+        {"family": "GPU_NV_2M", "credits_per_hour": 3.50},
+        {"family": "GPU_NV_3M", "credits_per_hour": 3.55},
+        {"family": "GPU_GCP_NV_A100_8_40G", "credits_per_hour": 11.68},
+        {"family": "GPU_NV_SL", "credits_per_hour": 13.50},
+        {"family": "GPU_NV_L", "credits_per_hour": 14.12}
+      ]
+    },
+    "spcs_gen2": {
+      "description": "Table 1(g) - Gen 2 SPCS Compute Credits/Hour by Cloud Provider",
+      "data": [
+        {"family": "GEN_ARM_G1_2",   "aws": 0.084,  "azure": null,  "gcp": null},
+        {"family": "GEN_ARM_G1_4",   "aws": 0.168,  "azure": null,  "gcp": null},
+        {"family": "GEN_ARM_G1_8",   "aws": 0.336,  "azure": null,  "gcp": null},
+        {"family": "GEN_ARM_G1_16",  "aws": 0.672,  "azure": null,  "gcp": null},
+        {"family": "GEN_ARM_G1_32",  "aws": 1.344,  "azure": null,  "gcp": null},
+        {"family": "GEN_X64_G2_2",   "aws": 0.092,  "azure": 0.086, "gcp": null},
+        {"family": "GEN_X64_G2_4",   "aws": 0.184,  "azure": 0.172, "gcp": null},
+        {"family": "GEN_X64_G2_8",   "aws": 0.368,  "azure": 0.344, "gcp": null},
+        {"family": "GEN_X64_G2_16",  "aws": null,   "azure": 0.688, "gcp": null},
+        {"family": "GEN_X64_G2_32",  "aws": 1.472,  "azure": 1.376, "gcp": null},
+        {"family": "GPU_L40S_G1_8",  "aws": 1.580,  "azure": null,  "gcp": null},
+        {"family": "GPU_L40S_G1_16", "aws": 3.160,  "azure": null,  "gcp": null},
+        {"family": "GPU_L40S_G1_48", "aws": 9.480,  "azure": null,  "gcp": null},
+        {"family": "GPU_L40S_G1_192","aws": 37.920, "azure": null,  "gcp": null},
+        {"family": "GPU_R6K_G1_8",   "aws": 2.537,  "azure": null,  "gcp": null},
+        {"family": "GPU_R6K_G1_16",  "aws": 5.074,  "azure": null,  "gcp": null},
+        {"family": "GPU_R6K_G1_32",  "aws": 10.148, "azure": null,  "gcp": null},
+        {"family": "GPU_R6K_G1_48",  "aws": 15.222, "azure": null,  "gcp": null},
+        {"family": "GPU_R6K_G1_96",  "aws": 30.444, "azure": null,  "gcp": null},
+        {"family": "GPU_R6K_G1_192", "aws": 60.888, "azure": null,  "gcp": null},
+        {"family": "GPU_A100_G1_12", "aws": null,   "azure": null,  "gcp": 5.051},
+        {"family": "GPU_A100_G1_48", "aws": null,   "azure": null,  "gcp": 20.204},
+        {"family": "MEM_X64_G2_8",   "aws": 0.392,  "azure": 0.311, "gcp": null},
+        {"family": "MEM_X64_G2_32",  "aws": 1.568,  "azure": 1.244, "gcp": null},
+        {"family": "MEM_X64_G2_64",  "aws": 3.136,  "azure": 2.486, "gcp": null},
+        {"family": "MEM_X64_G2_96",  "aws": null,   "azure": 3.732, "gcp": null},
+        {"family": "MEM_X64_G2_192", "aws": 9.408,  "azure": null,  "gcp": null}
+      ]
+    }
+  },
+
+  "serverless": {
+    "description": "Serverless Feature Multipliers and Unit Charges",
+    "multipliers": [
+      {"feature": "Serverless Tasks", "compute_multiplier": 0.90, "cloud_services_multiplier": 1.00},
+      {"feature": "Serverless Tasks Flex", "compute_multiplier": 0.50, "cloud_services_multiplier": 1.00},
+      {"feature": "Serverless Alerts", "compute_multiplier": 0.90, "cloud_services_multiplier": 1.00},
+      {"feature": "Query Acceleration", "compute_multiplier": 1.00},
+      {"feature": "Clustered Tables", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
+      {"feature": "Materialized Views", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
+      {"feature": "Search Optimization", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
+      {"feature": "Replication", "compute_multiplier": 2.00, "cloud_services_multiplier": 0.35},
+      {"feature": "Backup", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
+      {"feature": "Data Quality Monitoring", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
+      {"feature": "Table Optimization", "compute_multiplier": 0.75, "cloud_services_multiplier": 1.00},
+      {"feature": "Trust Center", "compute_multiplier": 1.00, "cloud_services_multiplier": 1.00}
+    ],
+    "unit_charges": [
+      {"feature": "Automated Refresh", "rate": 0.06, "unit": "Credits per 1000 files", "compute_multiplier": 1.25},
+      {"feature": "Snowpipe", "rate": 0.0037, "unit": "Credits per GB"},
+      {"feature": "Snowpipe Streaming", "rate": 0.0037, "unit": "Credits per uncompressed GB"},
+      {"feature": "Telemetry Data Ingest", "rate": 0.0212, "unit": "Credits per GB"},
+      {"feature": "Open Catalog", "rate": 0.50, "unit": "Credits per 1M requests"}
+    ]
+  },
+
+  "openflow": {
+    "description": "Table 1(h) - Snowflake OpenFlow Pricing",
+    "data": [
+      {"deployment": "BYOC", "rate": 0.0225, "unit": "Credits per vCPU per Hour"},
+      {"deployment": "SPCS", "rate": "See SPCS CPU pricing", "notes": "Uses CPU_X64_S (0.11), CPU_X64_SL (0.41), CPU_X64_L (0.83)"}
+    ],
+    "billing_rules": {"minimum_charge": "60 seconds", "granularity": "per-second"}
+  },
+
+  "postgres": {
+    "description": "Table 1(i) - Snowflake Postgres Compute Credits/Hour (Preview)",
+    "data": [
+      {"family": "STANDARD_M", "aws": 0.0356, "azure": 0.0376, "aws_ha": 0.0712, "azure_ha": 0.0752},
+      {"family": "STANDARD_L", "aws": 0.0712, "azure": 0.0752, "aws_ha": 0.1424, "azure_ha": 0.1504},
+      {"family": "STANDARD_XL", "aws": 0.1424, "azure": 0.1504, "aws_ha": 0.2848, "azure_ha": 0.3008},
+      {"family": "STANDARD_2X", "aws": 0.2848, "azure": 0.3008, "aws_ha": 0.5696, "azure_ha": 0.6016},
+      {"family": "STANDARD_4XL", "aws": 0.5696, "azure": 0.6016, "aws_ha": 1.1392, "azure_ha": 1.2032},
+      {"family": "STANDARD_8XL", "aws": 1.1392, "azure": 1.2032, "aws_ha": 2.2784, "azure_ha": 2.4064},
+      {"family": "STANDARD_12XL", "aws": 1.7088, "azure": 1.8048, "aws_ha": 3.4176, "azure_ha": 3.6096},
+      {"family": "STANDARD_24XL", "aws": 3.4176, "azure": 3.6096, "aws_ha": 6.8352, "azure_ha": 7.2192},
+      {"family": "HIGHMEM_L", "aws": 0.1024, "azure": 0.1088, "aws_ha": 0.2048, "azure_ha": 0.2176},
+      {"family": "HIGHMEM_XL", "aws": 0.2048, "azure": 0.2176, "aws_ha": 0.4096, "azure_ha": 0.4352},
+      {"family": "HIGHMEM_2XL", "aws": 0.4096, "azure": 0.4352, "aws_ha": 0.8192, "azure_ha": 0.8704},
+      {"family": "HIGHMEM_4XL", "aws": 0.8192, "azure": 0.8704, "aws_ha": 1.6384, "azure_ha": 1.7408},
+      {"family": "HIGHMEM_8XL", "aws": 1.6384, "azure": 1.7408, "aws_ha": 3.2768, "azure_ha": 3.4816},
+      {"family": "HIGHMEM_12XL", "aws": 2.4576, "azure": 2.6112, "aws_ha": 4.9152, "azure_ha": 5.2224},
+      {"family": "HIGHMEM_16XL", "aws": 3.2768, "azure": 3.4816, "aws_ha": 6.5536, "azure_ha": 6.9632},
+      {"family": "HIGHMEM_24XL", "aws": 4.9152, "azure": 5.2224, "aws_ha": 9.8304, "azure_ha": 10.4448},
+      {"family": "HIGHMEM_32XL", "aws": 6.5536, "azure": 6.9632, "aws_ha": 13.1072, "azure_ha": 13.9264},
+      {"family": "HIGHMEM_48XL", "aws": 9.8304, "azure": 10.4448, "aws_ha": 19.6608, "azure_ha": 20.8896},
+      {"family": "BURST_XS", "aws": 0.0068, "aws_ha": 0.0136},
+      {"family": "BURST_S", "aws": 0.0136, "azure": 0.0144, "aws_ha": 0.0272, "azure_ha": 0.0288},
+      {"family": "BURST_M", "aws": 0.0272, "azure": 0.0288, "aws_ha": 0.0544, "azure_ha": 0.0576}
+    ]
+  },
+
+  "ai_features": {
+    "cortex_complete": {
+      "description": "Table 6(a) - Cortex AI Functions (Credits per 1M Tokens)",
+      "data": [
+        {"model": "claude-3-5-sonnet", "input": 1.50, "output": 7.50},
+        {"model": "claude-3-7-sonnet", "input": 1.50, "output": 7.50},
+        {"model": "claude-4-sonnet", "input": 1.50, "output": 7.50},
+        {"model": "claude-4-opus", "input": 7.50, "output": 37.50, "preview": true},
+        {"model": "claude-haiku-4-5", "input": 0.55, "output": 2.75, "preview": true},
+        {"model": "claude-opus-4-5", "input": 2.75, "output": 13.75, "preview": true},
+        {"model": "claude-sonnet-4-5", "input": 1.65, "output": 8.25},
+        {"model": "deepseek-r1", "input": 0.68, "output": 2.70},
+        {"model": "gemini-2-5-flash", "input": 0.15, "output": 1.25, "preview": true},
+        {"model": "gemini-2-5-flash-lite", "input": 0.05, "output": 0.20, "preview": true},
+        {"model": "gemini-3-pro", "input": 1.00, "output": 6.00, "preview": true},
+        {"model": "llama3.1-405b", "input": 1.20, "output": 1.20},
+        {"model": "llama3.1-70b", "input": 0.36, "output": 0.36},
+        {"model": "llama3.1-8b", "input": 0.11, "output": 0.11},
+        {"model": "llama3.3-70b", "input": 0.36, "output": 0.36},
+        {"model": "llama4-maverick", "input": 0.12, "output": 0.49},
+        {"model": "llama4-scout", "input": 0.09, "output": 0.33},
+        {"model": "mistral-large2", "input": 1.00, "output": 3.00},
+        {"model": "mistral-7b", "input": 0.08, "output": 0.10},
+        {"model": "mixtral-8x7b", "input": 0.23, "output": 0.35},
+        {"model": "openai-gpt-4.1", "input": 1.00, "output": 4.00},
+        {"model": "openai-gpt-5", "input": 0.69, "output": 5.50, "preview": true},
+        {"model": "openai-gpt-5-chat", "input": 0.63, "output": 5.00},
+        {"model": "openai-gpt-5-mini", "input": 0.14, "output": 1.10, "preview": true},
+        {"model": "openai-gpt-5-nano", "input": 0.03, "output": 0.22, "preview": true},
+        {"model": "openai-gpt-5.1", "input": 0.69, "output": 5.50, "preview": true},
+        {"model": "openai-gpt-5.2", "input": 0.97, "output": 7.70, "preview": true},
+        {"model": "pixtral-large", "input": 1.00, "output": 3.00},
+        {"model": "snowflake-arctic", "input": 0.84, "output": 0.84},
+        {"model": "snowflake-llama-3.1-405b", "input": 0.96, "output": 0.96},
+        {"model": "snowflake-llama-3.3-70b", "input": 0.29, "output": 0.29}
+      ]
+    },
+    "cortex_agents": {
+      "description": "Table 6(e) - Cortex Agents (Credits per 1M Tokens)",
+      "data": [
+        {"model": "claude-3-5-sonnet", "input": 1.88, "output": 9.41},
+        {"model": "claude-3-7-sonnet", "input": 1.88, "output": 9.41, "cache_write": 2.35, "cache_read": 0.19},
+        {"model": "claude-4-sonnet", "input": 1.88, "output": 9.41, "cache_write": 2.35, "cache_read": 0.19},
+        {"model": "claude-haiku-4-5", "input": 0.69, "output": 3.45, "cache_write": 0.87, "cache_read": 0.07, "preview": true},
+        {"model": "claude-4-5-sonnet", "input": 2.07, "output": 10.36, "cache_write": 2.59, "cache_read": 0.21},
+        {"model": "openai-gpt-4.1", "input": 1.38, "output": 5.52, "cache_read": 0.35},
+        {"model": "openai-gpt-5", "input": 0.86, "output": 6.90, "cache_read": 0.09, "preview": true}
+      ]
+    },
+    "cortex_analyst": {
+      "description": "Table 6(f) - Cortex Analyst via Intelligence/Agents (Credits per 1M Tokens)",
+      "data": [
+        {"model": "claude-3-5-sonnet", "input": 3.14, "output": 15.69},
+        {"model": "claude-3-7-sonnet", "input": 3.14, "output": 15.69},
+        {"model": "claude-4-sonnet", "input": 3.14, "output": 15.69},
+        {"model": "claude-haiku-4-5", "input": 1.15, "output": 5.75, "preview": true},
+        {"model": "claude-4-5-sonnet", "input": 3.45, "output": 17.26},
+        {"model": "mistral-large2", "input": 2.09, "output": 6.28},
+        {"model": "openai-gpt-4.1", "input": 2.30, "output": 9.21},
+        {"model": "openai-gpt-5", "input": 1.44, "output": 11.51, "preview": true}
+      ]
+    },
+    "snowflake_intelligence": {
+      "description": "Table 6(d) - Snowflake Intelligence (Credits per 1M Tokens)",
+      "data": [
+        {"model": "claude-3-5-sonnet", "input": 2.51, "output": 12.55},
+        {"model": "claude-3-7-sonnet", "input": 2.51, "output": 12.55, "cache_write": 3.14, "cache_read": 0.25},
+        {"model": "claude-4-sonnet", "input": 2.51, "output": 12.55, "cache_write": 3.14, "cache_read": 0.25},
+        {"model": "claude-haiku-4-5", "input": 0.92, "output": 4.60, "cache_write": 1.15, "cache_read": 0.09, "preview": true},
+        {"model": "claude-4-5-sonnet", "input": 2.76, "output": 13.81, "cache_write": 3.45, "cache_read": 0.28},
+        {"model": "openai-gpt-4.1", "input": 1.64, "output": 7.36, "cache_read": 0.46},
+        {"model": "openai-gpt-5", "input": 1.15, "output": 9.21, "cache_read": 0.12, "preview": true}
+      ]
+    },
+    "embeddings": {
+      "description": "AI Embed Functions (Credits per 1M Tokens)",
+      "data": [
+        {"model": "voyage-multimodal-3", "dimensions": 1024, "rate": 0.06, "type": "image"},
+        {"model": "multilingual-e5-large", "dimensions": 1024, "rate": 0.05, "type": "text"},
+        {"model": "nv-embed-qa-4", "dimensions": 1024, "rate": 0.05, "type": "text"},
+        {"model": "snowflake-arctic-embed-l-v2.0", "dimensions": 1024, "rate": 0.05, "type": "text"},
+        {"model": "voyage-multilingual-2", "dimensions": 1024, "rate": 0.07, "type": "text"},
+        {"model": "e5-base-v2", "dimensions": 768, "rate": 0.03, "type": "text"},
+        {"model": "snowflake-arctic-embed-m", "dimensions": 768, "rate": 0.03, "type": "text"},
+        {"model": "snowflake-arctic-embed-m-v1.5", "dimensions": 768, "rate": 0.03, "type": "text"}
+      ]
+    },
+    "utility_functions": {
+      "description": "AI Utility Functions (Credits per 1M Tokens)",
+      "data": [
+        {"function": "AI Sentiment", "rate": 1.60},
+        {"function": "AI_AGG", "rate": 1.60},
+        {"function": "AI_CLASSIFY", "rate": 1.39},
+        {"function": "AI_EXTRACT (arctic-extract)", "rate": 5.00},
+        {"function": "AI_FILTER", "rate": 1.39, "preview": true},
+        {"function": "AI_REDACT", "rate": 0.63},
+        {"function": "AI_SUMMARIZE_AGG", "rate": 1.60, "preview": true},
+        {"function": "AI_TRANSCRIBE", "rate": 1.30},
+        {"function": "AI_TRANSLATE", "rate": 1.50},
+        {"function": "Extract Answer", "rate": 0.08},
+        {"function": "Guard", "rate": 0.25},
+        {"function": "Sentiment", "rate": 0.08},
+        {"function": "Summarize", "rate": 0.10},
+        {"function": "Translate", "rate": 1.50}
+      ]
+    },
+    "other_ai_features": {
+      "description": "Table 6(h) - Other AI Features",
+      "data": [
+        {"feature": "AI Parse Document - Layout", "rate": 3.33, "unit": "Credits per 1,000 pages"},
+        {"feature": "AI Parse Document - OCR", "rate": 0.50, "unit": "Credits per 1,000 pages"},
+        {"feature": "Cortex Analyst (API)", "rate": 67.00, "unit": "Credits per 1,000 messages"},
+        {"feature": "Cortex Search", "rate": 6.30, "unit": "Credits per GB/mo indexed"},
+        {"feature": "Document AI", "rate": 8.00, "unit": "Credits per hour"}
+      ]
+    },
+    "fine_tuning": {
+      "description": "Table 6(g) - Fine-tuning (Credits per 1M Tokens) - Preview",
+      "data": [
+        {"model": "llama3.1-70b", "training": 3.40, "inference": 2.42},
+        {"model": "llama3.1-8b", "training": 0.64, "inference": 0.38},
+        {"model": "mistral-7b", "training": 0.64, "inference": 0.24},
+        {"model": "mistral-8x7b", "training": 3.40, "inference": 0.44}
+      ]
+    }
+  },
+
+  "storage": {
+    "on_demand": {
+      "description": "Table 3(a) - Standard storage pricing by region ($/TB/Month)",
+      "data": [
+        {"cloud": "AWS", "region": "US East (Northern Virginia)", "storage": 23.00, "time_travel": 23.00, "failsafe": 23.00},
+        {"cloud": "AWS", "region": "US West (Oregon)", "storage": 23.00, "time_travel": 23.00, "failsafe": 23.00},
+        {"cloud": "AWS", "region": "EU Dublin", "storage": 25.00, "time_travel": 25.00, "failsafe": 25.00},
+        {"cloud": "AWS", "region": "EU Frankfurt", "storage": 27.00, "time_travel": 27.00, "failsafe": 27.00},
+        {"cloud": "AWS", "region": "AP Sydney", "storage": 28.00, "time_travel": 28.00, "failsafe": 28.00},
+        {"cloud": "AWS", "region": "AP Singapore", "storage": 28.00, "time_travel": 28.00, "failsafe": 28.00},
+        {"cloud": "AWS", "region": "AP Tokyo", "storage": 29.00, "time_travel": 29.00, "failsafe": 29.00},
+        {"cloud": "Azure", "region": "East US 2 (Virginia)", "storage": 23.00, "time_travel": 23.00, "failsafe": 23.00},
+        {"cloud": "Azure", "region": "UK South", "storage": 25.00, "time_travel": 25.00, "failsafe": 25.00},
+        {"cloud": "Azure", "region": "West Europe (Netherlands)", "storage": 26.00, "time_travel": 26.00, "failsafe": 26.00},
+        {"cloud": "GCP", "region": "US Central 1 (Iowa)", "storage": 23.00, "time_travel": 23.00, "failsafe": 23.00}
+      ]
+    },
+    "spcs_block": {
+      "description": "Table 3(c) - SPCS Block Storage ($/TB/Month)",
+      "data": [
+        {"cloud": "AWS", "region": "US East", "volume": 81.92, "iops_per_1000": 5.00, "throughput_gb_sec": 40.96, "snapshot": 51.20},
+        {"cloud": "Azure", "region": "East US 2", "volume": 82.23, "iops_per_1000": 5.11, "throughput_gb_sec": 41.12, "snapshot": 51.20},
+        {"cloud": "GCP", "region": "US Central 1", "volume": 81.92, "iops_per_1000": 5.00, "throughput_gb_sec": 40.96, "snapshot": 51.20}
+      ]
+    },
+    "archive": {
+      "description": "Table 3(e) - Archive Storage (Preview)",
+      "cool_tier": {"storage_range": "$4.00 - $8.30 per TB/mo", "retrieval": "$30.00 per TB"},
+      "cold_tier": {"storage_range": "$1.00 - $1.40 per TB/mo", "retrieval_range": "$2.50 - $8.00 per TB"}
+    },
+    "postgres": {
+      "description": "Table 3(f) - Postgres Storage ($/TB/Month)",
+      "data": [
+        {"cloud": "AWS", "region": "US East", "standard": 117.76, "high_availability": 235.52},
+        {"cloud": "AWS", "region": "EU Dublin", "standard": 129.55, "high_availability": 259.10},
+        {"cloud": "Azure", "region": "East US 2", "standard": 118.21, "high_availability": 236.42}
+      ]
+    }
+  },
+
+  "data_transfer": {
+    "aws": {
+      "description": "Table 4(a) - AWS Data Transfer ($/TB)",
+      "data": [
+        {"region": "US East (Northern Virginia)", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "US West (Oregon)", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "EU Dublin", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "EU Frankfurt", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "AP Sydney", "same_region": 0, "spcs_same_region": 3.07, "different_region": 140, "internet": 140},
+        {"region": "AP Singapore", "same_region": 0, "spcs_same_region": 3.07, "different_region": 90, "internet": 120}
+      ]
+    },
+    "azure": {
+      "description": "Table 4(b) - Azure Data Transfer ($/TB)",
+      "data": [
+        {"region": "East US 2", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "West US 2", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "UK South", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "West Europe", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50}
+      ]
+    },
+    "gcp": {
+      "description": "Table 4(c) - GCP Data Transfer ($/TB)",
+      "data": [
+        {"region": "US Central 1", "same_region": 0, "spcs_same_region": 6.22, "north_america": 20, "europe": 50, "asia": 80}
+      ]
+    }
+  },
+
+  "formulas": {
+    "warehouse_monthly_credits": "Credits/Hour × Hours/Day × Days/Month",
+    "warehouse_annual_credits": "Monthly Credits × 12",
+    "multi_cluster_credits": "Size × Hours × Days × Avg Clusters",
+    "annual_cost": "Annual Credits × $/Credit",
+    "storage_cost": "Compressed TB × $/TB/Month × 12",
+    "cortex_ai_cost": "(Total Tokens / 1,000,000) × Credits per Million Tokens"
+  },
+
+  "reference_values": {
+    "operating_days": {
+      "weekdays_only": 22,
+      "seven_day": 30,
+      "weekdays_annual": 264,
+      "seven_day_annual": 365
+    },
+    "compression_ratios": {
+      "csv_json_logs": "5-10x",
+      "structured_relational": "3-5x",
+      "semi_structured": "3-7x",
+      "already_compressed": "1-2x"
+    },
+    "warehouse_sizing_guidelines": {
+      "XS": "Dev/test, <10 users, simple queries",
+      "S": "Light BI (<20 users), simple transforms, <1TB daily",
+      "M": "Standard BI (20-50 users), moderate transforms",
+      "L": "Heavy transforms, complex queries, 50-100 users",
+      "XL": "Large-scale processing, ML training, 100+ users"
+    },
+    "multi_cluster_triggers": [
+      "Power BI DirectQuery with >15 concurrent users",
+      "Any BI tool with >30 concurrent users",
+      "SLA requires <30 second response times under load"
+    ]
+  }
+}
