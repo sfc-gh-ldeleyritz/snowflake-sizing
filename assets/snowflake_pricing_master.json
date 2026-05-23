@@ -393,18 +393,32 @@
       "data": [
         {"feature": "AI Parse Document - Layout", "rate": 3.33, "unit": "Credits per 1,000 pages"},
         {"feature": "AI Parse Document - OCR", "rate": 0.50, "unit": "Credits per 1,000 pages"},
+        {"feature": "Batch Cortex Search", "rate": 0.12, "unit": "Credits per GB/hr of indexed data", "preview": true},
         {"feature": "Cortex Analyst (API)", "rate": 67.00, "unit": "Credits per 1,000 messages"},
         {"feature": "Cortex Search", "rate": 6.30, "unit": "Credits per GB/mo indexed"},
         {"feature": "Document AI", "rate": 8.00, "unit": "Credits per hour"}
       ]
     },
     "fine_tuning": {
-      "description": "Table 6(g) - Fine-tuning (Credits per 1M Tokens) - Preview",
+      "description": "Table 6(f) - Fine-tuning (Credits per 1M tokens). Preview feature.",
+      "preview": true,
       "data": [
+        {"model": "arctic-extract-finetuned", "training": 0, "inference": 10, "feature": "AI_EXTRACT"},
         {"model": "llama3.1-70b", "training": 3.40, "inference": 2.42},
         {"model": "llama3.1-8b", "training": 0.64, "inference": 0.38},
         {"model": "mistral-7b", "training": 0.64, "inference": 0.24},
-        {"model": "mistral-8x7b", "training": 3.40, "inference": 0.44}
+        {"model": "mixtral-8x7b", "training": 3.40, "inference": 0.44}
+      ],
+      "legacy": [
+        {"model": "llama3-70b", "training": 3.40, "inference": 2.42},
+        {"model": "llama3-8b", "training": 0.64, "inference": 0.38}
+      ]
+    },
+    "provisioned_throughput": {
+      "description": "Table 6(h) - Provisioned Throughput (AI Credits per PTU per hour). Subject to minimum PTU quantities; see Documentation.",
+      "data": [
+        {"cloud": "AWS", "credits_per_ptu_per_hour": 0.08, "term_length_months": 1},
+        {"cloud": "Azure", "credits_per_ptu_per_hour": 0.10, "term_length_months": 1}
       ]
     },
     "rest_api_with_caching": {
