@@ -226,14 +226,24 @@
       {"feature": "Backup", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
       {"feature": "Data Quality Monitoring", "compute_multiplier": 2.00, "cloud_services_multiplier": 1.00},
       {"feature": "Table Optimization", "compute_multiplier": 0.75, "cloud_services_multiplier": 1.00},
-      {"feature": "Trust Center", "compute_multiplier": 1.00, "cloud_services_multiplier": 1.00}
+      {"feature": "Trust Center", "compute_multiplier": 1.00, "cloud_services_multiplier": 1.00},
+      {"feature": "Failsafe Recovery", "compute_multiplier": 0.90, "cloud_services_multiplier": 1.00},
+      {"feature": "Sensitive Data Classification", "compute_multiplier": 0.90, "cloud_services_multiplier": 1.00},
+      {"feature": "Storage Lifecycle Policy Execution", "compute_multiplier": 0.50, "cloud_services_multiplier": 1.00, "preview": true},
+      {"feature": "Logging", "compute_multiplier": 1.25, "cloud_services_multiplier": null, "note": "soon to be replaced by Telemetry Data Ingest"},
+      {"feature": "Snowpipe Streaming Classic", "compute_multiplier": 1.00, "cloud_services_multiplier": null},
+      {"feature": "Copy Files", "compute_multiplier": null, "cloud_services_multiplier": null, "preview": true, "note": "listed in PDF Table 5 with no rate"}
     ],
     "unit_charges": [
       {"feature": "Automated Refresh", "rate": 0.06, "unit": "Credits per 1000 files", "compute_multiplier": 1.25},
       {"feature": "Snowpipe", "rate": 0.0037, "unit": "Credits per GB"},
       {"feature": "Snowpipe Streaming", "rate": 0.0037, "unit": "Credits per uncompressed GB"},
       {"feature": "Telemetry Data Ingest", "rate": 0.0212, "unit": "Credits per GB"},
-      {"feature": "Open Catalog", "rate": 0.50, "unit": "Credits per 1M requests"}
+      {"feature": "Open Catalog", "rate": 0.50, "unit": "Credits per 1M requests"},
+      {"feature": "Archive Storage Retrieval File Processing", "rate": 0.05, "unit": "Credits per 1000 files", "preview": true},
+      {"feature": "Archive Storage Write", "rate": 0.05, "unit": "Credits per 1000 files", "preview": true},
+      {"feature": "Logging", "rate": 0.28, "unit": "Credits per 1000 file batches", "compute_multiplier": 1.25},
+      {"feature": "Snowpipe Streaming Classic", "rate": 0.01, "unit": "Credits per client instance per hour", "compute_multiplier": 1.00}
     ]
   },
 
@@ -1078,6 +1088,31 @@
       "Power BI DirectQuery with >15 concurrent users",
       "Any BI tool with >30 concurrent users",
       "SLA requires <30 second response times under load"
+    ]
+  },
+
+  "openflow_oracle": {
+    "description": "Table 7 - Openflow Connector for Oracle. Per licensed core per month.",
+    "data": [
+      {"component": "License", "rate_per_core_month": 70.00},
+      {"component": "Support & Maintenance", "rate_per_core_month": 40.00}
+    ]
+  },
+
+  "organization_usage": {
+    "description": "Table 8 - Organization Usage tiered credit pricing based on Records Powering Views per month",
+    "data": [
+      {"records_min": 0,            "records_max": 999999,        "credits": 0,    "label": "< 1 million"},
+      {"records_min": 1000000,      "records_max": 9999999,       "credits": 2,    "label": "1 million ≤ Records < 10 million"},
+      {"records_min": 10000000,     "records_max": 49999999,      "credits": 11,   "label": "10 million ≤ Records < 50 million"},
+      {"records_min": 50000000,     "records_max": 249999999,     "credits": 50,   "label": "50 million ≤ Records < 250 million"},
+      {"records_min": 250000000,    "records_max": 499999999,     "credits": 115,  "label": "250 million ≤ Records < 500 million"},
+      {"records_min": 500000000,    "records_max": 999999999,     "credits": 230,  "label": "500 million ≤ Records < 1 billion"},
+      {"records_min": 1000000000,   "records_max": 2499999999,    "credits": 290,  "label": "1 billion ≤ Records < 2.5 billion"},
+      {"records_min": 2500000000,   "records_max": 4999999999,    "credits": 575,  "label": "2.5 billion ≤ Records < 5 billion"},
+      {"records_min": 5000000000,   "records_max": 9999999999,    "credits": 1150, "label": "5 billion ≤ Records < 10 billion"},
+      {"records_min": 10000000000,  "records_max": 19999999999,   "credits": 2300, "label": "10 billion ≤ Records < 20 billion"},
+      {"records_min": 20000000000,  "records_max": null,          "credits": 3500, "label": "20 billion ≤ Records"}
     ]
   }
 }
