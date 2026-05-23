@@ -26,7 +26,7 @@ Derive from pricing data:
 
 - `credit_rate` — from `credit_pricing.data` matching cloud + region + edition
 - `ai_credit_rate` — from `ai_credit_pricing.on_demand.global` ($2.00 default)
-- `storage_rate_per_tb` — from `storage.on_demand` for the region
+- `storage_rate_per_tb` — from `storage.standard` for the region (use `row["on_demand"]` for the no-commit rate)
 
 Build initial `meta` object:
 
