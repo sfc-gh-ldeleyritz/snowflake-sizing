@@ -3,8 +3,10 @@
     "effective_date": "2026-05-12",
     "source": "Snowflake Service Consumption Table",
     "description": "Complete Snowflake Pricing Reference - All Components",
-    "version": "2.0",
-    "last_updated": "2026-05-22"
+    "version": "2.1",
+    "last_updated": "2026-05-23",
+    "source_pdf": "CreditConsumptionTable.pdf",
+    "regions_covered": 55
   },
 
   "credit_pricing": {
@@ -47,12 +49,24 @@
       {"cloud": "AWS", "region": "EU (Paris)",                 "standard": 2.60, "enterprise": 3.90, "business_critical": 5.20, "vps": 7.80},
       {"cloud": "AWS", "region": "Asia Pacific (Jakarta)",     "standard": 2.50, "enterprise": 3.70, "business_critical": 5.00, "vps": 7.50},
       {"cloud": "AWS", "region": "EU (Zurich)",                "standard": 3.10, "enterprise": 4.65, "business_critical": 6.20, "vps": 9.30},
+      {"cloud": "AWS", "region": "US Gov West 1",                      "standard": null, "enterprise": null, "business_critical": 5.60, "vps": 8.40},
+      {"cloud": "AWS", "region": "US Gov West 1 (Fedramp High Plus)",  "standard": null, "enterprise": null, "business_critical": 5.60, "vps": 8.40},
+      {"cloud": "AWS", "region": "US Gov East 1 (Fedramp High Plus)",  "standard": null, "enterprise": null, "business_critical": 5.60, "vps": 8.40},
+      {"cloud": "AWS", "region": "US Gov West 1 (DoD)",                "standard": null, "enterprise": null, "business_critical": 5.60, "vps": 8.40},
+      {"cloud": "AWS", "region": "US West (Commercial Gov - Oregon)",  "standard": null, "enterprise": null, "business_critical": 4.80, "vps": 7.20},
       {"cloud": "GCP", "region": "Middle East Central 2 (Dammam)", "standard": 3.25, "enterprise": 4.90, "business_critical": 6.50, "vps": 9.75},
       {"cloud": "GCP", "region": "Australia Southeast 2 (Melbourne)", "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
       {"cloud": "Azure", "region": "East US (Virginia)",       "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
       {"cloud": "Azure", "region": "Korea Central",            "standard": 2.75, "enterprise": 4.05, "business_critical": 5.50, "vps": 8.25},
       {"cloud": "Azure", "region": "Sweden Central",           "standard": 2.40, "enterprise": 3.60, "business_critical": 4.80, "vps": 7.20},
-      {"cloud": "Azure", "region": "Mexico Central",           "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00}
+      {"cloud": "Azure", "region": "Mexico Central",           "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "Switzerland North",                  "standard": 3.10, "enterprise": 4.65, "business_critical": 6.20, "vps": 9.30},
+      {"cloud": "Azure", "region": "US Gov Virginia",                    "standard": null, "enterprise": null, "business_critical": 5.60, "vps": 8.40},
+      {"cloud": "Azure", "region": "Central US (Iowa)",                  "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "South Central US (Texas)",           "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "UAE North (Dubai)",                  "standard": 2.70, "enterprise": 4.00, "business_critical": 5.40, "vps": 8.10},
+      {"cloud": "Azure", "region": "Central India (Pune)",               "standard": 2.00, "enterprise": 3.00, "business_critical": 4.00, "vps": 6.00},
+      {"cloud": "Azure", "region": "US Gov Virginia (Fed Ramp High Plus)","standard": null, "enterprise": null, "business_critical": 5.60, "vps": 8.40}
     ]
   },
 
