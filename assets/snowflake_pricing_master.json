@@ -775,27 +775,179 @@
     "aws": {
       "description": "Table 4(a) - AWS Data Transfer ($/TB)",
       "data": [
-        {"region": "US East (Northern Virginia)", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
-        {"region": "US West (Oregon)", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
-        {"region": "EU Dublin", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
-        {"region": "EU Frankfurt", "same_region": 0, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
-        {"region": "AP Sydney", "same_region": 0, "spcs_same_region": 3.07, "different_region": 140, "internet": 140},
-        {"region": "AP Singapore", "same_region": 0, "spcs_same_region": 3.07, "different_region": 90, "internet": 120}
+        {"region": "US East (Northern Virginia)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "US West (Oregon)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "EU Dublin", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "EU Frankfurt", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "AP Sydney", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 140, "internet": 140},
+        {"region": "AP Singapore", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 90, "internet": 120},
+        {"region": "Canada Central", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "US East 2 (Ohio)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "AP Northeast 1 (Tokyo)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 90, "internet": 114},
+        {"region": "AP Mumbai", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 60, "internet": 90},
+        {"region": "US East 1 Commercial Gov", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "Europe (London)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "Asia Pacific (Seoul)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 80, "internet": 126},
+        {"region": "US Gov West 1", "same_region": 0.00, "spcs_same_region": 7.17, "different_region": 30, "internet": 155},
+        {"region": "US Gov West 1 (Fedramp High Plus)", "same_region": 0.00, "spcs_same_region": 7.17, "different_region": 30, "internet": 155},
+        {"region": "Europe (Stockholm)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "Asia Pacific (Osaka)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 90, "internet": 114},
+        {"region": "South America East 1 (São Paulo)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 138, "internet": 150},
+        {"region": "EU (Paris)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "Asia Pacific (Jakarta)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 100, "internet": 132},
+        {"region": "US Gov East 1 (Fedramp High Plus)", "same_region": 0.00, "spcs_same_region": 7.17, "different_region": 30, "internet": 155},
+        {"region": "EU (Zurich)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "US Gov West 1 (DoD)", "same_region": 0.00, "spcs_same_region": 7.17, "different_region": 30, "internet": 155},
+        {"region": "US West (Commercial Gov - Oregon)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 20, "internet": 90},
+        {"region": "Africa (Cape Town)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 147, "internet": 154},
+        {"region": "Middle East (UAE)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 85, "internet": 110},
+        {"region": "Asia Pacific (Malaysia)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 80, "internet": 108},
+        {"region": "Asia Pacific (Thailand)", "same_region": 0.00, "spcs_same_region": 3.07, "different_region": 80, "internet": 108}
       ]
     },
     "azure": {
-      "description": "Table 4(b) - Azure Data Transfer ($/TB)",
+      "description": "Table 4(b) - Azure Data Transfer ($/TB). SPCS Same Region is always $0.00.",
       "data": [
-        {"region": "East US 2", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50},
-        {"region": "West US 2", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50},
-        {"region": "UK South", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50},
-        {"region": "West Europe", "same_region": 0, "same_continent": 20, "different_continent": 50, "internet": 87.50}
+        {"region": "East US 2 (Virginia)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "West US 2 (Washington)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "West Europe (Netherlands)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "Australia East (New South Wales)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 80, "different_continent": 80, "internet": 120},
+        {"region": "Canada Central (Toronto)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "Southeast Asia (Singapore)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 80, "different_continent": 80, "internet": 120},
+        {"region": "Switzerland North", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "US Gov Virginia", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "Central US (Iowa)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "North Europe (Ireland)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "Japan East (Tokyo)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 80, "different_continent": 80, "internet": 120},
+        {"region": "UAE North (Dubai)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 80, "different_continent": 80, "internet": 120},
+        {"region": "South Central US (Texas)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "Central India (Pune)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 40, "different_continent": 50, "internet": 87.50},
+        {"region": "UK South (London)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "US Gov Virginia (Fed Ramp High Plus)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.50},
+        {"region": "Mexico Central", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.00},
+        {"region": "Korea Central", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 80, "different_continent": 80, "internet": 120},
+        {"region": "Sweden Central", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.00},
+        {"region": "East US (Virginia)", "same_region": 0.00, "spcs_same_region": 0.00, "same_continent": 20, "different_continent": 50, "internet": 87.00}
       ]
     },
     "gcp": {
-      "description": "Table 4(c) - GCP Data Transfer ($/TB)",
+      "description": "Table 4(c) - GCP Data Transfer ($/TB). same_cloud destinations broken out by 8 geographies; different_cloud_or_internet broken out by 6 destination groups.",
       "data": [
-        {"region": "US Central 1", "same_region": 0, "spcs_same_region": 6.22, "north_america": 20, "europe": 50, "asia": 80}
+        {
+          "region": "US Central 1 (Iowa)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 20, "europe": 50, "asia": 80, "indonesia": 100, "middle_east": 110, "oceania": 100, "africa": 110, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 120, "europe": 120, "asia": 120, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 150, "china": 230}
+        },
+        {
+          "region": "US East 4 (N. Virginia)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 20, "europe": 50, "asia": 80, "indonesia": 100, "middle_east": 110, "oceania": 100, "africa": 110, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 120, "europe": 120, "asia": 120, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 150, "china": 230}
+        },
+        {
+          "region": "Europe West 4 (Netherlands)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 50, "europe": 20, "asia": 80, "indonesia": 100, "middle_east": 110, "oceania": 100, "africa": 110, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 120, "europe": 120, "asia": 120, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 150, "china": 230}
+        },
+        {
+          "region": "Europe West 2 (London)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 50, "europe": 20, "asia": 80, "indonesia": 100, "middle_east": 110, "oceania": 100, "africa": 110, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 120, "europe": 120, "asia": 120, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 150, "china": 230}
+        },
+        {
+          "region": "Europe West 3 (Frankfurt)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 50, "europe": 20, "asia": 80, "indonesia": 100, "middle_east": 110, "oceania": 100, "africa": 110, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 120, "europe": 120, "asia": 120, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 150, "china": 230}
+        },
+        {
+          "region": "Middle East Central 2 (Dammam)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 110, "europe": 110, "asia": 110, "indonesia": 110, "middle_east": 80, "oceania": 110, "africa": 110, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 190, "europe": 190, "asia": 190, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 190, "china": 230}
+        },
+        {
+          "region": "Australia Southeast 2 (Melbourne)",
+          "same_region": 0.00,
+          "spcs_same_region": 6.22,
+          "same_cloud": {"north_america": 100, "europe": 100, "asia": 100, "indonesia": 80, "middle_east": 110, "oceania": 80, "africa": 140, "south_america": 140},
+          "different_cloud_or_internet": {"north_america": 190, "europe": 190, "asia": 190, "australia_indonesia_korea_sa_saudi": 190, "middle_east_africa": 190, "china": 230}
+        }
+      ]
+    },
+    "specific_endpoints": {
+      "description": "Table 4(d) - Pricing for Specific Endpoint Types ($/TB processed)",
+      "data": [
+        {"endpoint_type": "AWS API Gateway, Private Endpoints", "rate_per_tb": 10.00}
+      ]
+    },
+    "privatelink": {
+      "description": "Table 4(e) - Outbound Privatelink Pricing. Endpoint fee per 1,000 hours plus tiered data processing per TB.",
+      "data": [
+        {"cloud": "AWS", "region": "US East (Northern Virginia)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US West (Oregon)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "EU Dublin", "endpoint_fee_per_1k_hours": 11.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "EU Frankfurt", "endpoint_fee_per_1k_hours": 12.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "AP Sydney", "endpoint_fee_per_1k_hours": 13.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "AP Singapore", "endpoint_fee_per_1k_hours": 13.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Canada Central", "endpoint_fee_per_1k_hours": 11.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US East 2 (Ohio)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "AP Northeast 1 (Tokyo)", "endpoint_fee_per_1k_hours": 14.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "AP Mumbai", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US East 1 Commercial Gov", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Europe (London)", "endpoint_fee_per_1k_hours": 11.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Asia Pacific (Seoul)", "endpoint_fee_per_1k_hours": 13.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US Gov West 1", "endpoint_fee_per_1k_hours": 12.50, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US Gov West 1 (Fedramp High Plus)", "endpoint_fee_per_1k_hours": 12.50, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Europe (Stockholm)", "endpoint_fee_per_1k_hours": 10.50, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Asia Pacific (Osaka)", "endpoint_fee_per_1k_hours": 14.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "South America East 1 (São Paulo)", "endpoint_fee_per_1k_hours": 21.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "EU (Paris)", "endpoint_fee_per_1k_hours": 11.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Asia Pacific (Jakarta)", "endpoint_fee_per_1k_hours": 13.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US Gov East 1 (Fedramp High Plus)", "endpoint_fee_per_1k_hours": 12.50, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "EU (Zurich)", "endpoint_fee_per_1k_hours": 13.20, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US Gov West 1 (DoD)", "endpoint_fee_per_1k_hours": 12.50, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "US West (Commercial Gov - Oregon)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Africa (Cape Town)", "endpoint_fee_per_1k_hours": 13.09, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Middle East (UAE)", "endpoint_fee_per_1k_hours": 12.10, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Asia Pacific (Malaysia)", "endpoint_fee_per_1k_hours": 11.70, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "AWS", "region": "Asia Pacific (Thailand)", "endpoint_fee_per_1k_hours": 11.70, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "East US 2 (Virginia)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "West US 2 (Washington)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "West Europe (Netherlands)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Australia East (New South Wales)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Canada Central (Toronto)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Southeast Asia (Singapore)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Switzerland North", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "US Gov Virginia", "endpoint_fee_per_1k_hours": 13.00, "data_first_1pb_per_tb": 12.80, "data_next_4pb_per_tb": 12.80, "data_over_5pb_per_tb": 12.80},
+        {"cloud": "Azure", "region": "Central US (Iowa)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "North Europe (Ireland)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Japan East (Tokyo)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "UAE North (Dubai)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "South Central US (Texas)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Central India (Pune)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "UK South (London)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "US Gov Virginia (Fed Ramp High Plus)", "endpoint_fee_per_1k_hours": 13.00, "data_first_1pb_per_tb": 12.80, "data_next_4pb_per_tb": 12.80, "data_over_5pb_per_tb": 12.80},
+        {"cloud": "Azure", "region": "Mexico Central", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Korea Central", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "Sweden Central", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "Azure", "region": "East US (Virginia)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 10.24, "data_next_4pb_per_tb": 6.14, "data_over_5pb_per_tb": 4.09},
+        {"cloud": "GCP", "region": "US Central 1 (Iowa)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57},
+        {"cloud": "GCP", "region": "US East 4 (N. Virginia)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57},
+        {"cloud": "GCP", "region": "Europe West 4 (Netherlands)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57},
+        {"cloud": "GCP", "region": "Europe West 2 (London)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57},
+        {"cloud": "GCP", "region": "Europe West 3 (Frankfurt)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57},
+        {"cloud": "GCP", "region": "Middle East Central 2 (Dammam)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57},
+        {"cloud": "GCP", "region": "Australia Southeast 2 (Melbourne)", "endpoint_fee_per_1k_hours": 10.00, "data_first_1pb_per_tb": 30.72, "data_next_4pb_per_tb": 26.62, "data_over_5pb_per_tb": 24.57}
       ]
     }
   },
