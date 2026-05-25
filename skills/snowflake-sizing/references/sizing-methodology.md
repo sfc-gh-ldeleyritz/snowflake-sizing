@@ -200,9 +200,22 @@ Used for Cortex Code, Snowflake Intelligence agentic features.
 ### Document AI
 8 credits per hour of compute
 
-### Cortex Code (Snowflake Intelligence billing)
-Estimate: `developers × queries/day × avg_tokens_per_query / 1,000,000 × intelligence_rate × working_days`
-Default: 20 queries/dev/day, 2,000 tokens/query = 0.04M tokens/dev/day
+### Cortex Code (per-surface billing)
+
+Cortex Code bills at the Table 6(e) rate (~$2.51/M tokens blended) regardless of surface, but per-developer usage differs significantly by surface. Estimate each surface independently and sum:
+
+```
+surface_credits/mo = developers × queries/dev/day × tokens/query / 1,000,000 × 22 × 2.51
+total = sum(cli, snowsight, desktop)
+```
+
+| Surface | Typical queries/dev/day | Typical tokens/query | Notes |
+|---|---|---|---|
+| CLI | 5–20 | 800–1,500 | Power users in terminal; lightweight prompts. |
+| Snowsight | 10–40 | 1,000–1,800 | SQL assist inside worksheets; medium per-dev usage. |
+| Cortex Code Desktop | 30–80 | 1,200–2,500 | IDE assistant with inline suggestions + chat; heaviest per-dev usage. |
+
+Default if surface is uncertain: enable CLI only at 20 queries/dev/day × 1,200 tokens/query (conservative). Flag the other two surfaces in `confirm_required` so the SE can validate with the customer.
 
 ---
 

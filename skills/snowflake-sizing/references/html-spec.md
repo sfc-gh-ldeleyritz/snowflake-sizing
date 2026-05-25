@@ -304,6 +304,8 @@ Each column shows: Year 1 / Year 2 / Year 3 / TCV. The "Expected" column is high
 
 Each column has editable growth % and ramp selector so the SE can customise.
 
+**Scenario toggle.** Above the grid: `<input type="checkbox" id="show-low-high" checked>` labeled *Show Conservative & Aggressive scenarios*. When unchecked, `updateScenarios()` filters the array to the Expected card only and adds the `only-expected` class to `.scenario-grid` (`grid-template-columns: minmax(0, 480px); justify-content: center;`) so the lone card doesn't stretch full-width. Hidden in print (`@media print` rule on `.scenario-toggle`).
+
 #### Scenario Calculation
 
 Each scenario computes its own year-by-year totals using `recalculate()` logic with overridden growth and ramp:
@@ -369,17 +371,26 @@ Each scenario card must have:
 Two sections rendered from `SIZING_SPEC.assumptions` and `SIZING_SPEC.confirm_required`:
 
 ```html
-<div class="assumptions-section">
+<div class="section">
   <h3>Stated Assumptions</h3>
-  <ul id="assumptions-list"><!-- rendered from SIZING_SPEC.assumptions --></ul>
-</div>
-<div class="confirm-section">
-  <h3>⚠️ Requires Customer Confirmation</h3>
-  <ul id="confirm-list"><!-- rendered from SIZING_SPEC.confirm_required --></ul>
+  <ul class="assumptions-list" id="assumptions-list"><!-- rendered by renderAssumptions() --></ul>
+  <button class="add-item-btn" onclick="addAssumption()">+ Add Assumption</button>
+  <h3 style="margin-top: 24px;">⚠️ Requires Customer Confirmation</h3>
+  <ul class="confirm-list" id="confirm-list"><!-- rendered by renderAssumptions() --></ul>
+  <button class="add-item-btn" onclick="addConfirmItem()">+ Add Item</button>
 </div>
 ```
 
-Each `confirm_required` item renders with an orange warning badge and the quantified impact.
+**Editable items.** Both lists are fully editable in the browser:
+
+- `assumptions` items: each `<li>` carries `contenteditable="true"`. An `oninput` handler writes back to `SIZING_SPEC.assumptions[i]` on every keystroke.
+- `confirm_required` items: the item text is a `<span contenteditable="true">` inside the `<li>` (the `<li>` itself also holds the non-editable CONFIRM badge). An `oninput` handler calls `updateConfirmItem(i, text)`.
+- A `✕` delete button (`.item-delete-btn`) appears on hover for each item; it calls `removeAssumption(i)` or `removeConfirmItem(i)` which splices the array and re-renders.
+- `+ Add Assumption` / `+ Add Item` buttons (`.add-item-btn`) push a placeholder entry, re-render, and focus + select the new item.
+- All edit controls (`.item-delete-btn`, `.add-item-btn`) are `display: none !important` in `@media print`.
+- `saveSnapshot()` requires no changes — it serialises the full `SIZING_SPEC`, so all edits are preserved automatically on the next save.
+
+JS mutation helpers (defined immediately after `renderAssumptions()`): `removeAssumption(i)`, `addAssumption()`, `updateConfirmItem(i, text)`, `removeConfirmItem(i)`, `addConfirmItem()`, `_selectAll(el)`.
 
 ### 8. Footer
 
@@ -411,9 +422,9 @@ A floating `<button class="print-btn">Print / Save as PDF</button>` is rendered 
 
 ### `@media print` rules (essentials)
 
-- `@page { size: A4 portrait; margin: 12mm; }`
+- `@page { size: A4 portrait; margin: 15mm; }` — generous margin so any browser-injected date/title/URL bars land in the unprintable margin instead of overlapping content.
 - `body` set to `print-color-adjust: exact` so the navy header background and badge colours render in the PDF.
-- `.tab-nav`, `.print-btn`, `.add-btn`, `.add-btn-group`, `.delete-btn` are all `display: none !important`.
+- `.tab-nav`, `.print-btn`, `.save-btn`, `.print-help`, `.add-btn`, `.add-btn-group`, `.delete-btn`, `.scenario-toggle`, `.info-icon`, `#tt-tip` are all `display: none !important`.
 - `.tab-content { display: block !important; }` — every tab is shown in flow. `.tab-content + .tab-content { page-break-before: always; }` puts each tab on its own page.
 - Each `.tab-content` carries a `data-print-title` attribute (e.g. `"Warehouses"`, `"Snowpark Container Services (SPCS)"`); a `::before` rule renders that title as a section heading in print mode only.
 - `input[type="range"] { display: none; }` — sliders disappear; the inline value `<span>`s next to each slider remain visible.
@@ -422,6 +433,10 @@ A floating `<button class="print-btn">Print / Save as PDF</button>` is rendered 
 - `.workload-card`, `.scenario-card`, `.section` use `page-break-inside: avoid` to prevent splits.
 - `.chart-row { grid-template-columns: 1fr; }` and `.chart-container { height: 240px; }` so charts reflow to a single-column layout.
 
+### Browser-injected headers/footers
+
+Chrome and other browsers add their own date+title bar at the top and `file://` URL footer at the bottom of every printed page. **CSS cannot suppress these** — only the user can disable them via *Print dialog → More settings → Headers and footers*. The proposal exposes a small `<span class="print-help" data-tt="print_help">ⓘ</span>` next to the Print button whose tooltip explains exactly that workaround. Don't attempt server-side PDF rendering from this skill.
+
 ### Chart canvas reflow
 
 Chart.js canvases keep their on-screen pixel dimensions across the media query change unless explicitly resized. The template wires three handlers — `beforeprint`, `afterprint`, and a `matchMedia('print').change` listener — that all call `chartStacked.resize()` and `chartDonut.resize()` to force a layout pass at the new container width.
@@ -429,6 +444,75 @@ Chart.js canvases keep their on-screen pixel dimensions across the media query c
 ### What appears in the PDF
 
 Per project direction, the printed PDF contains the full proposal: header, KPI tiles, year-by-year chart and table, every configuration tab (warehouses / serverless / AI / SPCS / OpenFlow / storage / collaboration / global), scenarios, assumptions, and confirm-required items. Sliders and buttons are hidden; their values stay inline.
+
+---
+
+## Per-feature Tooltips
+
+Every togglable feature label renders with a small info icon `<span class="info-icon" data-tt="<key>" tabindex="0">ⓘ</span>` (Unicode U+24D8). The shared dispatcher attaches `mouseover` / `focusin` listeners on `document` and looks up the body string in a hardcoded `FEATURE_TOOLTIPS` dictionary at the top of `<script>`.
+
+```js
+const FEATURE_TOOLTIPS = {
+  print_help:  "For a clean PDF: ...",
+  snowpipe:    'Continuous file ingestion service. Billed per GB ingested ...',
+  cortex_complete: 'LLM completions API. Billed per million input/output tokens by model.',
+  cortex_code_cli:       'Cortex Code via Snowflake CLI. ...',
+  cortex_code_snowsight: 'Cortex Code surfaced inside Snowsight ...',
+  cortex_code_desktop:   'Cortex Code Desktop IDE assistant ...',
+  // ~30 more entries covering every togglable feature
+};
+```
+
+A reusable inline helper `tt(key)` returns the icon HTML. Populators call it next to every feature label, e.g. `<span class="feature-name">Snowpipe</span>${tt('snowpipe')}`.
+
+The tooltip element is a single `<div id="tt-tip">` lazily created on first show. Positioning logic measures the element's `getBoundingClientRect()` and the viewport, places the tooltip above the icon if there's room, or below otherwise; horizontal position is clamped to a minimum 8px viewport gutter. A small triangle is positioned via `[data-pos="above"|"below"]::after`.
+
+The tooltip is hidden by `mouseout`, `focusout`, `Escape`, and is `display: none` in print.
+
+## Group-header rows with units
+
+Every config-tab populator prepends a `.group-header` row above the first card, formatted `[Feature label | Configuration | <unit>]` so SEs can read the live monthly total at a glance:
+
+| Tab | Unit |
+|---|---|
+| Warehouses | `cr/mo` |
+| Serverless | `cr/mo` |
+| AI / Cortex | `AI cr/mo` |
+| SPCS | `cr/mo` |
+| OpenFlow | `cr/mo` |
+| Storage | `$/mo` |
+| Collaboration | `cr/mo` |
+
+A reusable helper `groupHeaderRow(featureLabel, configLabel, unit, totalElId)` returns the HTML; the right cell is `<span id="<totalElId>">0</span> <unit>`. Each panel uses an id like `gh-total-workloads`, `gh-total-serverless`, etc. `recalculate()` calls `updateGroupHeaderTotals()` which re-computes the per-panel monthly figure (workloads = sum of `whMonthlyCredits`; serverless = `calcServerlessCredits()`; AI = `calcAICredits()`; SPCS = `calcSPCSCost()`; OpenFlow = sum of `connections * vcpu * hours * 0.0225`; storage = `storageForYear(1) * storage_rate`; collaboration = `calcCollabCost()`) and writes to each id.
+
+CSS: `.group-header { display: grid; grid-template-columns: 1.5fr 2fr auto; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--gray-600); background: var(--gray-100); border-bottom: 1px solid var(--sf-divider); }`. The unit cell uses navy bold for the live number.
+
+## Save Version button
+
+Next to the Print button: `<button class="save-btn" onclick="saveSnapshot()">Save Version</button>`. Hidden in print.
+
+`saveSnapshot()`:
+
+1. Reads `SIZING_SPEC.meta.version_number` (initialised to `1` by SKILL.md Phase 4) and increments by 1.
+2. Reads `'<!DOCTYPE html>\n' + document.documentElement.outerHTML`.
+3. Replaces the sentinel-wrapped block:
+
+   ```html
+   <script>
+   const PRICING_DATA = ...;
+   /* __SIZING_SPEC_BEGIN__ */
+   const SIZING_SPEC = ...;
+   /* __SIZING_SPEC_END__ */
+   ...
+   ```
+
+   with a fresh `JSON.stringify(SIZING_SPEC)` snapshot reflecting all current edits. The sentinel comments are emitted by the template; saved files re-emit them so successive saves work.
+
+4. Builds filename `<slug>-<contract_years>year-sizing-v<version_number>-<YYYY-MM-DD>.html` and triggers a browser download via Blob URL.
+
+The serialisation only replaces `SIZING_SPEC` because all UI state and calculation output is derived from it. PRICING_DATA is unchanged. The brand-fonts CSS, Chart.js script tag, and template scaffold are inherited from the live DOM verbatim.
+
+If the saved file is opened in a browser and the SE saves again, the auto-incrementing version number continues from the embedded value (v3 → v4 → v5).
 
 ---
 
@@ -584,10 +668,15 @@ function calcAICredits() {
   if (ai.snowflake_intelligence.enabled)
     total += (ai.snowflake_intelligence.monthly_input_tokens_M  * 2.51 +
               ai.snowflake_intelligence.monthly_output_tokens_M * 12.55);
-  if (ai.cortex_code.enabled) {
-    const tokensM = ai.cortex_code.developers * ai.cortex_code.queries_per_dev_per_day *
-                    ai.cortex_code.avg_tokens_per_query / 1_000_000 * 22;
-    total += tokensM * 2.51; // via Snowflake Intelligence
+  if (ai.cortex_code) {
+    ['cli', 'snowsight', 'desktop'].forEach(surface => {
+      const cc = ai.cortex_code[surface];
+      if (cc && cc.enabled) {
+        const tokensM = cc.developers * cc.queries_per_dev_per_day *
+                        cc.avg_tokens_per_query / 1_000_000 * 22;
+        total += tokensM * 2.51; // Table 6(e) blended rate; same per-token rate across all 3 surfaces
+      }
+    });
   }
   if (ai.cortex_analyst.enabled)
     total += ai.cortex_analyst.monthly_messages / 1000 * 67;

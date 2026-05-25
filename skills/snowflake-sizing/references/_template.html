@@ -199,6 +199,97 @@ body {
 }
 .print-btn:hover { background: var(--sf-navy-deep); }
 
+.save-btn {
+  position: fixed;
+  top: 16px;
+  right: 178px;
+  z-index: 1000;
+  padding: 8px 14px;
+  background: white;
+  color: var(--sf-navy);
+  border: 1px solid var(--sf-navy);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+.save-btn:hover { background: var(--sf-navy); color: white; }
+
+
+.scenario-toggle {
+  margin: 4px 0 12px 0;
+  font-size: 13px;
+  color: var(--gray-700);
+}
+.scenario-toggle label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.scenario-grid.only-expected {
+  grid-template-columns: minmax(0, 480px);
+  justify-content: center;
+}
+
+/* Info-icon + custom tooltip */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--sf-navy);
+  background: var(--gray-200);
+  cursor: help;
+  user-select: none;
+  vertical-align: middle;
+}
+.info-icon:hover, .info-icon:focus { background: var(--sf-blue-light); outline: none; }
+#tt-tip {
+  position: fixed;
+  z-index: 2000;
+  max-width: 320px;
+  padding: 8px 12px;
+  background: var(--sf-navy-deep);
+  color: white;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+#tt-tip.visible { opacity: 1; }
+#tt-tip::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+#tt-tip[data-pos="above"]::after { top: 100%; left: 50%; margin-left: -6px; border-top-color: var(--sf-navy-deep); }
+#tt-tip[data-pos="below"]::after { bottom: 100%; left: 50%; margin-left: -6px; border-bottom-color: var(--sf-navy-deep); }
+
+/* Group-header rows above tab content */
+.group-header {
+  display: grid;
+  grid-template-columns: 1.5fr 2fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gray-600);
+  background: var(--gray-100, #f7f9fb);
+  border-bottom: 1px solid var(--sf-divider, #e2e8ee);
+}
+.group-header .gh-unit { text-align: right; color: var(--sf-navy); font-weight: 700; }
+
 /* Serverless rows */
 .serverless-row {
   display: grid;
@@ -247,6 +338,26 @@ body {
   font-weight: 700;
   margin-right: 8px;
 }
+.assumptions-list li[contenteditable] {
+  outline: none; border-radius: 4px; padding: 4px 6px; cursor: text; list-style-position: inside;
+}
+.assumptions-list li[contenteditable]:hover { background: var(--gray-100); }
+.assumptions-list li[contenteditable]:focus { background: #fff; box-shadow: 0 0 0 2px var(--sf-blue); }
+.confirm-list li span[contenteditable] {
+  outline: none; border-radius: 4px; padding: 2px 4px; cursor: text;
+}
+.confirm-list li span[contenteditable]:hover { background: var(--gray-100); }
+.confirm-list li span[contenteditable]:focus { background: #fff; box-shadow: 0 0 0 2px var(--sf-blue); }
+.item-delete-btn {
+  display: none; background: none; border: none; color: var(--gray-600);
+  cursor: pointer; font-size: 13px; padding: 0 4px; margin-left: 4px; vertical-align: middle;
+}
+li:hover .item-delete-btn { display: inline; }
+.add-item-btn {
+  margin-top: 8px; background: none; border: 1px dashed var(--sf-divider);
+  color: var(--sf-navy); border-radius: 4px; padding: 4px 14px; font-size: 12px; cursor: pointer;
+}
+.add-item-btn:hover { background: var(--gray-100); }
 
 /* Footer */
 .footer { padding: 24px; text-align: center; color: var(--gray-600); font-size: 12px; line-height: 1.5; }
@@ -259,11 +370,24 @@ body {
 /* AI Cortex */
 .ai-section { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--gray-200); }
 .ai-section h4 { margin: 0 0 8px 0; color: var(--sf-navy); font-size: 14px; }
-.ai-row { display: grid; grid-template-columns: 2fr 1fr 1fr 100px; gap: 8px; align-items: center; padding: 6px 0; font-size: 13px; }
+.ai-row { display: grid; grid-template-columns: 2fr 1.1fr 1.4fr 1.4fr; gap: 8px; align-items: center; padding: 6px 0; font-size: 13px; }
+.input-with-unit { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.input-with-unit input[type="number"] { flex: 1; min-width: 0; width: 100%; }
+.unit-chip {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-600);
+  background: var(--gray-100, #f1f4f8);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
 
 /* Print / PDF layout */
 @media print {
-  @page { size: A4 portrait; margin: 12mm; }
+  @page { size: A4 portrait; margin: 15mm; }
   body { background: white; font-size: 10.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   .container { max-width: 100%; padding: 0; }
   .section { box-shadow: none; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; padding: 16px; }
@@ -273,7 +397,9 @@ body {
   .kpi-grid { gap: 8px; }
   .kpi-tile { box-shadow: none; padding: 14px; border: 1px solid var(--gray-200); }
   .kpi-value { font-size: 20px; }
-  .tab-nav, .print-btn, .add-btn, .add-btn-group, .delete-btn { display: none !important; }
+  .tab-nav, .print-btn, .save-btn, .print-help, .add-btn, .add-btn-group, .delete-btn,
+  .scenario-toggle, .info-icon, #tt-tip, .item-delete-btn, .add-item-btn { display: none !important; }
+  li[contenteditable], span[contenteditable] { box-shadow: none !important; background: none !important; cursor: default !important; }
   .tab-content { display: block !important; page-break-before: auto; margin-top: 12px; }
   .tab-content + .tab-content { page-break-before: always; }
   .tab-content::before {
@@ -310,6 +436,7 @@ body {
 </head>
 <body>
 <button class="print-btn" onclick="window.print()" title="Print or Save as PDF">Print / Save as PDF</button>
+<button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save Version</button>
 <div class="container">
 
 <!-- 1. Header -->
@@ -413,7 +540,6 @@ body {
   </div>
 
   <div class="tab-content" id="tab-ai" data-print-title="AI / Cortex">
-    <p style="color: var(--gray-600); font-style: italic; margin-bottom: 16px;">No AI/Cortex features enabled in current scope. Enable specific functions below to model future expansion.</p>
     <div id="ai-container"></div>
   </div>
 
@@ -447,6 +573,10 @@ body {
 <!-- 5. Scenarios -->
 <div class="section">
   <h2>Scenario Comparison</h2>
+  <div class="scenario-toggle">
+    <label><input type="checkbox" id="show-low-high" checked onchange="updateScenarios()">
+      Show Conservative &amp; Aggressive scenarios</label>
+  </div>
   <div class="scenario-grid" id="scenarios"></div>
 </div>
 
@@ -454,8 +584,10 @@ body {
 <div class="section">
   <h3>Stated Assumptions</h3>
   <ul class="assumptions-list" id="assumptions-list"></ul>
-  <h3 style="margin-top: 24px;">Requires Customer Confirmation</h3>
+  <button class="add-item-btn" onclick="addAssumption()">+ Add Assumption</button>
+  <h3 style="margin-top: 24px;">⚠️ Requires Customer Confirmation</h3>
   <ul class="confirm-list" id="confirm-list"></ul>
+  <button class="add-item-btn" onclick="addConfirmItem()">+ Add Item</button>
 </div>
 
 <div class="footer">
@@ -506,10 +638,137 @@ fill="#29B5E8" stroke="none">
 
 <script>
 const PRICING_DATA = __PRICING_DATA__;
+/* __SIZING_SPEC_BEGIN__ */
 const SIZING_SPEC = __SIZING_SPEC__;
+/* __SIZING_SPEC_END__ */
 const SF_CHART_PALETTE = ['#11567F', '#1B7BAE', '#29B5E8', '#76D0F1', '#A0BBCC'];
 
 const WH_CREDITS = { XS:1, S:2, M:4, L:8, XL:16, '2XL':32, '3XL':64, '4XL':128 };
+
+// ========== Per-feature tooltips ==========
+// Hover or focus an .info-icon[data-tt="key"] to display these strings.
+const FEATURE_TOOLTIPS = {
+  // Serverless features (Tables 4 / 5)
+  snowpipe: 'Continuous file ingestion service. Billed per GB ingested at the standard Snowpipe rate.',
+  snowpipe_streaming: 'Row-set streaming ingestion via the Snowpipe Streaming API. Billed by uncompressed GB written.',
+  snowpipe_streaming_classic: 'Legacy Snowpipe Streaming SDK. Billed per client instance per hour.',
+  serverless_tasks: 'Snowflake-managed scheduled task compute, billed per compute-hour at a serverless multiplier.',
+  serverless_tasks_flex: 'Flex variant of Serverless Tasks (lower-cost, time-elastic).',
+  serverless_alerts: 'Serverless compute that fires SQL alerts on schedule.',
+  clustered_tables: 'Auto-clustering background service. Billed per compute-hour spent re-clustering.',
+  materialized_views: 'Background refresh compute for materialized views.',
+  search_optimization: 'Background indexing service that accelerates point lookups on large tables.',
+  query_acceleration: 'Serverless boost compute for query acceleration service (QAS).',
+  replication: 'Cross-region or cross-account replication background compute.',
+  backup: 'Backup retention service compute (where applicable).',
+  failsafe_recovery: 'Failsafe recovery operations (rare; charged when recovery is invoked).',
+  data_quality_monitoring: 'Data Metric Function (DMF) execution.',
+  trust_center: 'Trust Center scheduled scan compute.',
+  table_optimization: 'Background table optimization (compaction, etc).',
+  storage_lifecycle_policy: 'Lifecycle-policy execution compute (cold-tier archival).',
+  copy_files: 'Server-managed COPY operations (e.g. copy to/from external stage).',
+  automated_refresh: 'Automated refresh of dynamic tables / external tables. Billed per files refreshed.',
+  organization_usage: 'Organization Usage views compute (cross-account aggregations).',
+  sensitive_data_classification: 'Background scan that auto-tags PII / sensitive columns.',
+  open_catalog: 'Apache Polaris (Open Catalog) API. Billed per million REST requests.',
+  logging: 'Server logging pipeline. Billed per file batch processed.',
+  telemetry_data_ingest: 'Telemetry / observability pipeline ingest. Billed per GB ingested.',
+  archive_storage_retrieval: 'Cold-tier retrieval read operations.',
+  archive_storage_write: 'Cold-tier write operations.',
+  hybrid_tables_requests: 'Hybrid Tables read traffic. Billed per GB read.',
+
+  // AI / Cortex
+  cortex_complete: 'LLM completions API. Billed per million input/output tokens by model.',
+  cortex_agents: 'Multi-step agent runtime that combines retrieval, tool-calling, and Cortex Complete.',
+  snowflake_intelligence: 'Snowflake Intelligence assistant. Combined input/output token billing.',
+  cortex_code_cli: 'Cortex Code via Snowflake CLI. Lightweight per-query token usage; sized for power users in terminals.',
+  cortex_code_snowsight: 'Cortex Code surfaced inside Snowsight (e.g. SQL assist in a worksheet). Medium per-dev usage.',
+  cortex_code_desktop: 'Cortex Code Desktop IDE assistant. Heavier per-dev usage from inline suggestions and chat.',
+  cortex_analyst: 'Cortex Analyst (NL-to-SQL on semantic model). Billed per 1k messages.',
+  cortex_search: 'Cortex Search (managed retrieval / RAG index). Billed per indexed GB-month.',
+  document_ai: 'Document AI document layout extraction. Billed per compute hour.',
+  ai_classify: 'AI_CLASSIFY function. Billed per million tokens.',
+  ai_sentiment: 'AI_SENTIMENT function. Billed per million tokens.',
+  ai_summarize: 'AI_SUMMARIZE function. Billed per million tokens.',
+  ai_translate: 'AI_TRANSLATE function. Billed per million tokens.',
+  ai_extract: 'AI_EXTRACT function. Billed per million tokens.',
+  ai_transcribe: 'AI_TRANSCRIBE function. Billed per million tokens.',
+  embeddings: 'EMBED_TEXT and related embedding functions. Billed per million tokens.',
+
+  // SPCS / OpenFlow / Collaboration
+  spcs: 'Snowpark Container Services. Billed per instance-hour, by generation and instance family.',
+  openflow: 'Snowflake OpenFlow connector runtime. Billed per source-connection vCPU-hour ($0.0225/vCPU-hr).',
+  collab_reader: 'Reader account: read-only consumer account on the provider warehouse.',
+  collab_managed: 'Managed account: writable consumer account billed via the provider warehouse compute model.',
+};
+
+let _ttEl = null;
+function _getTooltipEl() {
+  if (!_ttEl) {
+    _ttEl = document.createElement('div');
+    _ttEl.id = 'tt-tip';
+    _ttEl.setAttribute('role', 'tooltip');
+    document.body.appendChild(_ttEl);
+  }
+  return _ttEl;
+}
+function showTooltip(target, key) {
+  const text = FEATURE_TOOLTIPS[key];
+  if (!text) return;
+  const tip = _getTooltipEl();
+  tip.textContent = text;
+  tip.classList.add('visible');
+  // measure after content + visibility
+  const tipRect = tip.getBoundingClientRect();
+  const r = target.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const margin = 8;
+  // Prefer above; if there isn't room, place below.
+  let top = r.top - tipRect.height - 10;
+  let pos = 'above';
+  if (top < margin) { top = r.bottom + 10; pos = 'below'; }
+  if (top + tipRect.height > vh - margin) top = vh - tipRect.height - margin;
+  let left = r.left + (r.width / 2) - (tipRect.width / 2);
+  left = Math.max(margin, Math.min(left, vw - tipRect.width - margin));
+  tip.style.top = top + 'px';
+  tip.style.left = left + 'px';
+  tip.setAttribute('data-pos', pos);
+}
+function hideTooltip() {
+  if (_ttEl) { _ttEl.classList.remove('visible'); _ttEl.removeAttribute('data-pos'); }
+}
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('.info-icon');
+  if (el) showTooltip(el, el.getAttribute('data-tt'));
+});
+document.addEventListener('mouseout', e => {
+  if (e.target.closest('.info-icon')) hideTooltip();
+});
+document.addEventListener('focusin', e => {
+  const el = e.target.closest('.info-icon');
+  if (el) showTooltip(el, el.getAttribute('data-tt'));
+});
+document.addEventListener('focusout', e => {
+  if (e.target.closest('.info-icon')) hideTooltip();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTooltip(); });
+function tt(key) { return '<span class="info-icon" data-tt="' + key + '" tabindex="0" aria-label="More info">&#9432;</span>'; }
+
+function groupHeaderRow(featureLabel, configLabel, crTotalId, dollarTotalId) {
+  const crCell = crTotalId
+    ? '<span class="gh-unit"><span id="' + crTotalId + '">0</span> cr/mo</span>'
+    : '<span></span>';
+  const dollarCell = dollarTotalId
+    ? '<span class="gh-unit">$<span id="' + dollarTotalId + '">0</span>/mo</span>'
+    : '<span></span>';
+  return '<div class="group-header">' +
+    '<span>' + featureLabel + '</span>' +
+    '<span>' + configLabel + '</span>' +
+    crCell +
+    dollarCell +
+    '</div>';
+}
 
 let chartStacked = null;
 let chartDonut = null;
@@ -563,6 +822,23 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
       if (!inst.id || seen.has(inst.id)) inst.id = nextId('sp');
       seen.add(inst.id);
     });
+  }
+
+  // Cortex Code: migrate legacy single-object shape to {cli, snowsight, desktop}.
+  // Legacy values land on `cli` (preserves existing dossiers and the committed example).
+  if (SIZING_SPEC.ai_cortex && SIZING_SPEC.ai_cortex.cortex_code) {
+    const cc = SIZING_SPEC.ai_cortex.cortex_code;
+    if (!('cli' in cc) && !('snowsight' in cc) && !('desktop' in cc)) {
+      const legacyEnabled = !!cc.enabled;
+      const legacyDevs    = cc.developers || 0;
+      const legacyQpd     = cc.queries_per_dev_per_day || 0;
+      const legacyTokens  = cc.avg_tokens_per_query || 0;
+      SIZING_SPEC.ai_cortex.cortex_code = {
+        cli:       { enabled: legacyEnabled, developers: legacyDevs, queries_per_dev_per_day: legacyQpd, avg_tokens_per_query: legacyTokens },
+        snowsight: { enabled: false,         developers: 0,          queries_per_dev_per_day: 0,         avg_tokens_per_query: legacyTokens || 1200 },
+        desktop:   { enabled: false,         developers: 0,          queries_per_dev_per_day: 0,         avg_tokens_per_query: legacyTokens || 1500 },
+      };
+    }
   }
 })();
 
@@ -638,10 +914,15 @@ function calcAICredits() {
   if (ai.snowflake_intelligence && ai.snowflake_intelligence.enabled)
     total += ((ai.snowflake_intelligence.monthly_input_tokens_M || 0) * 2.51 +
               (ai.snowflake_intelligence.monthly_output_tokens_M || 0) * 12.55);
-  if (ai.cortex_code && ai.cortex_code.enabled) {
-    const tokensM = (ai.cortex_code.developers || 0) * (ai.cortex_code.queries_per_dev_per_day || 0) *
-                    (ai.cortex_code.avg_tokens_per_query || 0) / 1000000 * 22;
-    total += tokensM * 2.51;
+  if (ai.cortex_code) {
+    ['cli', 'snowsight', 'desktop'].forEach(surface => {
+      const cc = ai.cortex_code[surface];
+      if (cc && cc.enabled) {
+        const tokensM = (cc.developers || 0) * (cc.queries_per_dev_per_day || 0) *
+                        (cc.avg_tokens_per_query || 0) / 1000000 * 22;
+        total += tokensM * 2.51;
+      }
+    });
   }
   if (ai.cortex_analyst && ai.cortex_analyst.enabled)
     total += (ai.cortex_analyst.monthly_messages || 0) / 1000 * 67;
@@ -709,7 +990,7 @@ function calcCollabCost() {
 
 function calcOpenflowCost(cr, ramp) {
   const of = SIZING_SPEC.openflow;
-  if (!of || !of.enabled || !Array.isArray(of.instances)) return 0;
+  if (!of || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
   return of.instances.reduce((sum, inst) => {
     return sum + (inst.source_connections || 0) * (inst.vcpu_per_connection || 0) *
                  (inst.hours_monthly || 0) * 0.0225 * cr * 12 * ramp;
@@ -748,7 +1029,43 @@ function recalculate() {
   updateCharts(yearData);
   updateYearTable(yearData);
   updateWorkloadCalcs();
+  updateGroupHeaderTotals();
   updateScenarios();
+}
+
+// ========== Group-header monthly totals ==========
+// Each tab gets a single group-header row above its first card; the right cells
+// show live monthly cr and $ totals for that panel.
+function updateGroupHeaderTotals() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmt(val); };
+  const cr   = SIZING_SPEC.meta.credit_rate;
+  const aiCr = SIZING_SPEC.meta.ai_credit_rate;
+  const sr   = SIZING_SPEC.meta.storage_rate_per_tb;
+
+  const whMonthly = SIZING_SPEC.workloads.reduce((s, w) => s + whMonthlyCredits(w), 0);
+  set('gh-cr-workloads', whMonthly); set('gh-d-workloads', whMonthly * cr);
+
+  const slMonthly = calcServerlessCredits();
+  set('gh-cr-serverless', slMonthly); set('gh-d-serverless', slMonthly * cr);
+
+  const aiMonthly = calcAICredits();
+  set('gh-cr-ai', aiMonthly); set('gh-d-ai', aiMonthly * aiCr);
+
+  const spcsMonthly = calcSPCSCost();
+  set('gh-cr-spcs', spcsMonthly); set('gh-d-spcs', spcsMonthly * cr);
+
+  let ofMonthly = 0;
+  const of = SIZING_SPEC.openflow;
+  if (of && Array.isArray(of.instances)) {
+    ofMonthly = of.instances.reduce((s, inst) =>
+      s + (inst.source_connections || 0) * (inst.vcpu_per_connection || 0) * (inst.hours_monthly || 0) * 0.0225, 0);
+  }
+  set('gh-cr-openflow', ofMonthly); set('gh-d-openflow', ofMonthly * cr);
+
+  set('gh-d-storage', storageForYear(1) * sr);
+
+  const collabMonthly = calcCollabCost();
+  set('gh-cr-collab', collabMonthly); set('gh-d-collab', collabMonthly * cr);
 }
 
 function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
@@ -936,11 +1253,14 @@ function updateWorkloadCalcs() {
 }
 
 function updateScenarios() {
+  const showLowHigh = document.getElementById('show-low-high')?.checked ?? true;
+  const grid = document.getElementById('scenarios');
+  if (grid) grid.classList.toggle('only-expected', !showLowHigh);
   const scenarios = [
-    { name: 'Conservative', growth: 0.10, ramp: 0.55, cls: '' },
+    showLowHigh && { name: 'Conservative', growth: 0.10, ramp: 0.55, cls: '' },
     { name: 'Expected',     growth: 0.30, ramp: 0.70, cls: 'expected' },
-    { name: 'Aggressive',   growth: 0.35, ramp: 0.80, cls: '' },
-  ];
+    showLowHigh && { name: 'Aggressive',   growth: 0.35, ramp: 0.80, cls: '' },
+  ].filter(Boolean);
   const years = SIZING_SPEC.meta.contract_years;
   const cr    = SIZING_SPEC.meta.credit_rate;
   const aiCr  = SIZING_SPEC.meta.ai_credit_rate;
@@ -1015,8 +1335,9 @@ function populateWorkloadCards() {
       <div class="justification"><strong>${w.source || 'ASSUMPTION'}:</strong> ${w.justification || ''}</div>
     </div>`;
   }).join('');
-  document.getElementById('workloads-container').innerHTML = html ||
-    '<p style="color: var(--gray-600); font-style: italic;">No workloads. Click + Add Workload to create one.</p>';
+  document.getElementById('workloads-container').innerHTML =
+    groupHeaderRow('Workload', 'Size / Hours / Days / Clusters', 'gh-cr-workloads', 'gh-d-workloads') +
+    (html || '<p style="color: var(--gray-600); font-style: italic;">No workloads. Click + Add Workload to create one.</p>');
 }
 
 function addWorkload() {
@@ -1079,7 +1400,7 @@ function populateServerlessPanel() {
       <label class="toggle">
         <input type="checkbox" id="sl-${f.key}" ${conf.enabled ? 'checked' : ''}
                onchange="updateServerless('${f.key}', 'enabled', this.checked)">
-        <span class="feature-name">${f.label}</span>
+        <span class="feature-name">${f.label}</span>${tt(f.key)}
         <span class="unit-hint">(${f.unit})</span>
       </label>
       <input type="number" id="sl-vol-${f.key}" value="${vol}" min="0"
@@ -1088,7 +1409,8 @@ function populateServerlessPanel() {
       <span class="serverless-cost" id="sl-cost-${f.key}">$0</span>
     </div>`;
   }).join('');
-  document.getElementById('serverless-container').innerHTML = html;
+  document.getElementById('serverless-container').innerHTML =
+    groupHeaderRow('Feature', 'Volume', 'gh-cr-serverless', 'gh-d-serverless') + html;
 }
 
 function populateAIPanel() {
@@ -1100,73 +1422,116 @@ function populateAIPanel() {
       <h4>Cortex Complete</h4>
       <div class="ai-row">
         <label><input type="checkbox" id="ai-cc-on" ${ai.cortex_complete.enabled ? 'checked' : ''}
-               onchange="updateAI('cortex_complete', 'enabled', this.checked)"> Cortex Complete</label>
+               onchange="updateAI('cortex_complete', 'enabled', this.checked)"> Cortex Complete${tt('cortex_complete')}</label>
         <select onchange="updateAI('cortex_complete', 'model', this.value)">${modelOpts}</select>
-        <input type="number" placeholder="Input M tokens/mo" value="${ai.cortex_complete.monthly_input_tokens_M}"
-               oninput="updateAI('cortex_complete', 'monthly_input_tokens_M', +this.value)">
-        <input type="number" placeholder="Output M tokens/mo" value="${ai.cortex_complete.monthly_output_tokens_M}"
-               oninput="updateAI('cortex_complete', 'monthly_output_tokens_M', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Input" value="${ai.cortex_complete.monthly_input_tokens_M}"
+                 oninput="updateAI('cortex_complete', 'monthly_input_tokens_M', +this.value)">
+          <span class="unit-chip">input M tok/mo</span>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Output" value="${ai.cortex_complete.monthly_output_tokens_M}"
+                 oninput="updateAI('cortex_complete', 'monthly_output_tokens_M', +this.value)">
+          <span class="unit-chip">output M tok/mo</span>
+        </div>
       </div>
     </div>
     <div class="ai-section">
       <h4>Cortex Agents / Snowflake Intelligence</h4>
       <div class="ai-row">
         <label><input type="checkbox" ${ai.cortex_agents.enabled ? 'checked' : ''}
-               onchange="updateAI('cortex_agents', 'enabled', this.checked)"> Cortex Agents</label>
+               onchange="updateAI('cortex_agents', 'enabled', this.checked)"> Cortex Agents${tt('cortex_agents')}</label>
         <span></span>
-        <input type="number" placeholder="Input M" value="${ai.cortex_agents.monthly_input_tokens_M}"
-               oninput="updateAI('cortex_agents', 'monthly_input_tokens_M', +this.value)">
-        <input type="number" placeholder="Output M" value="${ai.cortex_agents.monthly_output_tokens_M}"
-               oninput="updateAI('cortex_agents', 'monthly_output_tokens_M', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Input" value="${ai.cortex_agents.monthly_input_tokens_M}"
+                 oninput="updateAI('cortex_agents', 'monthly_input_tokens_M', +this.value)">
+          <span class="unit-chip">input M tok/mo</span>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Output" value="${ai.cortex_agents.monthly_output_tokens_M}"
+                 oninput="updateAI('cortex_agents', 'monthly_output_tokens_M', +this.value)">
+          <span class="unit-chip">output M tok/mo</span>
+        </div>
       </div>
       <div class="ai-row">
         <label><input type="checkbox" ${ai.snowflake_intelligence.enabled ? 'checked' : ''}
-               onchange="updateAI('snowflake_intelligence', 'enabled', this.checked)"> Snowflake Intelligence</label>
+               onchange="updateAI('snowflake_intelligence', 'enabled', this.checked)"> Snowflake Intelligence${tt('snowflake_intelligence')}</label>
         <span></span>
-        <input type="number" placeholder="Input M" value="${ai.snowflake_intelligence.monthly_input_tokens_M}"
-               oninput="updateAI('snowflake_intelligence', 'monthly_input_tokens_M', +this.value)">
-        <input type="number" placeholder="Output M" value="${ai.snowflake_intelligence.monthly_output_tokens_M}"
-               oninput="updateAI('snowflake_intelligence', 'monthly_output_tokens_M', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Input" value="${ai.snowflake_intelligence.monthly_input_tokens_M}"
+                 oninput="updateAI('snowflake_intelligence', 'monthly_input_tokens_M', +this.value)">
+          <span class="unit-chip">input M tok/mo</span>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Output" value="${ai.snowflake_intelligence.monthly_output_tokens_M}"
+                 oninput="updateAI('snowflake_intelligence', 'monthly_output_tokens_M', +this.value)">
+          <span class="unit-chip">output M tok/mo</span>
+        </div>
       </div>
     </div>
     <div class="ai-section">
       <h4>Cortex Code (developer assist)</h4>
-      <div class="ai-row">
-        <label><input type="checkbox" ${ai.cortex_code.enabled ? 'checked' : ''}
-               onchange="updateAI('cortex_code', 'enabled', this.checked)"> Enabled</label>
-        <input type="number" placeholder="Developers" value="${ai.cortex_code.developers}"
-               oninput="updateAI('cortex_code', 'developers', +this.value)">
-        <input type="number" placeholder="Queries/dev/day" value="${ai.cortex_code.queries_per_dev_per_day}"
-               oninput="updateAI('cortex_code', 'queries_per_dev_per_day', +this.value)">
-        <input type="number" placeholder="Tokens/query" value="${ai.cortex_code.avg_tokens_per_query}"
-               oninput="updateAI('cortex_code', 'avg_tokens_per_query', +this.value)">
-      </div>
+      ${[
+        { key: 'cli',       label: 'CLI',                 ttKey: 'cortex_code_cli' },
+        { key: 'snowsight', label: 'Snowsight',           ttKey: 'cortex_code_snowsight' },
+        { key: 'desktop',   label: 'Cortex Code Desktop', ttKey: 'cortex_code_desktop' },
+      ].map(s => {
+        const cc = (ai.cortex_code && ai.cortex_code[s.key]) || { enabled: false, developers: 0, queries_per_dev_per_day: 0, avg_tokens_per_query: 0 };
+        return `<div class="ai-row">
+        <label><input type="checkbox" ${cc.enabled ? 'checked' : ''}
+               onchange="updateAI('cortex_code.${s.key}', 'enabled', this.checked)"> ${s.label}${tt(s.ttKey)}</label>
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Devs" value="${cc.developers}"
+                 oninput="updateAI('cortex_code.${s.key}', 'developers', +this.value)">
+          <span class="unit-chip">devs</span>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Queries" value="${cc.queries_per_dev_per_day}"
+                 oninput="updateAI('cortex_code.${s.key}', 'queries_per_dev_per_day', +this.value)">
+          <span class="unit-chip">q/dev/day</span>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Tokens" value="${cc.avg_tokens_per_query}"
+                 oninput="updateAI('cortex_code.${s.key}', 'avg_tokens_per_query', +this.value)">
+          <span class="unit-chip">tok/q</span>
+        </div>
+      </div>`;
+      }).join('')}
     </div>
     <div class="ai-section">
       <h4>Cortex Analyst &amp; Search</h4>
       <div class="ai-row">
         <label><input type="checkbox" ${ai.cortex_analyst.enabled ? 'checked' : ''}
-               onchange="updateAI('cortex_analyst', 'enabled', this.checked)"> Cortex Analyst</label>
+               onchange="updateAI('cortex_analyst', 'enabled', this.checked)"> Cortex Analyst${tt('cortex_analyst')}</label>
         <span></span>
         <span></span>
-        <input type="number" placeholder="Messages/mo" value="${ai.cortex_analyst.monthly_messages}"
-               oninput="updateAI('cortex_analyst', 'monthly_messages', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Messages" value="${ai.cortex_analyst.monthly_messages}"
+                 oninput="updateAI('cortex_analyst', 'monthly_messages', +this.value)">
+          <span class="unit-chip">msgs/mo</span>
+        </div>
       </div>
       <div class="ai-row">
         <label><input type="checkbox" ${ai.cortex_search.enabled ? 'checked' : ''}
-               onchange="updateAI('cortex_search', 'enabled', this.checked)"> Cortex Search</label>
+               onchange="updateAI('cortex_search', 'enabled', this.checked)"> Cortex Search${tt('cortex_search')}</label>
         <span></span>
         <span></span>
-        <input type="number" placeholder="Indexed GB" value="${ai.cortex_search.indexed_data_gb}"
-               oninput="updateAI('cortex_search', 'indexed_data_gb', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Indexed" value="${ai.cortex_search.indexed_data_gb}"
+                 oninput="updateAI('cortex_search', 'indexed_data_gb', +this.value)">
+          <span class="unit-chip">GB indexed</span>
+        </div>
       </div>
       <div class="ai-row">
         <label><input type="checkbox" ${ai.document_ai.enabled ? 'checked' : ''}
-               onchange="updateAI('document_ai', 'enabled', this.checked)"> Document AI</label>
+               onchange="updateAI('document_ai', 'enabled', this.checked)"> Document AI${tt('document_ai')}</label>
         <span></span>
         <span></span>
-        <input type="number" placeholder="Compute hrs/mo" value="${ai.document_ai.compute_hours_monthly}"
-               oninput="updateAI('document_ai', 'compute_hours_monthly', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Hours" value="${ai.document_ai.compute_hours_monthly}"
+                 oninput="updateAI('document_ai', 'compute_hours_monthly', +this.value)">
+          <span class="unit-chip">hrs/mo</span>
+        </div>
       </div>
     </div>
     <div class="ai-section">
@@ -1175,29 +1540,37 @@ function populateAIPanel() {
         const cf = ai.cortex_functions[f];
         return `<div class="ai-row">
           <label><input type="checkbox" ${cf.enabled ? 'checked' : ''}
-                 onchange="updateAI('cortex_functions.${f}', 'enabled', this.checked)"> ${f}</label>
+                 onchange="updateAI('cortex_functions.${f}', 'enabled', this.checked)"> ${f}${tt(f)}</label>
           <span></span>
           <span></span>
-          <input type="number" placeholder="M tokens/mo" value="${cf.tokens_M_monthly}"
-                 oninput="updateAI('cortex_functions.${f}', 'tokens_M_monthly', +this.value)">
+          <div class="input-with-unit">
+            <input type="number" min="0" placeholder="Tokens" value="${cf.tokens_M_monthly}"
+                   oninput="updateAI('cortex_functions.${f}', 'tokens_M_monthly', +this.value)">
+            <span class="unit-chip">M tok/mo</span>
+          </div>
         </div>`;
       }).join('')}
       <div class="ai-row">
         <label><input type="checkbox" ${ai.embeddings.enabled ? 'checked' : ''}
-               onchange="updateAI('embeddings', 'enabled', this.checked)"> Embeddings</label>
+               onchange="updateAI('embeddings', 'enabled', this.checked)"> Embeddings${tt('embeddings')}</label>
         <span></span>
         <span></span>
-        <input type="number" placeholder="M tokens/mo" value="${ai.embeddings.tokens_M_monthly}"
-               oninput="updateAI('embeddings', 'tokens_M_monthly', +this.value)">
+        <div class="input-with-unit">
+          <input type="number" min="0" placeholder="Tokens" value="${ai.embeddings.tokens_M_monthly}"
+                 oninput="updateAI('embeddings', 'tokens_M_monthly', +this.value)">
+          <span class="unit-chip">M tok/mo</span>
+        </div>
       </div>
     </div>`;
-  document.getElementById('ai-container').innerHTML = html;
+  document.getElementById('ai-container').innerHTML =
+    groupHeaderRow('Feature', 'Configuration', 'gh-cr-ai', 'gh-d-ai') + html;
 }
 
 function populateSPCSPanel() {
   const sp = SIZING_SPEC.spcs;
+  const header = groupHeaderRow('Instance', 'Generation / Type / Count / Hours', 'gh-cr-spcs', 'gh-d-spcs');
   if (!sp || !Array.isArray(sp.instances) || sp.instances.length === 0) {
-    document.getElementById('spcs-container').innerHTML =
+    document.getElementById('spcs-container').innerHTML = header +
       '<p style="color: var(--gray-600); font-style: italic;">No SPCS instances configured. Click + Add SPCS Instance to create one.</p>';
     return;
   }
@@ -1234,7 +1607,7 @@ function populateSPCSPanel() {
       </div>
     </div>`;
   }).join('');
-  document.getElementById('spcs-container').innerHTML = html;
+  document.getElementById('spcs-container').innerHTML = header + html;
 }
 
 function addSPCSInstance() {
@@ -1275,7 +1648,6 @@ function updateSPCSInstance(id, field, value) {
 
 function populateOpenflowPanel() {
   const of = SIZING_SPEC.openflow;
-  const enabled = !!(of && of.enabled);
   const instances = (of && Array.isArray(of.instances)) ? of.instances : [];
   const cards = instances.map(inst => `
     <div class="workload-card" data-id="${inst.id}">
@@ -1306,12 +1678,8 @@ function populateOpenflowPanel() {
       </div>
     </div>`).join('');
   const empty = '<p style="color: var(--gray-600); font-style: italic;">No OpenFlow instances configured. Click + Add OpenFlow Instance to create one.</p>';
-  document.getElementById('openflow-container').innerHTML = `
-    <div class="storage-form" style="grid-template-columns: auto;">
-      <label class="toggle"><input type="checkbox" ${enabled?'checked':''}
-             onchange="SIZING_SPEC.openflow.enabled = this.checked; recalculate();"> Enable OpenFlow billing</label>
-    </div>
-    ${instances.length ? cards : empty}`;
+  const header = groupHeaderRow('Connector', 'Deployment / Connections / vCPU / Hours', 'gh-cr-openflow', 'gh-d-openflow');
+  document.getElementById('openflow-container').innerHTML = header + (instances.length ? cards : empty);
 }
 
 function addOpenflowInstance() {
@@ -1347,7 +1715,8 @@ function updateOpenflowInstance(id, field, value) {
 
 function populateStoragePanel() {
   const s = SIZING_SPEC.storage.standard;
-  document.getElementById('storage-container').innerHTML = `
+  document.getElementById('storage-container').innerHTML =
+    groupHeaderRow('Setting', 'Value', null, 'gh-d-storage') + `
     <div class="storage-form">
       <label>Raw TB (Year 1): <span id="st-val-raw_tb_year1">${s.raw_tb_year1}</span>
         <input type="range" min="0" max="1000" step="1" value="${s.raw_tb_year1}"
@@ -1429,7 +1798,8 @@ function populateCollabPanel() {
       </div>
     </div>`).join('');
   const empty = '<p style="color: var(--gray-600); font-style: italic;">No reader or managed accounts configured. Click + Add Reader / + Add Managed to create one.</p>';
-  document.getElementById('collab-container').innerHTML = accounts.length ? cards : empty;
+  const header = groupHeaderRow('Account', 'Type / WH size / Hours / Days', 'gh-cr-collab', 'gh-d-collab');
+  document.getElementById('collab-container').innerHTML = header + (accounts.length ? cards : empty);
 }
 
 function addAccount(type) {
@@ -1528,12 +1898,55 @@ function populateGlobalSettings() {
 
 function renderAssumptions() {
   document.getElementById('assumptions-list').innerHTML =
-    SIZING_SPEC.assumptions.map(a => `<li>${a}</li>`).join('');
+    SIZING_SPEC.assumptions.map((a, i) =>
+      `<li contenteditable="true"
+           oninput="SIZING_SPEC.assumptions[${i}] = this.textContent.trim()"
+           onblur="SIZING_SPEC.assumptions[${i}] = this.textContent.trim()"
+      >${a}<button class="item-delete-btn" onclick="removeAssumption(${i})" title="Delete">✕</button></li>`
+    ).join('');
   document.getElementById('confirm-list').innerHTML =
-    SIZING_SPEC.confirm_required.map(c => {
+    SIZING_SPEC.confirm_required.map((c, i) => {
       const text = (typeof c === 'string') ? c : c.item;
-      return `<li><span class="warning-badge">CONFIRM</span>${text}</li>`;
+      return `<li><span class="warning-badge">CONFIRM</span><span contenteditable="true"
+              oninput="updateConfirmItem(${i}, this.textContent)"
+              onblur="updateConfirmItem(${i}, this.textContent)"
+              >${text}</span><button class="item-delete-btn" onclick="removeConfirmItem(${i})" title="Delete">✕</button></li>`;
     }).join('');
+}
+
+function removeAssumption(i) {
+  SIZING_SPEC.assumptions.splice(i, 1);
+  renderAssumptions();
+}
+function addAssumption() {
+  SIZING_SPEC.assumptions.push('New assumption');
+  renderAssumptions();
+  const items = document.querySelectorAll('#assumptions-list li');
+  const last = items[items.length - 1];
+  if (last) { last.focus(); _selectAll(last); }
+}
+function updateConfirmItem(i, text) {
+  const c = SIZING_SPEC.confirm_required[i];
+  if (typeof c === 'string') SIZING_SPEC.confirm_required[i] = text.trim();
+  else c.item = text.trim();
+}
+function removeConfirmItem(i) {
+  SIZING_SPEC.confirm_required.splice(i, 1);
+  renderAssumptions();
+}
+function addConfirmItem() {
+  SIZING_SPEC.confirm_required.push({ item: 'New item to confirm', impact_pct: 0 });
+  renderAssumptions();
+  const items = document.querySelectorAll('#confirm-list li span[contenteditable]');
+  const last = items[items.length - 1];
+  if (last) { last.focus(); _selectAll(last); }
+}
+function _selectAll(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
 }
 
 // ========== Tabs ==========
@@ -1573,6 +1986,45 @@ window.addEventListener('afterprint', _reflowCharts);
 if (window.matchMedia) {
   const mql = window.matchMedia('print');
   if (mql.addEventListener) mql.addEventListener('change', _reflowCharts);
+}
+
+// ========== Save Version (download self-contained snapshot) ==========
+// Reads the current SIZING_SPEC, bumps meta.version_number, replaces the
+// sentinel-wrapped block in document.documentElement.outerHTML, and triggers
+// a download. Re-opening a saved file picks up the embedded version_number
+// and increments from there.
+function saveSnapshot() {
+  const meta = SIZING_SPEC.meta || {};
+  meta.version_number = (meta.version_number || 1) + 1;
+  SIZING_SPEC.meta = meta;
+
+  const sentinel = /\/\* __SIZING_SPEC_BEGIN__ \*\/[\s\S]*?\/\* __SIZING_SPEC_END__ \*\//;
+  const replacement =
+    '/* __SIZING_SPEC_BEGIN__ */\n' +
+    'const SIZING_SPEC = ' + JSON.stringify(SIZING_SPEC) + ';\n' +
+    '/* __SIZING_SPEC_END__ */';
+
+  const docHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  if (!sentinel.test(docHtml)) {
+    alert('Save failed: SIZING_SPEC sentinel block not found. This file may be a saved snapshot from an older template.');
+    return;
+  }
+  const updated = docHtml.replace(sentinel, replacement);
+
+  const slug = (meta.customer || 'customer').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+  const years = meta.contract_years || 1;
+  const today = new Date().toISOString().slice(0, 10);
+  const filename = slug + '-' + years + 'year-sizing-v' + meta.version_number + '-' + today + '.html';
+
+  const blob = new Blob([updated], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
 </body>

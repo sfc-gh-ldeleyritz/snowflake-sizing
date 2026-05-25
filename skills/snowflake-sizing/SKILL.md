@@ -43,7 +43,8 @@ Build initial `meta` object:
   "contract_years": [N],
   "generated_date": "[today YYYY-MM-DD]",
   "ramp_curve": "linear",
-  "pdf_version": "2026-05-12"
+  "pdf_version": "2026-05-12",
+  "version_number": 1
 }
 ```
 
@@ -241,6 +242,16 @@ Enable only what the customer has explicitly mentioned or where there is clear u
 
 If the customer is in a data science or AI-forward industry, flag relevant features in `confirm_required`.
 
+**Cortex Code shape:** `ai_cortex.cortex_code = { cli, snowsight, desktop }`, each entry `{ enabled, developers, queries_per_dev_per_day, avg_tokens_per_query }`. The three surfaces (CLI / Snowsight / Cortex Code Desktop) bill at the same Table 6(e) rate but reflect different per-developer usage patterns. Enable each surface independently. Defaults:
+
+| Surface | Typical queries/dev/day | Typical tokens/query | Notes |
+|---|---|---|---|
+| CLI | 5 - 20 | 800 - 1,500 | Power users in terminal; lightweight prompts. |
+| Snowsight | 10 - 40 | 1,000 - 1,800 | SQL assist inside worksheets; medium usage. |
+| Cortex Code Desktop | 30 - 80 | 1,200 - 2,500 | IDE assistant with inline suggestions + chat; heaviest usage. |
+
+The legacy single-object shape (`cortex_code.{enabled, developers, queries_per_dev_per_day, avg_tokens_per_query}`) is auto-normalized by the template (legacy values land on `cli`), but new specs MUST emit the three-surface form.
+
 ### SPCS, Openflow, Postgres
 
 Enable only if explicitly mentioned. For Openflow, always ask about source database server count.
@@ -389,4 +400,10 @@ Print to terminal:
 Open in browser: open temp/[filename]
 Print / Save as PDF: click the "Print / Save as PDF" button in the top-right of the proposal,
 or in the SE's terminal: open temp/[filename] (then Cmd-P → "Save as PDF").
+Tip: Chrome adds a date/title header and file:// URL footer by default — expand "More settings"
+in the print dialog and uncheck "Headers and footers" for a clean PDF. (Hover the ⓘ next to the
+Print button in the proposal for the same hint.)
+Save versioned snapshots: click "Save Version" (next to Print) to download a self-contained HTML
+with the SE's current edits embedded. Filename is auto-generated as
+<slug>-<years>year-sizing-v<N>-<YYYY-MM-DD>.html and the version number auto-increments each save.
 ```
