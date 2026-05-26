@@ -48,6 +48,7 @@ body {
 .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .doc-meta { text-align: right; font-size: 12px; opacity: 0.85; line-height: 1.6; }
 .doc-meta div:first-child { font-weight: 700; letter-spacing: 1px; opacity: 1; color: var(--sf-blue); }
+.discount-badge { font-size: 11px; font-weight: 600; opacity: 0.85; }
 .header h1 { margin: 0; font-size: 36px; font-weight: 700; font-family: 'Texta', 'Lato', sans-serif; }
 .header-subtitle { margin-top: 8px; font-size: 18px; opacity: 0.9; }
 
@@ -468,7 +469,7 @@ li:hover .item-delete-btn { display: inline; }
       <div>CONSUMPTION ESTIMATE</div>
       <div>Prepared: <span id="hdr-date">__DATE__</span></div>
       <div><span id="hdr-edition">__EDITION__</span> &middot; <span id="hdr-cloud">__CLOUD__</span> <span id="hdr-region">__REGION__</span></div>
-      <div>$<span id="hdr-credit-rate">__CREDIT_RATE__</span>/credit</div>
+      <div>$<span id="hdr-credit-rate">__CREDIT_RATE__</span>/credit<span id="hdr-discount-badge" class="discount-badge"></span></div>
     </div>
   </div>
   <h1 id="hdr-customer">__CUSTOMER__</h1>
@@ -520,7 +521,8 @@ li:hover .item-delete-btn { display: inline; }
 <div class="section">
   <h2>Configuration</h2>
   <div class="tab-nav">
-    <button class="tab-btn active" data-tab="warehouses">Warehouses</button>
+    <button class="tab-btn active" data-tab="global">Global Settings</button>
+    <button class="tab-btn" data-tab="warehouses">Warehouses</button>
     <button class="tab-btn" data-tab="serverless">Serverless</button>
     <button class="tab-btn" data-tab="ai">AI / Cortex</button>
     <button class="tab-btn" data-tab="spcs">SPCS</button>
@@ -528,10 +530,13 @@ li:hover .item-delete-btn { display: inline; }
     <button class="tab-btn" data-tab="storage">Storage</button>
     <button class="tab-btn" data-tab="collab">Collaboration</button>
     <button class="tab-btn" data-tab="replication">Replication</button>
-    <button class="tab-btn" data-tab="global">Global Settings</button>
   </div>
 
-  <div class="tab-content active" id="tab-warehouses" data-print-title="Warehouses">
+  <div class="tab-content active" id="tab-global" data-print-title="Global Settings">
+    <div id="global-container"></div>
+  </div>
+
+  <div class="tab-content" id="tab-warehouses" data-print-title="Warehouses">
     <div id="workloads-container"></div>
     <button class="add-btn" onclick="addWorkload()">+ Add Workload</button>
   </div>
@@ -571,9 +576,6 @@ li:hover .item-delete-btn { display: inline; }
     <button class="add-btn" onclick="enableReplication()">+ Enable Replication / DR</button>
   </div>
 
-  <div class="tab-content" id="tab-global" data-print-title="Global Settings">
-    <div id="global-container"></div>
-  </div>
 </div>
 
 <!-- 5. Scenarios -->
@@ -861,6 +863,12 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
   if (m.default_go_live_month == null)   m.default_go_live_month   = 11;
   if (m.annual_growth_rate == null)      m.annual_growth_rate      = 0.20;
 
+  // Platform Credit discount override (Order Form / negotiated capacity).
+  // list_credit_rate = pricing-JSON rate; credit_rate = effective rate every calc reads.
+  // Per AI Pricing Sales GTM FAQ, discount applies to Platform Credits only - AI Credits keep $2.00/$2.20.
+  if (m.list_credit_rate == null) m.list_credit_rate = m.credit_rate;
+  if (!m.discount) m.discount = { enabled: false, mode: 'percent', percent: 0, rate: null };
+
   // Per-workload ramp fields: fall back to meta defaults if missing.
   if (Array.isArray(SIZING_SPEC.workloads)) {
     SIZING_SPEC.workloads.forEach(w => {
@@ -1101,16 +1109,16 @@ function calcCollabCost() {
   }, 0);
 }
 
-// OpenFlow cost constants — sourced from official Openflow pricing calculator
-// SPCS rates: Snowflake Credit Consumption Table, Table 1(d) — credits per compute pool node/hr
+// OpenFlow cost constants - sourced from official Openflow pricing calculator
+// SPCS rates: Snowflake Credit Consumption Table, Table 1(d) - credits per compute pool node/hr
 const _OF_SPCS_RATES   = { Small: 0.11, Medium: 0.41, Large: 0.83 };
 const _OF_CTRL_POOL    = 0.11;   // CPU_X64_S control pool, always-on, per deployment
-// BYOC vCPU counts per runtime size — Openflow documentation
+// BYOC vCPU counts per runtime size - Openflow documentation
 const _OF_BYOC_VCPU    = { Small: 1, Medium: 4, Large: 8 };
 const _OF_BYOC_CR_VCPU = 0.0225; // credits per vCPU per hour, Table 1(g)
 // Warehouse credits per hour for MERGE operations
 const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
-// BYOC region pricing — fixed monthly (EKS+mgmt+NAT+NLB+agent+EBS+secrets) and per-node EC2 hourly
+// BYOC region pricing - fixed monthly (EKS+mgmt+NAT+NLB+agent+EBS+secrets) and per-node EC2 hourly
 // Source: AWS Price List API as of 2025-11-16 via official calculator fetch_byoc_pricing.py
 const _OF_BYOC_REG = {
   'us-east-1':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
@@ -1170,7 +1178,7 @@ function calcOpenflowCost(cr, ramp) {
       total += dataGb * 0.0037 * cr * 12 * ramp;
     }
 
-    // Warehouse MERGE cost (optional — CDC workloads with dedicated warehouse)
+    // Warehouse MERGE cost (optional - CDC workloads with dedicated warehouse)
     if (whSize && whHours > 0) {
       total += (_OF_WH_CR[whSize] || 1) * whHours * cr * 12 * ramp;
     }
@@ -1257,7 +1265,7 @@ function recalculate() {
     const spcsCost = calcSPCSCost() * 12 * defRamp;
     const ofCost   = calcOpenflowCost(cr, defRamp);
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled
-      ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * 110 * 12
+      ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * (y <= 3 ? 110 : 40) * 12
       : 0;
     const transferCost = calcTransferCost() * 12;
     const collabCost = calcCollabCost() * 12 * defRamp;
@@ -1279,6 +1287,7 @@ function recalculate() {
   updateGroupHeaderTotals();
   updateScenarios();
   updateReplicationPanel(yearData);
+  updateStorageBreakdown();
 }
 
 // ========== Group-header monthly totals ==========
@@ -1302,13 +1311,11 @@ function updateGroupHeaderTotals() {
   const spcsMonthly = calcSPCSCost();
   set('gh-cr-spcs', spcsMonthly); set('gh-d-spcs', spcsMonthly * cr);
 
-  let ofMonthly = 0;
-  const of = SIZING_SPEC.openflow;
-  if (of && Array.isArray(of.instances)) {
-    ofMonthly = of.instances.reduce((s, inst) =>
-      s + (inst.source_connections || 0) * (inst.vcpu_per_connection || 0) * (inst.hours_monthly || 0) * 0.0225, 0);
+  let ofMonthlyDollars = 0;
+  if (SIZING_SPEC.openflow && Array.isArray(SIZING_SPEC.openflow.instances) && SIZING_SPEC.openflow.instances.length > 0) {
+    ofMonthlyDollars = calcOpenflowCost(cr, 1) / 12;
   }
-  set('gh-cr-openflow', ofMonthly); set('gh-d-openflow', ofMonthly * cr);
+  set('gh-cr-openflow', cr > 0 ? ofMonthlyDollars / cr : 0); set('gh-d-openflow', ofMonthlyDollars);
 
   set('gh-d-storage', storageForYear(1) * sr);
 
@@ -1453,18 +1460,74 @@ function updateStorage(field, value) {
 function updateGlobal(field, value) {
   SIZING_SPEC.meta[field] = value;
   if (field === 'edition' || field === 'cloud' || field === 'region') {
-    // Re-derive credit rate
+    // Re-derive list rate from the pricing JSON; effective rate is set by applyDiscount() below.
     const row = PRICING_DATA.credit_pricing.data.find(r => r.cloud === SIZING_SPEC.meta.cloud && r.region === SIZING_SPEC.meta.region);
     if (row) {
       const ed = SIZING_SPEC.meta.edition.toLowerCase().replace(' ', '_');
       const newRate = row[ed];
-      if (newRate) SIZING_SPEC.meta.credit_rate = newRate;
+      if (newRate) SIZING_SPEC.meta.list_credit_rate = newRate;
     }
+    // Re-derive storage rate for the new cloud/region (edition doesn't affect storage pricing).
+    const storageRow = (PRICING_DATA.storage?.standard?.data || [])
+      .find(r => r.cloud === SIZING_SPEC.meta.cloud && r.region === SIZING_SPEC.meta.region);
+    if (storageRow?.on_demand != null) SIZING_SPEC.meta.storage_rate_per_tb = storageRow.on_demand;
+    populateGlobalSettings();
   }
   if (field === 'contract_years') {
     SIZING_SPEC.meta.contract_years = +value;
     // No more growth_rates array - per-workload ramps + meta.annual_growth_rate handle this.
   }
+  applyDiscount();
+  updateHeaderInfo();
+  recalculate();
+}
+
+// ========== Platform Credit discount override ==========
+// Effective rate = list × (1 − percent/100). Applies to Platform Credits only
+// (warehouses, serverless, replication compute). AI Credits keep their on-demand rate
+// per Snowflake's AI Pricing Sales GTM FAQ.
+function applyDiscount() {
+  const m = SIZING_SPEC.meta;
+  const list = Number(m.list_credit_rate);
+  if (!isFinite(list) || list <= 0) return;
+  const d = m.discount || (m.discount = { enabled: false, mode: 'percent', percent: 0, rate: null });
+  if (!d.enabled) {
+    m.credit_rate = list;
+    return;
+  }
+  let pct = Number(d.percent) || 0;
+  let rate = (d.rate != null) ? Number(d.rate) : null;
+  if (d.mode === 'rate' && rate != null && isFinite(rate)) {
+    rate = Math.max(0, Math.min(list, rate));
+    pct = (1 - rate / list) * 100;
+  } else {
+    pct = Math.max(0, Math.min(100, pct));
+    rate = list * (1 - pct / 100);
+  }
+  d.percent = pct;
+  d.rate = rate;
+  m.credit_rate = rate;
+}
+
+function toggleDiscount(enabled) {
+  SIZING_SPEC.meta.discount.enabled = !!enabled;
+  applyDiscount();
+  populateGlobalSettings();
+  updateHeaderInfo();
+  recalculate();
+}
+
+function updateDiscount(field, value) {
+  const d = SIZING_SPEC.meta.discount;
+  if (field === 'percent') {
+    d.mode = 'percent';
+    d.percent = parseFloat(value) || 0;
+  } else if (field === 'rate') {
+    d.mode = 'rate';
+    d.rate = parseFloat(value);
+  }
+  applyDiscount();
+  populateGlobalSettings();
   updateHeaderInfo();
   recalculate();
 }
@@ -1477,8 +1540,21 @@ function updateHeaderInfo() {
   set('hdr-edition', m.edition || '');
   set('hdr-cloud', m.cloud || '');
   set('hdr-region', m.region || '');
-  set('hdr-credit-rate', (m.credit_rate != null ? m.credit_rate : '').toString());
+  // Effective rate: trim to 2 decimals when fractional, otherwise show as-is.
+  const rate = m.credit_rate;
+  set('hdr-credit-rate', (rate != null ? (Number.isInteger(rate) ? String(rate) : Number(rate).toFixed(2)) : ''));
   set('hdr-years', (m.contract_years != null ? m.contract_years : '').toString());
+  // Discount badge - only renders when the toggle is on.
+  const badge = document.getElementById('hdr-discount-badge');
+  if (badge) {
+    const d = m.discount;
+    if (d && d.enabled && Number(d.percent) > 0) {
+      const pct = Math.round(Number(d.percent) * 10) / 10;
+      badge.textContent = ' (' + pct + '% off list)';
+    } else {
+      badge.textContent = '';
+    }
+  }
   // Update the document title to match the customer name.
   if (m.customer) document.title = m.customer + ' - Snowflake Consumption Estimate';
 }
@@ -1928,7 +2004,35 @@ function updateSPCSInstance(id, field, value) {
 function populateOpenflowPanel() {
   const of = SIZING_SPEC.openflow;
   const instances = (of && Array.isArray(of.instances)) ? of.instances : [];
-  const cards = instances.map(inst => `
+  const cards = instances.map(inst => {
+    const deployment = inst.deployment || 'BYOC';
+    const connType   = inst.connector_type || 'CDC';
+    const runtimeSize = inst.runtime_size || 'Medium';
+    const byocRegions = {
+      'us-east-1': 'US East (N. Virginia)',
+      'us-west-2': 'US West (Oregon)',
+      'eu-west-1': 'EU West (Ireland)',
+      'eu-west-2': 'EU West (London)',
+      'eu-central-1': 'EU Central (Frankfurt)',
+      'ap-southeast-1': 'AP Southeast (Singapore)',
+      'ap-northeast-1': 'AP Northeast (Tokyo)',
+    };
+    const byocRegionOpts = Object.entries(byocRegions).map(([k,v]) =>
+      `<option value="${k}" ${inst.byoc_region===k?'selected':''}>${v}</option>`).join('');
+    const byocRegionRow = deployment === 'BYOC' ? `
+        <label>AWS region
+          <select onchange="updateOpenflowInstance('${inst.id}', 'byoc_region', this.value)">
+            ${byocRegionOpts}
+          </select>
+        </label>` : '';
+    const whSize = inst.warehouse_size || '';
+    const showWhHours = connType === 'CDC' && whSize;
+    const whHoursRow = showWhHours ? `
+        <label>WH hours/month
+          <input type="number" value="${inst.warehouse_hours_monthly || 0}" min="0" max="744" step="1"
+                 onchange="updateOpenflowInstance('${inst.id}', 'warehouse_hours_monthly', +this.value)">
+        </label>` : '';
+    return `
     <div class="workload-card" data-id="${inst.id}">
       <div class="workload-header">
         <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
@@ -1936,28 +2040,50 @@ function populateOpenflowPanel() {
         <button class="delete-btn" onclick="removeOpenflowInstance('${inst.id}')" title="Delete this OpenFlow instance">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Deployment
-          <select onchange="updateOpenflowInstance('${inst.id}', 'deployment', this.value)">
-            <option value="BYOC" ${inst.deployment==='BYOC'?'selected':''}>BYOC</option>
-            <option value="SPCS" ${inst.deployment==='SPCS'?'selected':''}>SPCS</option>
+        <label>Connector type
+          <select onchange="updateOpenflowInstance('${inst.id}', 'connector_type', this.value); populateOpenflowPanel()">
+            <option value="CDC" ${connType==='CDC'?'selected':''}>CDC (JDBC)</option>
+            <option value="Streaming" ${connType==='Streaming'?'selected':''}>Streaming (Kafka/Kinesis)</option>
+            <option value="Files" ${connType==='Files'?'selected':''}>Files (S3/SFTP)</option>
+            <option value="SaaS" ${connType==='SaaS'?'selected':''}>SaaS / REST API</option>
+            <option value="Oracle CDC" ${connType==='Oracle CDC'?'selected':''}>Oracle CDC</option>
           </select>
         </label>
-        <label>Source connections
-          <input type="number" value="${inst.source_connections || 0}" min="0" step="1"
-                 onchange="updateOpenflowInstance('${inst.id}', 'source_connections', +this.value)">
+        <label>Deployment
+          <select onchange="updateOpenflowInstance('${inst.id}', 'deployment', this.value); populateOpenflowPanel()">
+            <option value="BYOC" ${deployment==='BYOC'?'selected':''}>BYOC (AWS)</option>
+            <option value="SPCS" ${deployment==='SPCS'?'selected':''}>SPCS (Snowflake)</option>
+          </select>
         </label>
-        <label>vCPU per connection
-          <input type="number" value="${inst.vcpu_per_connection || 0}" min="0" step="1"
-                 onchange="updateOpenflowInstance('${inst.id}', 'vcpu_per_connection', +this.value)">
+        <label>Runtime size
+          <select onchange="updateOpenflowInstance('${inst.id}', 'runtime_size', this.value)">
+            <option value="Small" ${runtimeSize==='Small'?'selected':''}>Small (1 vCPU)</option>
+            <option value="Medium" ${runtimeSize==='Medium'?'selected':''}>Medium (4 vCPU)</option>
+            <option value="Large" ${runtimeSize==='Large'?'selected':''}>Large (8 vCPU)</option>
+          </select>
         </label>
-        <label>Hours/month
-          <input type="number" value="${inst.hours_monthly || 0}" min="0" max="744" step="1"
-                 onchange="updateOpenflowInstance('${inst.id}', 'hours_monthly', +this.value)">
-        </label>
+        <label>Runtime nodes
+          <input type="number" value="${inst.runtime_nodes || 1}" min="1" step="1"
+                 onchange="updateOpenflowInstance('${inst.id}', 'runtime_nodes', +this.value)">
+        </label>${byocRegionRow}
+        <label>Monthly data (GB)
+          <input type="number" value="${inst.monthly_data_gb || 0}" min="0" step="1"
+                 onchange="updateOpenflowInstance('${inst.id}', 'monthly_data_gb', +this.value)">
+        </label>${connType === 'CDC' || connType === 'Oracle CDC' ? `
+        <label>Warehouse size (MERGE)
+          <select onchange="updateOpenflowInstance('${inst.id}', 'warehouse_size', this.value || null); populateOpenflowPanel()">
+            <option value="" ${!whSize?'selected':''}>None</option>
+            <option value="X-Small" ${whSize==='X-Small'?'selected':''}>X-Small</option>
+            <option value="Small" ${whSize==='Small'?'selected':''}>Small</option>
+            <option value="Medium" ${whSize==='Medium'?'selected':''}>Medium</option>
+            <option value="Large" ${whSize==='Large'?'selected':''}>Large</option>
+          </select>
+        </label>${whHoursRow}` : ''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   const empty = '<p style="color: var(--gray-600); font-style: italic;">No OpenFlow instances configured. Click + Add OpenFlow Instance to create one.</p>';
-  const header = groupHeaderRow('Connector', 'Deployment / Connections / vCPU / Hours', 'gh-cr-openflow', 'gh-d-openflow');
+  const header = groupHeaderRow('Connector', 'Type / Deployment / Size / Nodes', 'gh-cr-openflow', 'gh-d-openflow');
   document.getElementById('openflow-container').innerHTML = header + (instances.length ? cards : empty);
 }
 
@@ -1968,9 +2094,14 @@ function addOpenflowInstance() {
   SIZING_SPEC.openflow.instances.push({
     id: nextId('of'),
     label: 'New connector',
+    connector_type: 'CDC',
     deployment: 'BYOC',
-    source_connections: 1,
-    vcpu_per_connection: 4,
+    runtime_size: 'Medium',
+    runtime_nodes: 1,
+    byoc_region: 'us-east-1',
+    monthly_data_gb: 0,
+    warehouse_size: null,
+    warehouse_hours_monthly: 0,
     hours_monthly: 730,
   });
   populateOpenflowPanel();
@@ -2025,6 +2156,8 @@ function populateStoragePanel() {
 }
 
 function updateStorageBreakdown() {
+  const el = document.getElementById('storage-breakdown');
+  if (!el) return;
   const s = SIZING_SPEC.storage.standard;
   const sr = SIZING_SPEC.meta.storage_rate_per_tb;
   let rows = '';
@@ -2036,7 +2169,7 @@ function updateStorageBreakdown() {
     const total = grown + tt + fs;
     rows += `<tr><td>Year ${y}</td><td>${grown.toFixed(2)}</td><td>${tt.toFixed(3)}</td><td>${fs.toFixed(3)}</td><td>${total.toFixed(2)}</td><td>$${fmt(total * sr)}</td><td>$${fmt(total * sr * 12)}</td></tr>`;
   }
-  document.getElementById('storage-breakdown').innerHTML = `
+  el.innerHTML = `
     <table class="year-table">
       <thead><tr><th>Year</th><th>Compressed TB</th><th>Time Travel TB</th><th>Failsafe TB</th><th>Total TB</th><th>Monthly $</th><th>Annual $</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -2185,9 +2318,39 @@ function populateGlobalSettings() {
           SIZING_SPEC.meta.annual_growth_rate = +this.value / 100;
           recalculate();">
       </label>
-      <label>Credit rate
-        <input type="number" value="${m.credit_rate}" step="0.01" disabled style="background: var(--gray-100);">
+      <label>List rate ($/credit)
+        <input type="number" value="${Number(m.list_credit_rate ?? m.credit_rate).toFixed(2)}" step="0.01" disabled style="background: var(--gray-100);">
       </label>
+    </div>
+    <div class="storage-form" style="margin-top: 8px; padding: 12px; background: var(--gray-100); border-radius: 6px; border: 1px solid var(--gray-200);">
+      <label style="grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input type="checkbox" style="width: auto; margin-top: 0;" ${m.discount.enabled ? 'checked' : ''}
+               onchange="toggleDiscount(this.checked)">
+        <span>Apply negotiated discount</span>
+      </label>
+      ${m.discount.enabled ? `
+      <label>Net rate ($/credit)
+        <input type="number" min="0" max="${m.list_credit_rate}" step="0.01"
+               value="${Number(m.discount.rate ?? m.credit_rate).toFixed(2)}"
+               onchange="updateDiscount('rate', this.value)">
+      </label>
+      <label>Discount %
+        <input type="number" min="0" max="100" step="0.5"
+               value="${Number(m.discount.percent || 0).toFixed(1)}"
+               onchange="updateDiscount('percent', this.value)">
+      </label>
+      <label>Effective rate
+        <input type="number" value="${Number(m.credit_rate).toFixed(2)}" step="0.01" disabled style="background: white;">
+      </label>
+      <div style="grid-column: 1 / -1; font-size: 11px; color: var(--gray-700); font-style: italic; margin-top: -4px;">
+        Applies to Platform Credits only (warehouses, serverless, replication compute).
+        AI Credit rate ($2.00 global / $2.20 regional) is unaffected per Snowflake AI pricing rules.
+      </div>
+      ` : `
+      <div style="grid-column: 1 / -1; font-size: 11px; color: var(--gray-600); font-style: italic;">
+        Off: all calculations use the list rate above. Toggle on to enter an Order Form $/credit or discount %.
+      </div>
+      `}
     </div>`;
 }
 
@@ -2427,6 +2590,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populateCollabPanel();
   renderAssumptions();
   renderReplicationPanel();
+  applyDiscount();
   updateHeaderInfo();
   recalculate();
 });

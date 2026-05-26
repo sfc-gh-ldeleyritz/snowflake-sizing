@@ -403,5 +403,82 @@ Flag any of these as `REQUIRES_CONFIRMATION` with quantified impact:
 - Number of concurrent users (impacts MCW sizing — can be ±50% of compute cost)
 - Weekend/7-day operation vs weekday-only (±36% of compute cost)
 - Are OpenFlow databases on same server instance? (1 vs N connections)
-- Compression ratio if unknown (±40% of storage cost)
-- Growth rate assumption (±50% of Year 3 cost)
+- How many tables per OpenFlow source database? (600-table limit per runtime — can force more nodes)
+- Expected monthly data volume through OpenFlow? (±30% of cost via Snowpipe)
+- Is there an existing warehouse that can be reused for CDC MERGE? (can avoid 60–70% of CDC cost)
+- For Oracle CDC: processor type — Intel/AMD x86 counts at 0.5 factor; SPARC/POWER at 1.0
+
+---
+
+## OpenFlow Sizing
+
+### Runtime Size Selection by Connector Type
+
+**CDC (JDBC/database):**
+- Dedicated 1 runtime node per distinct JDBC source server (not per table/schema)
+- `runtime_nodes = max(source_server_count, ceil(total_tables / 600))` — 600-table limit per runtime
+- Runtime size: Medium if ≤100,000 events/day/connection; Large if >100,000 events/day
+- Always confirm: "Are all databases on the same physical server/cluster?" — determines 1 vs N nodes
+
+**Streaming (Kafka, Kinesis, etc.):**
+- Compute effective throughput: `messages_per_second × avg_message_size_kb / 1000` MB/s
+- Small if throughput < 10 MB/s; Medium if 10–50 MB/s; Large if ≥ 50 MB/s
+- Runtime nodes: start at 1; add nodes if throughput requires horizontal scale or high availability
+
+**Files (S3, SFTP, etc.):**
+- Small for most workloads (infrequent batch, low transform complexity)
+- Medium/Large for high-volume continuous ingestion with heavy transformations
+
+**SaaS / REST API:**
+- Small unless high polling frequency + complex transforms → Medium
+
+**Oracle CDC:**
+- Same node rules as CDC; additionally has licensing cost ($110/core/mo yr 1–3, $40/core/mo yr 4+)
+- Licensed cores = physical processor cores × processor_factor (x86=0.5, SPARC/POWER=1.0)
+
+### Platform Limits
+
+| Constraint | Value |
+|---|---|
+| Max tables per runtime | 600 |
+| Runtime packing ratio (SPCS) | 3 runtime nodes per compute pool node |
+| Runtime packing ratio (BYOC) | 3 runtime nodes per EC2 node |
+| EBS per EC2 compute pool node | 200 GB |
+| SPCS control pool | 1 per deployment (not per instance) |
+| BYOC fixed infra | 1 set per deployment (not per instance) |
+
+### SPCS Credit Rates (Credit Consumption Table 1d)
+
+| Runtime size | cr/hr per compute pool node |
+|---|---|
+| Small | 0.11 |
+| Medium | 0.41 |
+| Large | 0.83 |
+| Control pool (CPU_X64_S) | 0.11 (always-on, 1 per deployment) |
+
+### BYOC Regional Pricing
+
+| AWS Region | Fixed infra/mo | EC2 Small/hr | EC2 Medium/hr | EC2 Large/hr | EBS/GB-mo |
+|---|---|---|---|---|---|
+| us-east-1 | $463.39 | $0.2016 | $0.8064 | $1.6128 | $0.080 |
+| us-west-2 | $463.39 | $0.2016 | $0.8064 | $1.6128 | $0.080 |
+| eu-west-1 | $505.79 | $0.2247 | $0.8988 | $1.7976 | $0.088 |
+| eu-west-2 | $522.57 | $0.2331 | $0.9324 | $1.8648 | $0.0928 |
+| eu-central-1 | $537.74 | $0.2415 | $0.9660 | $1.9320 | $0.0952 |
+| ap-southeast-1 | $560.53 | $0.2520 | $1.0080 | $2.0160 | $0.096 |
+| ap-northeast-1 | $575.49 | $0.2604 | $1.0416 | $2.0832 | $0.096 |
+
+### BYOC vCPU Snowflake Credits (Credit Consumption Table 1g)
+
+0.0225 credits/vCPU/hour. vCPU counts: Small = 1, Medium = 4, Large = 8.
+
+### Snowpipe Streaming Rate
+
+0.0037 credits/GB uncompressed. Applied to all connector types on the `monthly_data_gb` volume.
+
+### Warehouse MERGE (CDC)
+
+MERGE warehouse is often the dominant cost for CDC workloads (60–70% of total). Key guidance:
+- X-Small (1 cr/hr) sufficient for most CDC workloads with <10M events/day
+- Warehouse hours ≈ 24 × days_per_month for continuous CDC; lower for scheduled batch
+- Always ask if customer already has a shared warehouse — avoids duplicating this cost in the estimate

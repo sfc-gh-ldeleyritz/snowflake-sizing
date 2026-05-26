@@ -52,6 +52,22 @@ Build initial `meta` object:
 
 The `default_*` fields seed per-workload defaults during Phase 3. They are not used directly in Phase 4 — every workload row carries its own `ramp_curve`, `dev_start_month`, `go_live_month`.
 
+**Optional discount block.** If the context mentions a negotiated capacity discount, an Order Form rate, or the SE asks for a what-if, add a `discount` block to `meta` (and seed `list_credit_rate` to the same value as `credit_rate`):
+
+```json
+"list_credit_rate": [same as credit_rate above],
+"discount": {
+  "enabled": true,
+  "mode": "percent",          // or "rate"
+  "percent": 25,              // 0..100
+  "rate": null                // or e.g. 3.00; null derives from percent
+}
+```
+
+`meta.credit_rate` should be written as the **effective** (post-discount) rate; `meta.list_credit_rate` preserves the pricing-JSON value for badge math. The HTML's `applyDiscount()` helper recomputes both on Edition / Cloud / Region changes. Omit the `discount` block entirely if no discount applies — the template will seed `enabled: false` automatically.
+
+**Scope reminder.** Per the AI Pricing Sales GTM FAQ, negotiated capacity discounts apply to Platform Credits only. AI Credits ($2.00 global / $2.20 regional) keep the on-demand rate; the discount block does **not** modify `meta.ai_credit_rate`.
+
 Read reference documents in parallel:
 
 1. Read `skills/snowflake-sizing/references/sizing-methodology.md`
@@ -272,7 +288,33 @@ Enable only if explicitly mentioned. For Openflow, always ask about source datab
 
 **SPCS shape:** `spcs.instances[]`, each entry `{ id, label, generation, instance_type, count, hours_monthly }`. Set `spcs.enabled=true` whenever the array is non-empty.
 
-**OpenFlow shape:** `openflow.instances[]`, each entry `{ id, label, deployment, source_connections, vcpu_per_connection, hours_monthly }`. Create one instance per distinct connector (e.g. one for "Salesforce CDC", one for "Postgres logical replication"). Set `openflow.enabled=true` whenever the array is non-empty. The legacy single-object shape (`source_connections` / `vcpu_per_connection` / `hours_monthly` directly on `openflow`) is auto-normalized by the template — but new specs MUST emit the array form.
+**OpenFlow shape:** `openflow.instances[]`, each entry:
+```json
+{
+  "id": "of-1",
+  "label": "Postgres CDC",
+  "connector_type": "CDC",
+  "deployment": "SPCS",
+  "runtime_size": "Medium",
+  "runtime_nodes": 3,
+  "byoc_region": null,
+  "monthly_data_gb": 90,
+  "warehouse_size": "X-Small",
+  "warehouse_hours_monthly": 180,
+  "hours_monthly": 730
+}
+```
+
+Fields:
+- `connector_type`: `"CDC"` / `"Streaming"` / `"Files"` / `"SaaS"` / `"Oracle CDC"` — display label and determines applicable cost components
+- `deployment`: `"SPCS"` (Snowflake-managed, credit-based) or `"BYOC"` (AWS-hosted, dual billing)
+- `runtime_size`: `"Small"` (1 vCPU, light), `"Medium"` (4 vCPU, standard), `"Large"` (8 vCPU, high-volume)
+- `runtime_nodes`: number of runtime nodes required. For CDC: 1 per distinct JDBC source server; if total tables > 600, use `max(source_servers, ceil(total_tables/600))`. For Streaming/Files: throughput-driven (see sizing-methodology.md)
+- `byoc_region`: AWS region code, required when `deployment === "BYOC"`. One of: `"us-east-1"`, `"us-west-2"`, `"eu-west-1"`, `"eu-west-2"`, `"eu-central-1"`, `"ap-southeast-1"`, `"ap-northeast-1"`
+- `monthly_data_gb`: estimated GB/month through Snowpipe Streaming. For CDC: `connections × events_per_day × avg_row_bytes / 1e9 × 30`. For Streaming: `MB/s × active_hours × 3600 × 30 / 1000`
+- `warehouse_size` + `warehouse_hours_monthly`: MERGE warehouse for CDC/Oracle CDC workloads. Often 60–70% of total CDC cost — always confirm if customer has an existing warehouse that can be reused. Set `warehouse_size: null` if no dedicated warehouse.
+
+Create one instance per distinct connector deployment (e.g. one for "Salesforce CDC", one for "Postgres replication"). Set `openflow.enabled=true` whenever the array is non-empty.
 
 ### Collaboration: Reader / Managed accounts
 
@@ -358,7 +400,14 @@ serverless_credits_year_y   = Σ_workloads (monthly_serverless_credits × Σ_mon
 ai_credits_year_y           = Σ_workloads (monthly_ai_credits × Σ_months_in_y month_factor)
 storage_cost_year_y         = active_TB(y) × storage_rate × 12     (already grows via storage growth model)
 spcs_cost_year_y            = Σ_instances  (instance_cr/hr × hrs/mo × count × credit_rate × Σ_months_in_y month_factor)
-openflow_cost_year_y        = Σ_instances  (connections × vcpu × hours × 0.0225 × credit_rate × Σ_months_in_y month_factor)
+openflow_cost_year_y        = per-instance sum × Σ_months_in_y month_factor, where per-instance:
+  SPCS runtimes:  ceil(nodes/3) × SPCS_rate[size] × 730 × cr   (Small=0.11, Medium=0.41, Large=0.83 cr/hr)
+  SPCS ctrl pool: 0.11 × 730 × cr  (once per deployment with any SPCS instance)
+  BYOC fixed:     region_fixed × 1  (no ramp — always-on; once per deployment; $463–575/mo by region)
+  BYOC EC2+EBS:   ceil(nodes/3) × (ec2_hourly[region][size] × 730 + 200 × ebs_gb[region])
+  BYOC credits:   nodes × vcpu[size] × 730 × 0.0225 × cr   (Small=1, Medium=4, Large=8 vCPU)
+  Snowpipe:       monthly_data_gb × 0.0037 × cr
+  Warehouse MERGE: wh_credits[wh_size] × wh_hours_monthly × cr  (CDC only; X-Small=1,S=2,M=4,L=8 cr/hr)
 transfer + privatelink      = tb × rate × 12
 replication_cost_year_y     = (active_TB(y) + monthly_change_TB(y) × 12) × cr_per_TB × credit_rate
                             + monthly_change_TB(y) × 12 × egress_matrix[source][target]

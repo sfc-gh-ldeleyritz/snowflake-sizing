@@ -292,6 +292,32 @@ Card mutation handlers: `addAccount(type)`, `removeAccount(id)`, `updateAccount(
 - Dev start month: number input (1-36). Sets `meta.default_dev_start_month` AND propagates to every workload row.
 - Go-live month: number input (1-36). Sets `meta.default_go_live_month` AND propagates to every workload row.
 - Annual growth %: number input. Sets `meta.annual_growth_rate` (used by year 2+ scaling).
+- List rate ($/credit): read-only display of the rate from `PRICING_DATA.credit_pricing` for the current Edition × Cloud × Region selection.
+
+##### Discount override
+
+A separate card below the main grid lets the SE apply a negotiated discount.
+
+```js
+SIZING_SPEC.meta.list_credit_rate    // pricing-JSON rate (always preserved)
+SIZING_SPEC.meta.credit_rate         // EFFECTIVE rate every calculation reads
+SIZING_SPEC.meta.discount = {
+  enabled: false,                    // toggle state
+  mode: "percent",                   // "percent" or "rate" — last edited field
+  percent: 0,                        // 0..100 (clamped)
+  rate: null                         // $/credit override; null means derive from percent
+}
+```
+
+Behaviour:
+- **Toggle off** (default): fields hidden, `meta.credit_rate = meta.list_credit_rate`, header shows the list rate with no badge.
+- **Toggle on**: two mutually-linked inputs appear — `Net rate ($/credit)` and `Discount %`. Editing one updates the other against the list rate via `applyDiscount()`. A read-only `Effective rate` field mirrors `meta.credit_rate` for confirmation.
+- Edition / Cloud / Region change recomputes `meta.list_credit_rate` from the pricing JSON, then `applyDiscount()` re-derives the effective rate (percent stays sticky if `mode === "percent"`; net rate stays sticky if `mode === "rate"`).
+- Header shows the effective rate followed by a subtle `(N% off list)` badge (rendered by `updateHeaderInfo()` into `#hdr-discount-badge`).
+
+**Scope** — applies to Platform Credits only (warehouses, serverless, replication compute). AI Credit rate (`PRICING_DATA.ai_credit_rate.global_on_demand` = $2.00, regional = $2.20) is intentionally untouched per Snowflake's [AI Pricing Sales GTM FAQ](https://docs.google.com/document/d/10k7wZLUN3tybElajcKuSccplCaYx4xEmx70HovXbVrw): *"Negotiated capacity discounts do not apply to AI Credits."* AI Credits use a separate automatic ACV-tiered discount (Table 2(b) of the Consumption Table) that the plugin does not surface as an editable input.
+
+Persistence: `meta.discount` and `meta.list_credit_rate` round-trip through `saveSnapshot()`. Legacy snapshots without these fields are seeded by the `normalizeSpec()` IIFE on load (`enabled: false`, `list_credit_rate = credit_rate`), so existing examples continue to load and render unchanged.
 
 ### 6. Scenario Comparison
 
@@ -623,7 +649,7 @@ A `<section id="replication-section">` is only rendered (display:block) when `SI
 
 **Configuration tab placement.** The Replication / DR / Migration panel lives as one of the configuration tabs (`#tab-replication`) alongside Warehouses / Serverless / AI / SPCS / OpenFlow / Storage / Collaboration / Global Settings. The card uses the same `workload-card` + `controls-grid` + `justification` formatting as other tabs; its group-header row (`gh-cr-replication`, `gh-d-replication`) shows live monthly credits and dollars. When `SIZING_SPEC.replication` is absent or `enabled: false`, the tab shows a `+ Enable Replication / DR` add-button; clicking it calls `enableReplication()` to seed default values (N. Virginia → Oregon, 0 TB, 4 cr/TB, $23/TB/mo). The Delete button on the active card calls `disableReplication()` (sets `enabled: false`).
 
-**Live header updates.** The proposal header (Customer name, Edition, Cloud + Region, Credit rate, Years) is wrapped in spans with stable IDs (`hdr-customer`, `hdr-edition`, `hdr-cloud`, `hdr-region`, `hdr-credit-rate`, `hdr-years`). `updateHeaderInfo()` synchronises these spans from `SIZING_SPEC.meta` whenever `updateGlobal()` is called from the Global Settings tab, so any change there reflects immediately in the header without a page reload.
+**Live header updates.** The proposal header (Customer name, Edition, Cloud + Region, Credit rate, Years) is wrapped in spans with stable IDs (`hdr-customer`, `hdr-edition`, `hdr-cloud`, `hdr-region`, `hdr-credit-rate`, `hdr-years`, `hdr-discount-badge`). `updateHeaderInfo()` synchronises these spans from `SIZING_SPEC.meta` whenever `updateGlobal()` is called from the Global Settings tab, so any change there reflects immediately in the header without a page reload. When `meta.discount.enabled` is true, `#hdr-discount-badge` renders ` (N% off list)` next to the rate (rounded to 1 decimal); otherwise empty.
 
 ### Core Functions
 
