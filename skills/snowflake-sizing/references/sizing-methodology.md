@@ -163,15 +163,16 @@ AI credits are priced separately from compute credits. Default on-demand rate: *
 
 ### Cortex Complete key models (credits per 1M tokens)
 
-| Model | Input | Output |
-|---|---|---|
-| claude-4-sonnet | 1.50 | 7.50 |
-| claude-4-opus | 7.50 | 37.50 |
-| claude-haiku-4-5 | 0.55 | 2.75 |
-| llama4-maverick | 0.12 | 0.49 |
-| llama4-scout | 0.09 | 0.33 |
-| openai-gpt-4.1 | 1.00 | 4.00 |
-| snowflake-arctic | 0.84 | 0.84 |
+| Model | Input | Output | Notes |
+|---|---|---|---|
+| claude-sonnet-4-6 | 1.65 | 8.25 | **← DEFAULT for cortex_complete** |
+| claude-4-sonnet | 1.50 | 7.50 | Legacy — prefer claude-sonnet-4-6 |
+| claude-4-opus | 7.50 | 37.50 | Complex reasoning only |
+| claude-haiku-4-5 | 0.55 | 2.75 | High-volume / low-cost |
+| llama4-maverick | 0.12 | 0.49 | |
+| llama4-scout | 0.09 | 0.33 | |
+| openai-gpt-4.1 | 1.00 | 4.00 | |
+| snowflake-arctic | 0.84 | 0.84 | |
 
 ### Cortex Agents — Table 6(b) (credits per 1M tokens)
 
@@ -198,7 +199,8 @@ Used for Cortex Code, Snowflake Intelligence agentic features.
 6.3 credits per GB/month of indexed data
 
 ### Document AI
-8 credits per hour of compute
+
+**DEPRECATED (2026-05-26)** — Superseded by `AI_EXTRACT`. Do NOT include `document_ai`, `ai_parse_document_layout`, or `ai_parse_document_ocr` in new sizing specs. For document processing workloads, use `ai_extract` with appropriate token volumes (default 70M tokens/month when document extraction is a primary use case).
 
 ### Cortex Code (per-surface billing)
 

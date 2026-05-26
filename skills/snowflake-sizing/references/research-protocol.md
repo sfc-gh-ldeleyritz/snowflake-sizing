@@ -45,18 +45,20 @@ SELECT p.NAME AS speaker, p.AFFILIATION,
        t.value:topic::STRING AS topic,
        t.INDEX AS turn_index,
        t.value:sentences AS sentences
-FROM GONG_SHARE.GONG_DATA_CLOUD.CALL_TRANSCRIPTS ct,
-     LATERAL FLATTEN(input => ct.TRANSCRIPT) t
+FROM GONG_SHARE.GONG_DATA_CLOUD.CALL_TRANSCRIPTS ct
+JOIN LATERAL FLATTEN(input => ct.TRANSCRIPT) t ON TRUE
 JOIN GONG_SHARE.GONG_DATA_CLOUD.CONVERSATION_PARTICIPANTS p
     ON ct.CONVERSATION_KEY = p.CONVERSATION_KEY
     AND t.value:speakerId::STRING = p.SPEAKER_ID::STRING
 WHERE ct.CONVERSATION_KEY IN ('<key_1>', '<key_2>')
+  AND ct.TRANSCRIPT IS NOT NULL
 ORDER BY ct.CONVERSATION_KEY, t.INDEX;
 ```
 
 Critical join rules:
 - Use `CONVERSATION_KEY` (hash). Do NOT use `CONVERSATION_ID` (numeric) for joins.
-- If `TRANSCRIPT` is NULL, fall back to `CALL_SPOTLIGHT_BRIEF` from C1 for that call.
+- Use explicit `JOIN LATERAL FLATTEN(...) ON TRUE` — do NOT use the implicit comma-join form (`CALL_TRANSCRIPTS ct, LATERAL FLATTEN(...) t JOIN ...`) as it puts the `ct` alias out of scope in the ON clause and causes a Snowflake compilation error.
+- **NULL fallback**: If the above returns 0 rows for a given CONVERSATION_KEY (TRANSCRIPT IS NULL), retrieve that call's `CALL_SPOTLIGHT_BRIEF` from the C1 result set and record `[FALLBACK: CALL_SPOTLIGHT_BRIEF — TRANSCRIPT NULL]` in the evidence file for that call.
 - Distinguish customer vs Snowflake speakers using `p.AFFILIATION` (`External` vs `Internal`).
 
 ---
@@ -80,13 +82,13 @@ You may execute up to **two** retry queries. Document each attempted substring i
 
 ## 4. Evidence file template
 
-Write to `temp/<customer-slug>-research-evidence.md`. The customer slug is the customer name lowercased with spaces → hyphens and non-alphanumerics removed (matches the slug used in `temp/<customer-slug>-<N>year-sizing.html`).
+Write to `temp/<customer-slug>-research-evidence.md`. The customer slug is the customer name lowercased with spaces → hyphens and non-alphanumerics removed.
 
 ```markdown
 # Research Evidence — <Customer> sizing v<N>
 
 Generated: <YYYY-MM-DD>
-Sizing artifact: temp/<customer-slug>-<N>year-sizing.html
+Sizing artifact: sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.html
 
 ## Glean — account signals (B1)
 Query: "<customer> snowflake data platform workloads"  num_results=8  hits=<N>

@@ -34,10 +34,19 @@ Reduced research is only allowed via the narrow exceptions clause in `skills/sno
 
 ## Output
 
-Two artifacts:
+Three artifacts:
 
-- `temp/<customer-slug>-<N>year-sizing.html` — single self-contained interactive proposal.
+- `sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.html` — single self-contained interactive proposal.
+- `sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.json` — portable sizing spec (the `SIZING_SPEC` object). Source of truth for the HTML and future export formats (PPTX, DOCX, XLSX).
 - `temp/<customer-slug>-research-evidence.md` — Glean + Gong audit trail (B1/B2/B3 hits, Gong call inventory with retry log, verbatim transcript turns, and sizing-impacting findings).
+
+The `sizings/` directory is git-tracked so specs and proposals are version-controlled alongside the plugin. `temp/` is git-ignored (scratch files only).
+
+### Sizing Spec (`.json`)
+
+The `.json` file contains the complete `SIZING_SPEC` object — all workloads, serverless features, AI config, storage, metadata, assumptions, and confirm_required items. It is the source of truth from which the HTML is derived and from which future export formats (PPTX, DOCX, XLSX) will be generated.
+
+**Browser round-trip:** Open any saved HTML and click **Export JSON** to extract the current `SIZING_SPEC` (including any browser edits) back to a `.json` file.
 
 Open the HTML in any browser. The proposal is fully interactive — all configuration changes propagate immediately to all output sections (KPI tiles, Year-by-Year Breakdown, charts, Scenario Comparison).
 
@@ -68,6 +77,7 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 - **Birdbox ramp curves** — per-workload power-law ramp from `dev_start_month` to `go_live_month` (Slowest / Slow / Linear / Fast / Fastest / Manual). Global Settings defaults seed all new rows; individual rows can override.
 - **Platform Credit discount override** — toggle in Global Settings accepts a net rate ($/credit) or discount %. AI Credits remain fixed at $2.00 global / $2.20 regional (discount does not apply per Snowflake policy).
 - **Save Version** — top-right button snapshots the current `SIZING_SPEC` (including all SE edits), bumps `meta.version_number`, and downloads a self-contained HTML file named `<slug>-<N>year-sizing-v<N>-<YYYY-MM-DD>.html`.
+- **Export JSON** — downloads the current `SIZING_SPEC` as a portable `.json` file (same name convention as Save Version). Use this to round-trip browser edits back to disk, or to feed future export skills for PPTX/DOCX/XLSX generation.
 - **Per-feature tooltips** — `ⓘ` icon next to every togglable feature explains what it is and how it bills. Hidden in print mode.
 - **Editable assumptions** — Stated Assumptions and Requires Confirmation items are `contenteditable` in the browser. Add, delete, or reword inline; changes persist in `SIZING_SPEC` and are saved by Save Version.
 - **Scenario toggle** — checkbox above the Scenario Comparison grid to show/hide the Conservative and Aggressive cards.

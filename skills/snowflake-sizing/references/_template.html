@@ -438,6 +438,7 @@ li:hover .item-delete-btn { display: inline; }
 <body>
 <button class="print-btn" onclick="window.print()" title="Print or Save as PDF">Print / Save as PDF</button>
 <button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save Version</button>
+<button class="save-btn" onclick="exportSpec()" title="Download the SIZING_SPEC as a portable .json file for use with other export formats">Export JSON</button>
 <div class="container">
 
 <!-- 1. Header -->
@@ -2639,6 +2640,29 @@ function saveSnapshot() {
   const filename = slug + '-' + years + 'year-sizing-v' + meta.version_number + '-' + today + '.html';
 
   const blob = new Blob([updated], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ========== Export JSON (download portable SIZING_SPEC) ==========
+// Downloads the current SIZING_SPEC as a .json file. Use this to round-trip
+// browser edits back to disk, or to feed future export skills (pptx, xlsx, etc.).
+function exportSpec() {
+  const meta = SIZING_SPEC.meta || {};
+  const slug = (meta.customer || 'customer').toString().toLowerCase()
+    .replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+  const years = meta.contract_years || 1;
+  const v = meta.version_number || 1;
+  const today = new Date().toISOString().slice(0, 10);
+  const filename = slug + '-' + years + 'year-sizing-v' + v + '-' + today + '.json';
+
+  const blob = new Blob([JSON.stringify(SIZING_SPEC, null, 2)], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

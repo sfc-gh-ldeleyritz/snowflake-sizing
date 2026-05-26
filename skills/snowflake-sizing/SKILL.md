@@ -20,11 +20,15 @@ Parse `$ARGUMENTS`:
 - `--edition X` — Standard / Enterprise / Business Critical / VPS. Default: **Enterprise**.
 - `--region "X"` — full region string, e.g. `"AWS Europe (London)"`. If omitted, infer from context file; default to `"AWS Europe (London)`".
 
-Read pricing data (use Read tool on `assets/snowflake_pricing_master.json`).
+Read pricing data using the absolute path (works regardless of working directory):
+
+```
+~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/assets/snowflake_pricing_master.json
+```
 
 Derive from pricing data:
 
-- `credit_rate` — from `credit_pricing.data` matching cloud + region + edition
+- `credit_rate` — from `credit_pricing.data` matching cloud + region + edition (see Region name resolution below)
 - `ai_credit_rate` — from `ai_credit_pricing.on_demand.global` ($2.00 default)
 - `storage_rate_per_tb` — from `storage.standard` for the region (use `row["on_demand"]` for the no-commit rate)
 
@@ -68,11 +72,39 @@ The `default_*` fields seed per-workload defaults during Phase 3. They are not u
 
 **Scope reminder.** Per the AI Pricing Sales GTM FAQ, negotiated capacity discounts apply to Platform Credits only. AI Credits ($2.00 global / $2.20 regional) keep the on-demand rate; the discount block does **not** modify `meta.ai_credit_rate`.
 
-Read reference documents in parallel:
+Read all four files in a single parallel batch (absolute paths — works regardless of working directory):
 
-1. Read `skills/snowflake-sizing/references/sizing-methodology.md`
-2. Read `skills/snowflake-sizing/references/html-spec.md`
-3. Read `skills/snowflake-sizing/references/research-protocol.md`
+1. `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/skills/snowflake-sizing/references/sizing-methodology.md`
+2. `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/skills/snowflake-sizing/references/html-spec.md`
+3. `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/skills/snowflake-sizing/references/research-protocol.md`
+
+**Region name resolution (MANDATORY before pricing lookup)**
+
+Before looking up `credit_rate`, resolve the user-supplied region string against the following alias table. Use the canonical key as the exact string to match in `credit_pricing.data[].region`.
+
+| User input (examples) | Canonical key in `credit_pricing.data` |
+|---|---|
+| `North Europe`, `Azure North Europe`, `Ireland` | `North Europe (Ireland)` |
+| `London`, `UK South`, `Azure London`, `UK` | `UK South (London)` |
+| `AWS US East`, `Virginia`, `N. Virginia`, `us-east-1` | `AWS US East (Northern Virginia)` |
+| `AWS US West`, `Oregon`, `us-west-2` | `AWS US West (Oregon)` |
+| `Frankfurt`, `AWS Frankfurt`, `eu-central-1` | `AWS EU (Frankfurt)` |
+| `Sydney`, `AWS Sydney`, `ap-southeast-2` | `AWS Asia Pacific (Sydney)` |
+| `Singapore`, `AWS Singapore`, `ap-southeast-1` | `AWS Asia Pacific (Singapore)` |
+| `Tokyo`, `AWS Tokyo`, `ap-northeast-1` | `AWS Asia Pacific (Tokyo)` |
+| `Netherlands`, `West Europe`, `Azure Netherlands` | `West Europe (Netherlands)` |
+| `Sweden Central` | `Sweden Central` |
+
+If the supplied string matches no alias and no exact key, print:
+```
+⚠️  Region '<input>' not matched. Available keys: <list from credit_pricing.data>
+Closest match found: '<key>' — continue? (or correct --region before proceeding)
+```
+
+After resolving, always print to the terminal before proceeding:
+```
+Region: <resolved key> | Credit rate: $X.XX/credit (<Edition>)
+```
 
 ---
 
@@ -120,7 +152,7 @@ CRITICAL: All three research operations (A, B, C) MUST execute. There is no "ski
 
 Read `skills/snowflake-sizing/references/research-protocol.md` before executing the matrix below — it contains the exact query strings, SQL templates, retry rules, and evidence file template.
 
-Run the full research matrix in parallel:
+**PARALLELISM RULE**: Run A, B1, B2, B3, and C1 simultaneously in a single parallel batch. Do NOT wait for any one call to complete before launching the others. C2 requires CONVERSATION_KEY values from C1 — launch C2 the moment C1 returns; do NOT wait for A/B to finish before starting C2.
 
 **A. Read context file**
 Read the file at `context_file`. Extract every piece of information relevant to sizing:
@@ -208,6 +240,25 @@ Proceeding to Phase 3 (build sizing spec).
 ---
 
 ## Phase 3 — Build the sizing spec
+
+### § Content Hygiene (MANDATORY)
+
+The following MUST NEVER appear in any customer-facing field (`label`, `justification`, `note`, `description` — any field that renders as visible text in the HTML):
+
+- **Personal names** from Gong transcripts or internal contacts (first or last names of any individuals)
+- **Internal file names** (`sizing-methodology.md`, `customer-context.md`, `research-evidence.md`, `html-spec.md`, `research-protocol.md`, or any other internal artefact)
+- **Citation prefixes in visible text**: `SOURCED:`, `ASSUMPTION:`, `REQUIRES_CONFIRMATION:`
+- **References to internal tools, systems, or methodology artefacts**
+
+Citation labels (`SOURCED:`, `ASSUMPTION:`) are ONLY permitted inside the JSON `source` metadata field (used as JS flags, never rendered). Justification text must be plain customer-facing prose: *"Based on stated 50 TB daily ingestion volume"* — never *"SOURCED: Gong turn 14 — Jay: …"*.
+
+### § AI Feature Defaults (MANDATORY)
+
+1. **Document AI is removed.** Do NOT include `document_ai`, `ai_parse_document_layout`, or `ai_parse_document_ocr` in any spec. These features are superseded by `ai_extract`. For document processing workloads, use `ai_extract` with appropriate token volumes (default 70M tokens/month when document extraction is a primary use case).
+
+2. **Default model for `cortex_complete`**: Always specify `claude-sonnet-4-6` (input: 1.65 AI cr/M, output: 8.25 AI cr/M). Do not use unlisted, older, or smaller models as defaults.
+
+---
 
 Using `sizing-methodology.md` as your rulebook, reason through EVERY consumption category.
 
@@ -431,22 +482,31 @@ If `replication` is not present in SIZING_SPEC, omit the Replication column.
 
 ---
 
-## Phase 5 — Generate interactive HTML
+## Phase 5 — Generate sizing spec and interactive HTML
 
-Read the committed template and substitute all placeholder tokens to produce the output file:
+The `.json` spec is the primary artifact and is written **first**. The HTML is then derived from it.
+
+**Output paths** (both go to the git-tracked `sizings/` directory):
 
 ```
-Input:   skills/snowflake-sizing/references/_template.html
-Output:  temp/<customer-slug>-<N>year-sizing.html
+Spec:  sizings/<customer-slug>-<N>year-sizing-v<version_number>-<YYYY-MM-DD>.json
+HTML:  sizings/<customer-slug>-<N>year-sizing-v<version_number>-<YYYY-MM-DD>.html
 ```
 
-Where `customer-slug` = customer name lowercased, spaces replaced with hyphens.
+Where:
+- `customer-slug` = customer name lowercased, spaces replaced with hyphens, special chars stripped
+- `version_number` = `SIZING_SPEC.meta.version_number` (set to `1` in Phase 1)
+- `YYYY-MM-DD` = today's date
 
 **Steps:**
 
-1. Read `skills/snowflake-sizing/references/_template.html`
-2. Read `assets/branding/_brand_fonts.css`
-3. Substitute every token below — replace the exact token string with its value:
+1. **Write the spec file first.** Serialize the complete `SIZING_SPEC` object as pretty-printed JSON and write to `sizings/<customer-slug>-<N>year-sizing-v1-<date>.json`. This step must complete before touching the template — if HTML generation fails, the spec is already saved.
+
+2. Read `skills/snowflake-sizing/references/_template.html`
+
+3. Read `assets/branding/_brand_fonts.css`
+
+4. Substitute every token below — replace the exact token string with its value:
 
 | Token | Value |
 |---|---|
@@ -462,23 +522,43 @@ Where `customer-slug` = customer name lowercased, spaces replaced with hyphens.
 | `__DATE__` | today's date (YYYY-MM-DD) |
 | `__PDF_VERSION__` | version string from SIZING_SPEC metadata |
 
-4. Write the result to `temp/<customer-slug>-<N>year-sizing.html`
+5. Write the result to `sizings/<customer-slug>-<N>year-sizing-v1-<date>.html`
 
 Do **not** modify any other part of the template. The template already contains official Snowflake branding (wordmark, fonts, favicon, crystal mark footer) — do not regenerate or alter those sections.
 
 **Quality check before reporting success (BLOCKING):**
 
-1. Confirm no `__TOKEN__` strings remain in the output (all 11 substituted).
-2. Verify the per-month factor model is wired through (not the legacy `growth_rates` array). `grep growth_rates temp/<slug>-<N>year-sizing.html` should return zero hits.
+1. Confirm no `__TOKEN__` strings remain in the HTML output (all 11 substituted).
+2. Verify the per-month factor model is wired through (not the legacy `growth_rates` array). `grep growth_rates sizings/<slug>-<N>year-sizing-v1-<date>.html` should return zero hits.
 3. Verify `credit_rate` in spec matches the region in the header.
 4. If `SIZING_SPEC.replication` was populated, confirm both `source_region` and `target_region` are valid keys in `pricing.replication.egress_matrix` (`source_region` exists, and `target_region` exists in `egress_matrix[source_region]`).
 5. **Em-dash gate.** Run:
 
    ```bash
-   python3 assets/emdash-check.py temp/<slug>-<N>year-sizing.html temp/<slug>-research-evidence.md
+   python3 assets/emdash-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html temp/<slug>-research-evidence.md
    ```
 
    If exit code is non-zero, the script prints `file:line:col` for each U+2014 occurrence. Replace each em-dash with ` - ` (space hyphen space) in the source artifact and re-run the gate until it exits 0. Do NOT proceed to Phase 6 until the gate passes.
+
+6. **Content hygiene gate.** Run:
+
+   ```bash
+   python3 -c "
+   import sys
+   with open('sizings/<slug>-<N>year-sizing-v1-<date>.html') as f:
+       html = f.read()
+   patterns = ['SOURCED:', 'ASSUMPTION:', 'sizing-methodology.md',
+               'customer-context.md', 'research-evidence.md', 'html-spec.md',
+               'research-protocol.md']
+   fails = [p for p in patterns if p in html]
+   if fails:
+       print('CONTENT HYGIENE FAIL:', fails)
+       sys.exit(1)
+   print('CONTENT HYGIENE PASS')
+   "
+   ```
+
+   If exit non-zero, locate the offending fields in the SIZING_SPEC, rewrite their visible text as plain customer-facing prose (no citation prefixes, no file names, no personal names), and re-run Phase 5 steps 4–6 until all gates pass.
 
 ---
 
@@ -488,10 +568,12 @@ Print to terminal:
 
 ```
 ✅ Generated:
-   temp/[filename].html              (interactive sizing proposal)
-   temp/[slug]-research-evidence.md  (Glean + Gong audit trail)
+   sizings/[slug]-[N]year-sizing-v1-[date].html   (interactive sizing proposal)
+   sizings/[slug]-[N]year-sizing-v1-[date].json   (portable sizing spec)
+   temp/[slug]-research-evidence.md               (Glean + Gong audit trail)
 
 🛡  emdash check: PASS
+🛡  content hygiene: PASS
 
 📊 [CUSTOMER] — [N]-Year Consumption Estimate
   Edition: [EDITION] · [CLOUD] [REGION] · $[CREDIT_RATE]/credit
@@ -512,13 +594,16 @@ Print to terminal:
   • [confirm_required item 2]
   ...
 
-Open in browser: open temp/[filename]
+Open in browser: open sizings/[slug]-[N]year-sizing-v1-[date].html
 Print / Save as PDF: click the "Print / Save as PDF" button in the top-right of the proposal,
-or in the SE's terminal: open temp/[filename] (then Cmd-P → "Save as PDF").
+or in the SE's terminal: open sizings/[slug]-[N]year-sizing-v1-[date].html (then Cmd-P → "Save as PDF").
 Tip: Chrome adds a date/title header and file:// URL footer by default — expand "More settings"
 in the print dialog and uncheck "Headers and footers" for a clean PDF. (Hover the ⓘ next to the
 Print button in the proposal for the same hint.)
 Save versioned snapshots: click "Save Version" (next to Print) to download a self-contained HTML
 with the SE's current edits embedded. Filename is auto-generated as
 <slug>-<years>year-sizing-v<N>-<YYYY-MM-DD>.html and the version number auto-increments each save.
+Export portable spec: click "Export JSON" (next to Save Version) to download the current
+SIZING_SPEC as a .json file — useful for round-tripping browser edits back to disk, or passing
+to future export skills (/export-pptx, /export-xlsx) to generate other format deliverables.
 ```

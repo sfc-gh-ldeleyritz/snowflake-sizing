@@ -1,6 +1,41 @@
 # snowflake-sizing changelog
 
-## [v1.0.0]
+## [v1.2.0] — GSMAi post-run fixes: correctness, hygiene, parallelism
+
+### Fixed
+
+- **Gong C2 transcript SQL — `CT.CONVERSATION_KEY` compilation error.** The C2 query in `references/research-protocol.md` mixed implicit comma-join (`CALL_TRANSCRIPTS ct, LATERAL FLATTEN(...) t`) with an explicit `JOIN`, putting the `ct` alias out of scope in the `ON` clause. Rewrote to use `JOIN LATERAL FLATTEN(...) t ON TRUE` + explicit `JOIN` for `CONVERSATION_PARTICIPANTS`. Added `AND ct.TRANSCRIPT IS NOT NULL` to the `WHERE` clause and a NULL fallback rule: when TRANSCRIPT is NULL for a given key, fall back to `CALL_SPOTLIGHT_BRIEF` from C1 and record `[FALLBACK: CALL_SPOTLIGHT_BRIEF — TRANSCRIPT NULL]` in the evidence file.
+- **Asset path resolution when invoked from a different plugin directory.** All file reads in SKILL.md Phase 1 (`assets/snowflake_pricing_master.json`, `sizing-methodology.md`, `html-spec.md`, `research-protocol.md`) now use absolute `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/...` paths. Previously, relative paths resolved against the caller's working directory (e.g. `rfp-wizard`), causing a "File not found" failure for the pricing JSON.
+- **Azure credit rate region mismatch.** The model was resolving freeform region text (e.g. "Azure North Europe") by partial string similarity and could land on the wrong row (e.g. `Sweden Central` at $3.60 instead of `North Europe (Ireland)` at $3.90). Root-fixed by a new alias table in SKILL.md Phase 1 (see Added below).
+- **`temp/` path in evidence file template.** `references/research-protocol.md` §4 template still referenced `temp/<slug>-<N>year-sizing.html` (pre-`sizings/` era). Updated to `sizings/<slug>-<N>year-sizing-v1-<YYYY-MM-DD>.html`.
+- **Document AI removed from sizing specs.** `document_ai`, `ai_parse_document_layout`, and `ai_parse_document_ocr` are deprecated and superseded by `AI_EXTRACT`. SKILL.md Phase 3 now explicitly prohibits these three features in new specs. `sizing-methodology.md` Document AI section replaced with a deprecation notice pointing to `ai_extract` (default 70M tokens/month for document-heavy use cases).
+- **`cortex_complete` model default.** SKILL.md Phase 3 now specifies `claude-sonnet-4-6` (input: 1.65 AI cr/M, output: 8.25 AI cr/M) as the mandatory default. `sizing-methodology.md` Cortex Complete table updated: `claude-sonnet-4-6` added as first row with `← DEFAULT` marker; `claude-4-sonnet` (1.50/7.50) kept as legacy reference row.
+
+### Added
+
+- **Region alias table (Phase 1).** New "Region name resolution" block in SKILL.md Phase 1. Before looking up `credit_rate`, the model resolves user-supplied shorthand (e.g. `"North Europe"`, `"London"`, `"Virginia"`) to the canonical key in `credit_pricing.data`. Covers 10 common aliases across AWS/Azure/GCP. If no alias matches, the model prints the attempted string and the full key list for SE confirmation. After resolving, always prints `Region: <resolved key> | Credit rate: $X.XX/credit (<Edition>)` to the terminal before proceeding.
+- **Content hygiene rules (Phase 3).** New `§ Content Hygiene (MANDATORY)` block added before the "Work through categories" section. Explicitly bans from all customer-facing fields (`label`, `justification`, `note`, `description`): individual personal names from Gong transcripts, internal file names (`sizing-methodology.md`, `customer-context.md`, etc.), raw citation prefixes (`SOURCED:`, `ASSUMPTION:`, `REQUIRES_CONFIRMATION:`), and internal tool references. Clarifies that citation labels belong only in the JSON `source` metadata field; justification text must be plain customer-facing prose.
+- **Content hygiene gate (Phase 5, BLOCKING).** New quality gate runs after the em-dash gate. A short Python one-liner scans the generated HTML for banned patterns (`SOURCED:`, `ASSUMPTION:`, `sizing-methodology.md`, `customer-context.md`, `research-evidence.md`, `html-spec.md`, `research-protocol.md`). If any match, the gate exits non-zero and blocks Phase 6. Phase 6 output summary now includes `🛡 content hygiene: PASS`.
+
+### Changed
+
+- **Phase 1 reference reads parallelised.** SKILL.md instruction updated: all four Phase 1 reads (pricing JSON + 3 reference `.md` files) are launched in a single parallel batch. Previously the instruction said "read reference documents in parallel" but the pricing read was listed separately, encouraging sequential execution.
+- **Phase 2 parallelism made explicit.** New `PARALLELISM RULE` block: A, B1, B2, B3, and C1 MUST run simultaneously in one batch. C2 launches the moment C1 returns — does NOT wait for A/B. Previously the protocol said "run in parallel" but lacked an explicit sequencing rule for C2, leading to full A/B/C completion before C2 was started.
+
+---
+
+### Added
+
+- **Portable `.json` sizing spec.** Every skill run now writes the complete `SIZING_SPEC` object as a pretty-printed `.json` file alongside the HTML proposal. The spec is written **first** (before template substitution) so it is persisted even if HTML generation fails. It is the source of truth from which the HTML is derived and from which future export formats (PPTX, DOCX, XLSX) will be generated. Spec shape is identical to the `SIZING_SPEC` already embedded in the HTML — no structural changes.
+- **`sizings/` output directory.** Both the HTML proposal and the `.json` spec are now written to the new git-tracked `sizings/` directory (was `temp/`). `temp/` remains git-ignored and is used only for scratch files (research evidence). Versioned filename convention: `<slug>-<N>year-sizing-v<version_number>-<YYYY-MM-DD>.{html,json}`.
+- **"Export JSON" button.** Added to the proposal HTML next to "Save Version". Downloads the current `SIZING_SPEC` (including any browser edits) as a `.json` file using the same `<slug>-<N>year-sizing-v<N>-<YYYY-MM-DD>.json` naming convention. Enables round-tripping browser edits back to disk and provides the input file for future export skills (`/export-pptx`, `/export-xlsx`, etc.).
+
+### Changed
+
+- **SKILL.md Phase 5 rewritten as spec-first.** Step 1 is now: write `sizings/<slug>-<N>year-sizing-v1-<date>.json`. Step 2 onward: read template, substitute tokens, write `sizings/<slug>-<N>year-sizing-v1-<date>.html`. Quality check grep paths updated to `sizings/`. Phase 6 output summary updated to list all three artifacts.
+- **Output paths changed from `temp/` to `sizings/`.** The HTML proposal and new JSON spec are written to `sizings/` (git-tracked). The research evidence file remains in `temp/` (git-ignored). `commands/snowflake-sizing.md` and `README.md` updated accordingly.
+
+---
 
 ### Added
 

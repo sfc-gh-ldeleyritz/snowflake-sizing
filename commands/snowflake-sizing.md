@@ -11,4 +11,4 @@ Generate a Snowflake sizing estimate and interactive HTML proposal. Pass `$ARGUM
 - Glean MCP configured: `cortex mcp add glean https://snowflake-be.glean.com/mcp/default --transport http`
 - Active SNOWHOUSE connection with `GONG_SHARE.GONG_DATA_CLOUD` access: `cortex connections set snowhouse`
 
-The skill emits two artifacts: `temp/<slug>-<N>year-sizing.html` (the interactive proposal) and `temp/<slug>-research-evidence.md` (the Glean + Gong audit trail).
+The skill emits three artifacts: `sizings/<slug>-<N>year-sizing-v1-<date>.html` (the interactive proposal), `sizings/<slug>-<N>year-sizing-v1-<date>.json` (the portable sizing spec), and `temp/<slug>-research-evidence.md` (the Glean + Gong audit trail).
