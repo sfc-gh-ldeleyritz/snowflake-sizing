@@ -39,13 +39,39 @@ Two artifacts:
 - `temp/<customer-slug>-<N>year-sizing.html` — single self-contained interactive proposal.
 - `temp/<customer-slug>-research-evidence.md` — Glean + Gong audit trail (B1/B2/B3 hits, Gong call inventory with retry log, verbatim transcript turns, and sizing-impacting findings).
 
-Open the HTML in any browser. The proposal includes:
-- Executive summary with live TCV, Year 1 cost, and total credits
-- Year-by-year bar chart and workload breakdown donut
-- Interactive sliders for every variable (warehouse size, hours, clusters, serverless features, AI tokens, storage, etc.)
-- 3-scenario comparison (Conservative / Expected / Aggressive)
-- All assumptions listed with source citations
-- Items requiring customer confirmation with quantified impact
+Open the HTML in any browser. The proposal is fully interactive — all configuration changes propagate immediately to all output sections (KPI tiles, Year-by-Year Breakdown, charts, Scenario Comparison).
+
+### Interactive tabs
+
+| Tab | What you can edit |
+|---|---|
+| **Global Settings** | Cloud / Region / Edition, contract years, annual growth %, default ramp curve, dev-start / go-live months, Platform Credit discount override |
+| **Warehouses** | Size, hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards |
+| **Serverless** | Toggle and size each serverless feature (Snowpipe, Search Optimization, Materialized Views, Dynamic Tables, etc.) |
+| **AI / Cortex** | Cortex Complete, Cortex Agents, Snowflake Intelligence, Cortex Code (CLI / Snowsight / Desktop surfaces), Cortex Analyst, Cortex Search, Document AI, AI Functions |
+| **SPCS** | Instance type, generation, node count, hours/month; add / delete instances |
+| **OpenFlow** | Deployment (SPCS / BYOC), source connections, vCPU, hours/month; add / delete connectors |
+| **Storage** | Raw TB, compression ratio, annual growth %, Time Travel days, churn rate %; per-year breakdown table refreshes live |
+| **Collaboration** | Reader and Managed accounts with warehouse size, hours/day, days/month; add / delete accounts |
+| **Replication** | Source / target regions, initial TB, monthly change TB, credits/TB, replica storage rate, growth/YoY; enable / disable per relationship |
+
+### Output sections (all update live)
+
+- **KPI tiles** — TCV, Year 1 cost, total credits, effective credit rate
+- **Year-by-Year Breakdown** — per-workload credit and dollar totals for each contract year
+- **Stacked bar chart** — annual spend by workload group
+- **Donut chart** — credit share by workload group
+- **Scenario Comparison** — Conservative (10% growth / slow ramp), Expected (20% / linear), Aggressive (35% / fast) side-by-side
+
+### Additional features
+
+- **Birdbox ramp curves** — per-workload power-law ramp from `dev_start_month` to `go_live_month` (Slowest / Slow / Linear / Fast / Fastest / Manual). Global Settings defaults seed all new rows; individual rows can override.
+- **Platform Credit discount override** — toggle in Global Settings accepts a net rate ($/credit) or discount %. AI Credits remain fixed at $2.00 global / $2.20 regional (discount does not apply per Snowflake policy).
+- **Save Version** — top-right button snapshots the current `SIZING_SPEC` (including all SE edits), bumps `meta.version_number`, and downloads a self-contained HTML file named `<slug>-<N>year-sizing-v<N>-<YYYY-MM-DD>.html`.
+- **Per-feature tooltips** — `ⓘ` icon next to every togglable feature explains what it is and how it bills. Hidden in print mode.
+- **Editable assumptions** — Stated Assumptions and Requires Confirmation items are `contenteditable` in the browser. Add, delete, or reword inline; changes persist in `SIZING_SPEC` and are saved by Save Version.
+- **Scenario toggle** — checkbox above the Scenario Comparison grid to show/hide the Conservative and Aggressive cards.
+- **Print / Save as PDF** — floating button opens the browser print dialog. `@media print` hides all interactive controls, expands all tabs in flow, and reflows Chart.js canvases to A4 width.
 
 ## Context File Format
 
