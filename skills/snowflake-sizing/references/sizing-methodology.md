@@ -250,8 +250,8 @@ Default: 3x compression if unknown.
 
 Each workload row carries three ramp inputs that determine its month-by-month consumption:
 
-- `dev_start_month` — first month of any consumption (typically 2; month 1 reserved for setup/onboarding)
-- `go_live_month` — month at which consumption reaches 100% of steady-state (typically 11)
+- `dev_start_month` — first month of any consumption (typically 0; billing ramp begins from month 1 of the contract)
+- `go_live_month` — month at which consumption reaches 100% of steady-state (typically 3)
 - `ramp_curve` — one of `slowest | slow | linear | fast | fastest | manual`
 
 ### The factor formula
@@ -286,15 +286,15 @@ The agent should default to `pricing.ramp_curves.recommended_by_workload_type[<w
 
 ### Year 1 effective multiplier examples
 
-For the default window (`dev_start=2`, `go_live=11`), the average of factor(1..12) is roughly:
+For the default window (`dev_start=0`, `go_live=3`), the average of factor(1..12) is roughly:
 
 | Curve | Avg factor across 12 months |
 |---|---|
-| Slowest | 0.31 |
-| Slow | 0.43 |
-| Linear | 0.54 |
-| Fast | 0.69 |
-| Fastest | 0.79 |
+| Slowest | 0.86 |
+| Slow | 0.90 |
+| Linear | 0.94 |
+| Fast | 0.96 |
+| Fastest | 0.98 |
 
 These are **derived**, not configured — Phase 4 sums per-month factors directly rather than using a single multiplier.
 

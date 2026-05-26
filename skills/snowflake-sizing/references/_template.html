@@ -860,8 +860,8 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
   // Birdbox-style ramp curve defaults: seed meta-level defaults if missing.
   const m = SIZING_SPEC.meta;
   if (m.default_ramp_curve == null)     m.default_ramp_curve     = m.ramp_curve || 'linear';
-  if (m.default_dev_start_month == null) m.default_dev_start_month = 2;
-  if (m.default_go_live_month == null)   m.default_go_live_month   = 11;
+  if (m.default_dev_start_month == null) m.default_dev_start_month = 0;
+  if (m.default_go_live_month == null)   m.default_go_live_month   = 3;
   if (m.annual_growth_rate == null)      m.annual_growth_rate      = 0.20;
 
   // Platform Credit discount override (Order Form / negotiated capacity).
@@ -908,8 +908,8 @@ function rampMultiplierForYear(row, year) {
   // multiplied by the cumulative annual-growth factor for years 2+.
   const m = SIZING_SPEC.meta;
   const annualGrowth = (m.annual_growth_rate != null) ? m.annual_growth_rate : 0.20;
-  const devStart = (row && row.dev_start_month != null) ? row.dev_start_month : (m.default_dev_start_month != null ? m.default_dev_start_month : 2);
-  const goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   != null ? m.default_go_live_month   : 11);
+  const devStart = (row && row.dev_start_month != null) ? row.dev_start_month : (m.default_dev_start_month != null ? m.default_dev_start_month : 0);
+  const goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   != null ? m.default_go_live_month   : 3);
   const curve   = (row && row.ramp_curve)              ? row.ramp_curve      : (m.default_ramp_curve || 'linear');
   let avg;
   if (year === 1) {
@@ -1617,7 +1617,7 @@ function updateScenarios() {
     const synthRow = {
       ramp_curve: sc.curve,
       dev_start_month: m.default_dev_start_month,
-      go_live_month: Math.max(2, (m.default_go_live_month || 11) + sc.shift),
+      go_live_month: Math.max(2, (m.default_go_live_month || 3) + sc.shift),
     };
     const savedGrowth = m.annual_growth_rate;
     m.annual_growth_rate = sc.growth;  // temporarily swap for scenario growth
@@ -1639,7 +1639,7 @@ function updateScenarios() {
       tcv += total;
       yearRows += `<div class="scenario-row"><span>Year ${y}</span><span>$${fmt(total)}</span></div>`;
     }
-    const goLiveLabel = Math.max(2, (m.default_go_live_month || 11) + sc.shift);
+    const goLiveLabel = Math.max(2, (m.default_go_live_month || 3) + sc.shift);
     return `<div class="scenario-card ${sc.cls}">
       <div class="scenario-title">${sc.name}</div>
       <div style="font-size: 12px; color: var(--gray-600);">${(sc.growth*100).toFixed(0)}%/yr growth &middot; ${sc.curve} curve &middot; go-live month ${goLiveLabel}</div>
@@ -2300,14 +2300,14 @@ function populateGlobalSettings() {
         </select>
       </label>
       <label>Dev start (month)
-        <input type="number" min="1" max="36" value="${m.default_dev_start_month || 2}"
+        <input type="number" min="0" max="36" value="${m.default_dev_start_month ?? 0}"
                onchange="
           SIZING_SPEC.meta.default_dev_start_month = +this.value;
           SIZING_SPEC.workloads.forEach(w => { w.dev_start_month = +this.value; });
           recalculate();">
       </label>
       <label>Go-live (month)
-        <input type="number" min="1" max="36" value="${m.default_go_live_month || 11}"
+        <input type="number" min="1" max="36" value="${m.default_go_live_month || 3}"
                onchange="
           SIZING_SPEC.meta.default_go_live_month = +this.value;
           SIZING_SPEC.workloads.forEach(w => { w.go_live_month = +this.value; });

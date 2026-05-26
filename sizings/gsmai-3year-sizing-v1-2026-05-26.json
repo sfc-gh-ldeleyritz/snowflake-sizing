@@ -1,0 +1,521 @@
+{
+  "meta": {
+    "customer": "GSMA Intelligence (GSMAi)",
+    "edition": "Enterprise",
+    "cloud": "AWS",
+    "region": "Europe (London)",
+    "credit_rate": 4.0,
+    "ai_credit_rate": 2.0,
+    "storage_rate_per_tb": 24.0,
+    "hybrid_tables_storage_rate_per_gb": 0.34,
+    "contract_years": 3,
+    "generated_date": "2026-05-26",
+    "default_ramp_curve": "linear",
+    "default_dev_start_month": 2,
+    "default_go_live_month": 11,
+    "annual_growth_rate": 0.2,
+    "pdf_version": "2026-05-12",
+    "version_number": 1
+  },
+  "workloads": [
+    {
+      "id": "wh-ingest",
+      "label": "Data Ingestion",
+      "size": "S",
+      "hours_per_day": 2.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 10,
+      "dev_start_month": 2,
+      "go_live_month": 8,
+      "ramp_curve": "fast",
+      "justification": "Daily batch load and incremental ingestion from the 600 GB SQL Server source. Small warehouse handles under 100 GB daily incremental volume.",
+      "source": "RFP Q6 - SQL Server 600 GB, 14 core tables, batch processing"
+    },
+    {
+      "id": "wh-elt",
+      "label": "ELT / Transformation (dbt + Snowpark)",
+      "size": "S",
+      "hours_per_day": 3.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 10,
+      "dev_start_month": 2,
+      "go_live_month": 9,
+      "ramp_curve": "linear",
+      "justification": "dbt pipelines, Snowpark UDFs, and Dynamic Table refreshes across Bronze-Silver-Gold layers. Small warehouse handles complex joins across 14 core tables from the 600 GB source. Also serves as the MERGE warehouse for OpenFlow CDC.",
+      "source": "Gong 242442c6f6 turn 57-58 - medallion architecture, dbt, snowpark, dynamic tables, data quality"
+    },
+    {
+      "id": "wh-bi",
+      "label": "BI / Analytics (Power BI)",
+      "size": "XS",
+      "hours_per_day": 2.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 120,
+      "dev_start_month": 4,
+      "go_live_month": 10,
+      "ramp_curve": "linear",
+      "justification": "Power BI import-mode refresh against the Snowflake Gold layer. X-Small warehouse is sufficient for import-mode with no DirectQuery concurrency requirement. Estimated 25 internal analyst users.",
+      "source": "customer briefing - Power BI primary BI tool, import-mode refresh"
+    },
+    {
+      "id": "wh-dev",
+      "label": "Development / UAT",
+      "size": "XS",
+      "hours_per_day": 4.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 300,
+      "dev_start_month": 2,
+      "go_live_month": 2,
+      "ramp_curve": "fastest",
+      "justification": "Development, testing and UAT workloads for the engineering team. Available from project kickoff, consistent with the prior PoC engagement.",
+      "source": "Standard development warehouse for 4-5 engineers"
+    },
+    {
+      "id": "wh-adhoc",
+      "label": "Ad-hoc / Data Science",
+      "size": "XS",
+      "hours_per_day": 2.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 300,
+      "dev_start_month": 5,
+      "go_live_month": 11,
+      "ramp_curve": "slow",
+      "justification": "Data science exploration, vectorized embedding experiments, and analyst deep-dive queries against the Gold layer.",
+      "source": "Gong 242442c6f6 turn 58-59 - vectorized embeddings, Cortex Search, AI Extract experimentation in prior PoC"
+    },
+    {
+      "id": "wh-ml",
+      "label": "ML Forecasting (Phase 2 - Month 13+)",
+      "size": "M",
+      "hours_per_day": 4.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 10,
+      "dev_start_month": 13,
+      "go_live_month": 19,
+      "ramp_curve": "slow",
+      "justification": "Snowflake ML and Snowpark-based forecasting models replacing Excel and R pipelines. Medium warehouse supports multi-dimensional forecasting across 200+ markets.",
+      "source": "Gong 242442c6f6 turn 64 - forecasting Phase 2 scope; RFP Q8 - equivalents acceptable"
+    },
+    {
+      "id": "wh-bi-p2",
+      "label": "BI Expansion (Phase 2 - Month 13+)",
+      "size": "S",
+      "hours_per_day": 3.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 120,
+      "dev_start_month": 13,
+      "go_live_month": 20,
+      "ramp_curve": "linear",
+      "justification": "Expanded Power BI and Streamlit-in-Snowflake dashboards as the legacy application layer is progressively retired. Covers the operator ranking and network transformation dashboard use cases.",
+      "source": "customer briefing - Demo use cases A and B reference Streamlit-in-Snowflake and Cortex Analyst"
+    },
+    {
+      "id": "wh-serve",
+      "label": "Data Serving / API Layer (Phase 2 - Month 15+)",
+      "size": "S",
+      "hours_per_day": 4.0,
+      "days_per_month": 30,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 60,
+      "dev_start_month": 15,
+      "go_live_month": 22,
+      "ramp_curve": "linear",
+      "justification": "Snowflake serving as primary data access layer once legacy Postgres and Elasticsearch are retired in Phase 2. 7-day availability to support the customer-facing website query load.",
+      "source": "Gong 242442c6f6 turn 61 - phase 2 retires legacy stack; RFP Q5 - future state replaces Postgres"
+    },
+    {
+      "id": "wh-share",
+      "label": "Data Sharing / Marketplace (Phase 3 - Month 25+)",
+      "size": "S",
+      "hours_per_day": 3.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 120,
+      "dev_start_month": 25,
+      "go_live_month": 30,
+      "ramp_curve": "linear",
+      "justification": "Snowflake Marketplace data product delivery and secure data sharing with operator customers. Monetises the 50 million-plus data points as curated commercial data products.",
+      "source": "Glean GSMA-PoV-Plan - Marketplace listing and row-access policies for premium subscriptions"
+    }
+  ],
+  "serverless": {
+    "snowpipe": {
+      "enabled": false,
+      "gb_per_month": 0,
+      "justification": "Ingestion via OpenFlow CDC with Snowpipe metered inside OpenFlow billing; no standalone Snowpipe."
+    },
+    "snowpipe_streaming": {
+      "enabled": false,
+      "uncompressed_gb_per_month": 0,
+      "justification": "No streaming ingestion; all data flows are batch.",
+      "source": "RFP Q6 - nothing streaming, data moves sequentially"
+    },
+    "snowpipe_streaming_classic": {
+      "enabled": false,
+      "client_instances": 0
+    },
+    "serverless_tasks": {
+      "enabled": true,
+      "compute_hours_monthly": 9,
+      "justification": "Automated pipeline scheduling, data freshness checks, and incremental refresh orchestration.",
+      "source": "customer briefing - automated ingestion with Tasks to trigger downstream pipelines"
+    },
+    "serverless_tasks_flex": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "serverless_alerts": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "clustered_tables": {
+      "enabled": true,
+      "compute_hours_monthly": 7.5,
+      "justification": "Automatic clustering on the two largest tables (700M and 500M rows) for BI query performance on operator and date-range filters.",
+      "source": "RFP Q6 - largest 2 tables have 700M/500M rows"
+    },
+    "materialized_views": {
+      "enabled": false,
+      "compute_hours_monthly": 0,
+      "justification": "Dynamic Tables preferred for declarative pipeline logic."
+    },
+    "dynamic_tables": {
+      "enabled": true,
+      "compute_hours_monthly": 0,
+      "justification": "Dynamic Tables run on the ELT warehouse - no additional serverless cost."
+    },
+    "search_optimization": {
+      "enabled": false,
+      "compute_hours_monthly": 0,
+      "justification": "Cortex Search used for semantic search; traditional search optimization not required."
+    },
+    "data_quality_monitoring": {
+      "enabled": true,
+      "compute_hours_monthly": 3,
+      "justification": "Data quality monitoring across Bronze-Silver-Gold layers to enforce quality rules.",
+      "source": "Gong 242442c6f6 turn 57-58 - data quality monitoring cited as core ELT component"
+    },
+    "query_acceleration": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "replication": {
+      "enabled": false,
+      "compute_hours_monthly": 0,
+      "justification": "Single-region deployment; no DR/replication requirement in RFP."
+    },
+    "backup": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "failsafe_recovery": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "trust_center": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "table_optimization": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "storage_lifecycle_policy": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "hybrid_tables_requests": {
+      "enabled": false,
+      "reads_gb_monthly": 0,
+      "writes_gb_monthly": 0
+    },
+    "copy_files": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "automated_refresh": {
+      "enabled": false,
+      "files_per_month": 0
+    },
+    "organization_usage": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "sensitive_data_classification": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "open_catalog": {
+      "enabled": false,
+      "requests_per_month_M": 0
+    },
+    "logging": {
+      "enabled": false,
+      "file_batches_per_month": 0
+    },
+    "telemetry_data_ingest": {
+      "enabled": false,
+      "gb_per_month": 0
+    },
+    "archive_storage_retrieval": {
+      "enabled": false,
+      "files_per_month": 0
+    },
+    "archive_storage_write": {
+      "enabled": false,
+      "files_per_month": 0
+    }
+  },
+  "ai_cortex": {
+    "cortex_complete": {
+      "enabled": true,
+      "model": "claude-sonnet-4-6",
+      "monthly_input_tokens_M": 10.0,
+      "monthly_output_tokens_M": 2.0,
+      "dev_start_month": 5,
+      "go_live_month": 11,
+      "ramp_curve": "fast",
+      "justification": "Agentic pipeline automation, data enrichment, and natural language classification within dbt and Snowpark pipelines.",
+      "source": "Stated goal to automate manual data acquisition processes"
+    },
+    "cortex_agents": {
+      "enabled": false,
+      "model": "claude-4-sonnet",
+      "monthly_input_tokens_M": 0,
+      "monthly_output_tokens_M": 0
+    },
+    "snowflake_intelligence": {
+      "enabled": false,
+      "model": "claude-4-sonnet",
+      "monthly_input_tokens_M": 0,
+      "monthly_output_tokens_M": 0
+    },
+    "cortex_code": {
+      "model": "claude-4-sonnet",
+      "dev_start_month": 2,
+      "go_live_month": 4,
+      "ramp_curve": "fastest",
+      "cli": {
+        "enabled": true,
+        "developers": 4,
+        "queries_per_dev_per_day": 10,
+        "avg_tokens_per_query": 1000
+      },
+      "snowsight": {
+        "enabled": true,
+        "developers": 4,
+        "queries_per_dev_per_day": 20,
+        "avg_tokens_per_query": 1200
+      },
+      "desktop": {
+        "enabled": false,
+        "developers": 0,
+        "queries_per_dev_per_day": 0,
+        "avg_tokens_per_query": 0
+      },
+      "justification": "Cortex Code assists the engineering team authoring dbt models and Snowpark pipelines.",
+      "source": "4-person engineering team, CLI and Snowsight surfaces"
+    },
+    "cortex_analyst": {
+      "enabled": true,
+      "monthly_messages": 500,
+      "dev_start_month": 8,
+      "go_live_month": 12,
+      "ramp_curve": "fastest",
+      "justification": "Natural language query interface on the Gold layer semantic view for analyst and executive self-service.",
+      "source": "customer briefing - Demo use cases A and B both reference Cortex Analyst"
+    },
+    "cortex_search": {
+      "enabled": true,
+      "indexed_data_gb": 30,
+      "dev_start_month": 5,
+      "go_live_month": 10,
+      "ramp_curve": "fast",
+      "justification": "Semantic search across the unstructured document corpus - regulatory filings and investor call transcripts indexed for retrieval.",
+      "source": "Gong 242442c6f6 turn 58-59 - Cortex Search used in prior PoC alongside AI Extract"
+    },
+    "document_ai": {
+      "enabled": false,
+      "compute_hours_monthly": 0,
+      "justification": "Superseded by AI_EXTRACT."
+    },
+    "ai_parse_document_layout": {
+      "enabled": false,
+      "pages_per_month": 0
+    },
+    "ai_parse_document_ocr": {
+      "enabled": false,
+      "pages_per_month": 0
+    },
+    "cortex_fine_tuning": {
+      "enabled": false,
+      "model": "llama3.1-70b",
+      "training_tokens_M": 0
+    },
+    "cortex_functions": {
+      "ai_classify": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_sentiment": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_summarize": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_translate": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_extract": {
+        "enabled": true,
+        "tokens_M_monthly": 70.0,
+        "justification": "Automated extraction from regulatory filings, investor calls, and FX reports. Replaces manual data entry. 70M tokens/month (60M input + 10M output equivalent).",
+        "source": "Gong 242442c6f6 turn 54, 56 - PDFs, investor calls, FX data; teams of people in Delhi doing this manually"
+      },
+      "ai_transcribe": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      }
+    },
+    "embeddings": {
+      "enabled": false,
+      "tokens_M_monthly": 0
+    }
+  },
+  "spcs": {
+    "enabled": false,
+    "instances": []
+  },
+  "openflow": {
+    "enabled": true,
+    "instances": [
+      {
+        "id": "of-1",
+        "label": "SQL Server (wemaster) CDC",
+        "connector_type": "CDC",
+        "deployment": "SPCS",
+        "runtime_size": "Small",
+        "runtime_nodes": 1,
+        "byoc_region": null,
+        "monthly_data_gb": 8,
+        "warehouse_size": "X-Small",
+        "warehouse_hours_monthly": 90,
+        "dev_start_month": 2,
+        "go_live_month": 8,
+        "ramp_curve": "fast",
+        "justification": "Daily batch CDC from the 600 GB SQL Server source (wemaster). One runtime node handles all 14 core tables within the 600-table limit. X-Small MERGE warehouse runs nightly for approximately 3 hours.",
+        "source": "RFP Q6 - SQL Server 600 GB, 14 core tables; Gong 242442c6f6 turn 53 - SQL server gold layer called wemaster"
+      },
+      {
+        "id": "of-2",
+        "label": "PostgreSQL CDC",
+        "connector_type": "CDC",
+        "deployment": "SPCS",
+        "runtime_size": "Small",
+        "runtime_nodes": 1,
+        "byoc_region": null,
+        "monthly_data_gb": 2,
+        "warehouse_size": null,
+        "warehouse_hours_monthly": null,
+        "dev_start_month": 3,
+        "go_live_month": 9,
+        "ramp_curve": "fast",
+        "justification": "Daily batch CDC from the 16 GB PostgreSQL database (10 core tables). Shares the SPCS control pool and MERGE warehouse with the SQL Server connector.",
+        "source": "RFP Q6 - Postgres 16 GB, 10 core tables"
+      }
+    ]
+  },
+  "openflow_oracle": {
+    "enabled": false
+  },
+  "postgres": {
+    "enabled": false
+  },
+  "storage": {
+    "standard": {
+      "raw_tb_year1": 0.65,
+      "compression_ratio": 3.0,
+      "annual_growth_pct": 20,
+      "time_travel_days": 1,
+      "churn_rate_pct": 10,
+      "justification": "650 GB total source data at 3:1 structured compression.",
+      "source": "RFP Q6 - SQL Server 600 GB, Postgres 16 GB, ES 16 GB; unstructured documents approx 18 GB"
+    },
+    "hybrid_tables": {
+      "enabled": false,
+      "raw_tb": 0
+    },
+    "archive": {
+      "enabled": false,
+      "raw_tb": 0
+    }
+  },
+  "data_transfer": {
+    "enabled": false,
+    "pattern": "same_region",
+    "tb_per_month": 0
+  },
+  "privatelink": {
+    "enabled": false,
+    "endpoints": 0,
+    "tb_processed_monthly": 0
+  },
+  "collaboration": {
+    "enabled": false,
+    "accounts": [],
+    "native_apps": [],
+    "marketplace": []
+  },
+  "assumptions": [
+    "Operating days: weekday-only (22 days/month) for all batch workloads; Data Serving warehouse uses 30 days for customer-facing availability in Phase 2",
+    "SQL Server and PostgreSQL CDC connectors share a single OpenFlow SPCS deployment and control pool",
+    "PostgreSQL MERGE reuses the SQL Server X-Small MERGE warehouse - no additional warehouse cost",
+    "Power BI operates in import-mode refresh only (not DirectQuery); no Multi-Cluster Warehouse required",
+    "MVP scope: Data ingestion (OpenFlow CDC), ELT (dbt + Snowpark), Gold layer, and reverse ETL push to existing PostgreSQL only",
+    "Phase 2 (Month 13+): ML forecasting on Snowflake, expanded BI, PostgreSQL and Elasticsearch retirement begins",
+    "Phase 3 (Month 25+): Data monetisation via Snowflake Marketplace, data sharing with operator customers",
+    "Forecasting remains in Excel/SQL Server for MVP duration per confirmed RFP scope",
+    "Unstructured document processing (AI_EXTRACT) begins in Month 3 with the engineering team",
+    "Target deployment: AWS Europe (London) Enterprise; AWS or Azure cloud decision to be confirmed at engagement kickoff",
+    "Enterprise Edition required for Snowflake Horizon governance, RBAC policies, and data masking",
+    "AI_EXTRACT volume: 70M tokens per month (60M input plus 10M output equivalent) for regulatory filings, investor calls, and FX corpus",
+    "Cortex Search indexed volume: 30 GB for MVP document retrieval layer",
+    "Clustered tables applied to the two largest tables (700M and 500M rows) for BI query performance",
+    "Annual growth rate: 20% per year applied from Year 2 onwards",
+    "Go-live target: Q3 2026 (Month 8 from project kickoff)",
+    "OpenFlow SPCS runtime and control pool operate 24/7 (730 hr/month) as containers are always-on",
+    "MERGE warehouse hours: 90 hr/month (approximately 3 hr/night for incremental change application)",
+    "All source data volumes are batch; no streaming ingestion in MVP",
+    "Internal user count estimated at 25 Power BI users; 4-5 data engineers building the pipeline"
+  ],
+  "confirm_required": [
+    "Confirm exact number of concurrent Power BI users and refresh frequency - impact plus or minus 40% on BI warehouse cost if MCW is needed above 30 concurrent users",
+    "Confirm whether SQL Server and PostgreSQL are on separate physical servers - would require 2 OpenFlow SPCS deployments and double the control pool charge",
+    "Confirm if the existing ELT warehouse can serve as the MERGE warehouse for OpenFlow CDC - would eliminate the dedicated X-Small MERGE cost (saves approx 90 credits/month)",
+    "Confirm total table count across full SQL Server CDC scope - 14 core tables confirmed but full schema may include additional tables approaching the 600-table runtime limit",
+    "Confirm AI_EXTRACT token volumes for the regulatory filing and investor call corpus - 70M tokens estimated; impact plus or minus 50% on Year 1 AI costs",
+    "Confirm whether Cortex Search is in MVP scope or deferred to Phase 2 - deferring saves approx 189 AI credits/month in Year 1",
+    "Confirm final cloud provider selection (AWS or Azure) - minor impact on credit rates",
+    "Confirm Organisation Management System ingestion mechanism - 9,000 organisations confirmed via database connectivity in Q7; table count may require a dedicated OpenFlow runtime node",
+    "Confirm Phase 2 kickoff timeline - sizing assumes Month 13 start for ML forecasting and legacy retirement; a later Phase 2 start shifts TCV from Year 2 to Year 3"
+  ]
+}

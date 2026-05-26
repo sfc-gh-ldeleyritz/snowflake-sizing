@@ -1,5 +1,58 @@
 # snowflake-sizing changelog
 
+## [v1.5.0] — Default ramp window: dev_start=0, go_live=3
+
+### Changed
+
+- **Default `dev_start_month` changed from 2 → 0.** Billing ramp now begins from month 1 of the contract (month 0 seed means no months are zeroed out — the workload contributes from its first active month). Previously month 1 was always zero, which under-counted Year 1 spend for fast-moving deployments.
+- **Default `go_live_month` changed from 11 → 3.** Reflects modern deployment patterns where customers reach steady-state by end of Q1 rather than end of year. Produces higher Year 1 multipliers (linear curve ~0.94 vs ~0.54 previously).
+- **Global Settings "Dev start (month)" input `min` attribute changed from 1 → 0.** Allows the field to be set to 0 in the browser. The JS value display also changed from `|| 2` (which silently renders `2` when the stored value is `0`) to `?? 0` (nullish coalescing, correctly renders `0`).
+- **Year 1 effective multiplier table in `sizing-methodology.md` updated.** New values for `dev_start=0, go_live=3`: Slowest 0.86, Slow 0.90, Linear 0.94, Fast 0.96, Fastest 0.98 (was: 0.31 / 0.43 / 0.54 / 0.69 / 0.79).
+
+### Files changed
+
+- `skills/snowflake-sizing/references/_template.html` — normalizeSpec defaults, rampMultiplierForYear fallbacks, scenario `|| 11` references, Global Settings input `min` and value expression
+- `examples/acme-financial-3year-sizing.html` — same JS changes + embedded SIZING_SPEC meta defaults
+- `examples/acme-financial-3year-sizing.json` — `meta.default_dev_start_month` and `meta.default_go_live_month`
+- `skills/snowflake-sizing/SKILL.md` — meta block example, per-workload defaults table
+- `skills/snowflake-sizing/references/sizing-methodology.md` — field descriptions, Year 1 multiplier table
+- `framework/sizing_spec_schema.json` — `minimum` for `meta.default_dev_start_month` and `workloads[].dev_start_month` changed from 1 → 0
+
+---
+
+## [v1.4.0] — Canonical JSON Schema + PostToolUse validation hook
+
+### Added
+
+- **`framework/sizing_spec_schema.json`** — canonical JSON Schema draft-07 for the full `SIZING_SPEC` artifact. Covers every top-level section (`meta`, `workloads`, `serverless`, `ai_cortex`, `spcs`, `openflow`, `openflow_oracle`, `postgres`, `storage`, `data_transfer`, `privatelink`, `collaboration`, `assumptions`, `confirm_required`, `replication`). Strict `additionalProperties: false` on `meta`, `workloads[]` items, all `serverless` features, all `ai_cortex` features, and all other leaf objects. Shared `$defs` for `source_field` (SOURCED/ASSUMPTION/ESTIMATED), `ramp_curve` (fastest/fast/linear/slow/slowest), `wh_size_abbreviated` (XS–6XL, for workloads and reader accounts), `wh_size_full` (X-Small–4X-Large, for OpenFlow instances), `serverless_compute`, and `cortex_function`. Documents known footguns inline via `description` fields (e.g. `cortex_complete.monthly_input_tokens_M`: *"WRONG: 'monthly_tokens_input'"*; `cortex_search.indexed_data_gb`: *"WRONG: 'indexed_gb'"*; `openflow.instances[].warehouse_size`: *"use full names, not abbreviations"*; `storage.standard.raw_tb_year1`: *"WRONG path: storage.raw_tb"*). Intended as the inter-skill contract consumed by future `/export-pptx` and `/export-xlsx` skills.
+- **`hooks/validate-sizing-json.py`** — `PostToolUse` hook that fires on every `Write` to `sizings/*.json`. Skips `Edit` calls (partial content) and all non-sizing files. Validates: required top-level keys present; `warehouses` key absent; `meta.edition` / `meta.cloud` / `meta.default_ramp_curve` values within enum; all per-workload required fields present; workload `size` / `source` / `ramp_curve` within enum; legacy `avg_clusters` absent; `storage.standard.raw_tb_year1` path correct; `ai_cortex.cortex_complete.monthly_input_tokens_M` present when enabled; `ai_cortex.cortex_search.indexed_data_gb` correct; `ai_extract` not placed directly under `ai_cortex`; serverless features not using `monthly_credits`; OpenFlow `warehouse_size` not using abbreviations; `confirm_required` items have `item` + `impact_pct`. Returns `{"decision": "block", "reason": "..."}` with actionable error list on failure, exits 0 silently on pass.
+- **`hooks/hooks.json`** — wires `validate-sizing-json.py` to the `PostToolUse` / `Write|Edit` event.
+
+### Changed
+
+- **SKILL.md Phase 5, spec structure gate** — added two-sentence note after the `spec-validate.py` invocation pointing to `${CORTEX_PLUGIN_ROOT}/framework/sizing_spec_schema.json` as the canonical full-field reference and explaining that `hooks/validate-sizing-json.py` enforces the same rules automatically on every `Write` to `sizings/*.json`.
+
+---
+
+## [v1.3.0] — Spec validator, HTML render-check, SKILL.md schema hardening
+
+### Added
+
+- **`assets/spec-validate.py`** — standalone structural JSON validator for SIZING_SPEC files. Modelled on `emdash-check.py` (same exit 0/1 contract). Hard-fails on: `warehouses` key present instead of `workloads`; missing `workloads` key entirely; per-workload missing any of `id`, `label`, `size`, `hours_per_day`, `days_per_month`, `clusters_min`, `clusters_max`, `auto_suspend_seconds`, `dev_start_month`, `go_live_month`, `ramp_curve`; legacy `avg_clusters` field present; `storage.raw_tb` at top level instead of `storage.standard.raw_tb_year1`; `ai_cortex.cortex_complete.monthly_tokens_input` instead of `monthly_input_tokens_M`; `ai_cortex.cortex_search.indexed_gb` instead of `indexed_data_gb`; `ai_extract` directly under `ai_cortex` instead of `ai_cortex.cortex_functions.ai_extract`; serverless features using `monthly_credits` instead of `compute_hours_monthly`; OpenFlow `warehouse_size` using abbreviations (`XS`, `S`, etc.) instead of full names (`X-Small`, `Small`, etc.). Warns (non-fatal) on missing meta fields and absent `openflow_oracle` / `data_transfer` / `privatelink` keys.
+- **`assets/html-render-check.py`** — Python replica of the JS `recalculate()` engine. Extracts the embedded `SIZING_SPEC` from a generated HTML file (via `__SIZING_SPEC_BEGIN__` / `__SIZING_SPEC_END__` sentinels), parses it, runs the warehouse ramp + storage cost model, and asserts TCV > 0 and Year 1 total > 0. On pass, prints the computed Year 1 / Year 2 / Year 3 / TCV summary so the SE can eyeball the numbers before opening the browser. On failure, prints a diagnosis: zero `credit_rate`, empty `workloads`, all ramps landing outside year 1, or unsubstituted `__SIZING_SPEC__` token. Exit 0/1.
+- **`examples/acme-financial-3year-sizing.json`** — canonical reference JSON extracted from the existing `examples/acme-financial-3year-sizing.html`. Every field at the correct depth with the correct names. Future agent runs can diff against this file to catch field-name regressions before writing the HTML.
+- **Phase 5 gate 5 — Spec structure gate (BLOCKING).** `python3 assets/spec-validate.py sizings/<slug>.json` added as the fifth quality gate. Must exit 0 before the HTML render check or em-dash gate may run.
+- **Phase 5 gate 6 — HTML render check gate (BLOCKING).** `python3 assets/html-render-check.py sizings/<slug>.html` added as the sixth quality gate. Must exit 0 (TCV > 0) before the em-dash gate. A passing gate prints the Year 1/2/3/TCV summary, which is recorded verbatim in the Phase 6 output.
+
+### Changed
+
+- **SKILL.md Phase 3 `### Warehouses` renamed to `### Workloads (SIZING_SPEC.workloads array)`.** New critical callout: *"The top-level array key MUST be `workloads`. Do NOT use `warehouses`. The JS engine reads `SIZING_SPEC.workloads` — any other key renders as $0."* Required JSON shape block now shown verbatim with all mandatory fields including `clusters_min`, `clusters_max`, `auto_suspend_seconds`. Explicit note that `avg_clusters` is not read by the JS engine and must never be used.
+- **SKILL.md Phase 3 `### AI / Cortex Features` — field name reference table added.** Six-row table mapping every commonly-wrong field name to its correct counterpart: `monthly_tokens_input` → `monthly_input_tokens_M`, `indexed_gb` → `indexed_data_gb`, top-level `ai_extract` → `ai_cortex.cortex_functions.ai_extract`, `monthly_credits` → `compute_hours_monthly`, `storage.raw_tb` → `storage.standard.raw_tb_year1`, `"XS"` → `"X-Small"`. Note added that `ai_cortex.cortex_functions` is a required sub-object even when all AI_ SQL functions are disabled.
+- **SKILL.md Phase 5 quality gates renumbered.** Former gate 5 (em-dash) → gate 7. Former gate 6 (content hygiene) → gate 8. Phase 5 "re-run" reference updated from `steps 4–6` to `steps 4–8`.
+- **SKILL.md Phase 6 output summary** now includes `🛡 spec-validate: PASS` and `🛡 html-render-check: PASS` lines before the existing em-dash and content hygiene lines.
+
+---
+
 ## [v1.2.0] — GSMAi post-run fixes: correctness, hygiene, parallelism
 
 ### Fixed

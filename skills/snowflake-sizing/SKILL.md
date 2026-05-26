@@ -47,8 +47,8 @@ Build initial `meta` object:
   "contract_years": [N],
   "generated_date": "[today YYYY-MM-DD]",
   "default_ramp_curve": "linear",
-  "default_dev_start_month": 2,
-  "default_go_live_month": 11,
+  "default_dev_start_month": 0,
+  "default_go_live_month": 3,
   "pdf_version": "2026-05-12",
   "version_number": 1
 }
@@ -281,9 +281,33 @@ ASSUMPTION labels are still allowed but ONLY when all three of A (context file),
 
 **Work through categories in this order:**
 
-### Warehouses
+### Workloads (SIZING_SPEC.workloads array)
 
-Identify all distinct workload patterns and create one warehouse entry per pattern:
+> **CRITICAL: The top-level array key MUST be `workloads`. Do NOT use `warehouses`. The JS engine reads `SIZING_SPEC.workloads` — any other key renders as $0.**
+
+**Required shape for every workload row:**
+
+```json
+{
+  "id": "wh-elt",
+  "label": "ELT / Transformation",
+  "size": "S",
+  "hours_per_day": 3.0,
+  "days_per_month": 22,
+  "clusters_min": 1,
+  "clusters_max": 1,
+  "auto_suspend_seconds": 10,
+  "dev_start_month": 2,
+  "go_live_month": 9,
+  "ramp_curve": "linear",
+  "justification": "...",
+  "source": "..."
+}
+```
+
+Use `clusters_min` and `clusters_max` (both required). Do NOT use `avg_clusters` — that field is not read by the JS engine.
+
+Identify all distinct workload patterns and create one workload entry per pattern:
 
 - Data Ingestion (if batch/ELT loading)
 - Transformation / ELT (if transformation occurs in Snowflake)
@@ -298,8 +322,8 @@ Apply warehouse sizing rules from `sizing-methodology.md`. Apply MCW when concur
 
 | Field | Default | Source |
 |---|---|---|
-| `dev_start_month` | 2 | `meta.default_dev_start_month` (override per workload if context indicates a later kickoff) |
-| `go_live_month` | 11 | `meta.default_go_live_month` (shorten if customer states a faster deadline; lengthen for complex migrations) |
+| `dev_start_month` | 0 | `meta.default_dev_start_month` (override per workload if context indicates a later kickoff) |
+| `go_live_month` | 3 | `meta.default_go_live_month` (shorten if customer states a faster deadline; lengthen for complex migrations) |
 | `ramp_curve` | from `pricing.ramp_curves.recommended_by_workload_type[<workload kind>]` | See sizing-methodology.md "Choosing a curve" |
 
 When a workload is genuinely steady-state from month 1 (e.g., an ongoing production system being lifted), set `dev_start_month=1`, `go_live_month=1`, `ramp_curve="manual"` and the per-month factor stays at 1.0 throughout (the JS engine treats `manual` with `dev_start==go_live==1` as full ramp).
@@ -322,6 +346,19 @@ Key patterns to check:
 Enable only what the customer has explicitly mentioned or where there is clear use case evidence. Do NOT default-enable AI features.
 
 If the customer is in a data science or AI-forward industry, flag relevant features in `confirm_required`.
+
+**Field name reference (MANDATORY — wrong names silently compute $0):**
+
+| Feature | Correct field path | Wrong (never use) |
+|---|---|---|
+| Cortex Complete tokens | `ai_cortex.cortex_complete.monthly_input_tokens_M` + `monthly_output_tokens_M` (values in millions) | `monthly_tokens_input` |
+| Cortex Search index | `ai_cortex.cortex_search.indexed_data_gb` | `indexed_gb` |
+| AI Extract | `ai_cortex.cortex_functions.ai_extract.tokens_M_monthly` | `ai_cortex.ai_extract` (top-level) |
+| Serverless compute features | `compute_hours_monthly` on each serverless item | `monthly_credits` |
+| Storage volume | `storage.standard.raw_tb_year1` | `storage.raw_tb` |
+| OpenFlow MERGE warehouse | `warehouse_size: "X-Small"` (full name) | `"XS"` (abbreviation) |
+
+`ai_cortex.cortex_functions` is a **required sub-object** even when all AI_ SQL functions are disabled — omitting it causes the AI section to error silently.
 
 **Cortex Code shape:** `ai_cortex.cortex_code = { cli, snowsight, desktop }`, each entry `{ enabled, developers, queries_per_dev_per_day, avg_tokens_per_query }`. The three surfaces (CLI / Snowsight / Cortex Code Desktop) bill at the same Table 6(e) rate but reflect different per-developer usage patterns. Enable each surface independently. Defaults:
 
@@ -532,7 +569,25 @@ Do **not** modify any other part of the template. The template already contains 
 2. Verify the per-month factor model is wired through (not the legacy `growth_rates` array). `grep growth_rates sizings/<slug>-<N>year-sizing-v1-<date>.html` should return zero hits.
 3. Verify `credit_rate` in spec matches the region in the header.
 4. If `SIZING_SPEC.replication` was populated, confirm both `source_region` and `target_region` are valid keys in `pricing.replication.egress_matrix` (`source_region` exists, and `target_region` exists in `egress_matrix[source_region]`).
-5. **Em-dash gate.** Run:
+5. **Spec structure gate (BLOCKING).** Run:
+
+   ```bash
+   python3 assets/spec-validate.py sizings/<slug>-<N>year-sizing-v1-<date>.json
+   ```
+
+   If exit code is non-zero, fix the field-name errors flagged by the script before continuing. The most common failures: `warehouses` → `workloads`, `avg_clusters` → `clusters_min`/`clusters_max`, `storage.raw_tb` → `storage.standard.raw_tb_year1`.
+
+   The canonical JSON Schema for the full SIZING_SPEC (all fields, types, and enums) is at `${CORTEX_PLUGIN_ROOT}/framework/sizing_spec_schema.json`. The `hooks/validate-sizing-json.py` PostToolUse hook enforces the same rules automatically on every `Write` to `sizings/*.json`.
+
+6. **HTML render check gate (BLOCKING).** Run:
+
+   ```bash
+   python3 assets/html-render-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html
+   ```
+
+   If exit code is non-zero, the script prints the $0 diagnosis (missing `workloads`, zero `credit_rate`, all ramps outside year 1, etc.). Fix the root cause in the JSON spec and re-run Phase 5 steps 4–6 until the gate passes. A passing gate prints the computed Year 1 / Year 2 / Year 3 / TCV summary — record these numbers in the Phase 6 output.
+
+7. **Em-dash gate.** Run:
 
    ```bash
    python3 assets/emdash-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html temp/<slug>-research-evidence.md
@@ -540,7 +595,7 @@ Do **not** modify any other part of the template. The template already contains 
 
    If exit code is non-zero, the script prints `file:line:col` for each U+2014 occurrence. Replace each em-dash with ` - ` (space hyphen space) in the source artifact and re-run the gate until it exits 0. Do NOT proceed to Phase 6 until the gate passes.
 
-6. **Content hygiene gate.** Run:
+8. **Content hygiene gate.** Run:
 
    ```bash
    python3 -c "
@@ -558,7 +613,7 @@ Do **not** modify any other part of the template. The template already contains 
    "
    ```
 
-   If exit non-zero, locate the offending fields in the SIZING_SPEC, rewrite their visible text as plain customer-facing prose (no citation prefixes, no file names, no personal names), and re-run Phase 5 steps 4–6 until all gates pass.
+   If exit non-zero, locate the offending fields in the SIZING_SPEC, rewrite their visible text as plain customer-facing prose (no citation prefixes, no file names, no personal names), and re-run Phase 5 steps 4–8 until all gates pass.
 
 ---
 
@@ -572,6 +627,8 @@ Print to terminal:
    sizings/[slug]-[N]year-sizing-v1-[date].json   (portable sizing spec)
    temp/[slug]-research-evidence.md               (Glean + Gong audit trail)
 
+🛡  spec-validate: PASS
+🛡  html-render-check: PASS
 🛡  emdash check: PASS
 🛡  content hygiene: PASS
 
