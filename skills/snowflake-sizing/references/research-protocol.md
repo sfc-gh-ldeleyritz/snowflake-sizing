@@ -155,3 +155,133 @@ ASSUMPTION is only allowed when **all three** of A (context file), B (Glean), an
 ## 6. Pre-fetched batch mode
 
 If the parent invocation passed `Pre-fetched Glean Results:` and `Pre-fetched Gong Results:` blobs in the prompt, parse those blobs and skip the live B/C calls. Still write the evidence file from the pre-fetched data — the audit trail is required regardless of how the data was fetched.
+
+---
+
+## 7. Replication research block (D1, D2, D3)
+
+**Activation trigger.** Run this block when the customer context, Glean, or Gong results mention any of: `BCDR`, `DR`, `disaster recovery`, `failover`, `replication`, `secondary region`, `data sharing provider`, `migration to Snowflake`, `multi-region`. Also run if `--mode replication` or `--mode dr` is passed on the command line.
+
+When triggered, populate a `replication` block on the SIZING_SPEC. See sizing-methodology.md "Replication Sizing" for the field list.
+
+### D1 — Top databases by replicated TB (SNOWHOUSE)
+
+Execute on **SNOWHOUSE**, not the customer account. Substitute the customer's deployment (PROD2, AZEASTUS2PROD, etc.) into the `set` lines.
+
+```sql
+-- Set deployment-specific views (substitute deployment from C11 of customer's account locator)
+set accounting_etl = 'SNOWHOUSE_IMPORT.<DEPLOYMENT>.ACCOUNTING_ETL_V';
+set table_etl      = 'SNOWHOUSE_IMPORT.<DEPLOYMENT>.TABLE_ETL_V';
+set schema_etl     = 'SNOWHOUSE_IMPORT.<DEPLOYMENT>.SCHEMA_ETL_V';
+set database_etl   = 'SNOWHOUSE_IMPORT.<DEPLOYMENT>.DATABASE_ETL_V';
+set account_id     = (SELECT id FROM SNOWHOUSE_IMPORT.<DEPLOYMENT>.account_etl_v
+                      WHERE name = '<CUSTOMER_ACCOUNT_NAME>');
+
+-- Top databases by Replicated TB
+SELECT
+    database_etl.name AS database,
+    ROUND(SUM(STAT_ACTIVE_BYTES) / POWER(2, 40), 2)   AS active_bytes_TB,
+    ROUND(SUM(STAT_BYTES)        / POWER(2, 40), 2)   AS replicated_bytes_TB,
+    SUM(STAT_ACTIVE_ROWS)                              AS active_rows
+FROM IDENTIFIER($accounting_etl) accounting_etl
+JOIN IDENTIFIER($table_etl)    AS table_etl    ON accounting_etl.table_id = table_etl.id
+JOIN IDENTIFIER($schema_etl)   AS schema_etl   ON table_etl.parent_id = schema_etl.id
+JOIN IDENTIFIER($database_etl) AS database_etl ON schema_etl.parent_id = database_etl.id
+WHERE accounting_etl.ACCOUNT_ID = $account_id
+  AND table_etl.deleted_on IS NULL
+  AND schema_etl.deleted_on IS NULL
+  AND database_etl.deleted_on IS NULL
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 50;
+
+-- Total Active and Replicated TB + clone factor
+SELECT
+    ROUND(SUM(STAT_ACTIVE_BYTES) / POWER(2, 40))   AS total_active_TB,
+    ROUND(SUM(STAT_BYTES)        / POWER(2, 40))   AS total_replicated_TB,
+    ROUND(total_replicated_TB / total_active_TB, 2) AS clone_factor
+FROM IDENTIFIER($accounting_etl) accounting_etl
+JOIN IDENTIFIER($table_etl)    AS table_etl    ON accounting_etl.table_id = table_etl.id
+JOIN IDENTIFIER($schema_etl)   AS schema_etl   ON table_etl.parent_id = schema_etl.id
+JOIN IDENTIFIER($database_etl) AS database_etl ON schema_etl.parent_id = database_etl.id
+WHERE accounting_etl.ACCOUNT_ID = $account_id
+  AND table_etl.deleted_on IS NULL
+  AND schema_etl.deleted_on IS NULL
+  AND database_etl.deleted_on IS NULL;
+```
+
+**Populates:**
+- `replication.initial_TB` ← `total_active_TB` (or per-DB selection if only some DBs replicate)
+- `replication.clone_factor` ← `clone_factor` (logical/active ratio; surfaced for SE awareness, not used in cost math)
+
+### D2 — `SYSTEM$ESTIMATE_REPLICATION_COST` (customer account)
+
+Run as a customer-account user on the **primary deployment**. This is the most authoritative source for `monthly_change_TB`.
+
+```sql
+-- Replace <DB1>, <DB2>, ... with the databases scoped for replication
+SELECT SYSTEM$ESTIMATE_REPLICATION_COST(
+    OBJECT_CONSTRUCT('databases', ARRAY_CONSTRUCT('<DB1>', '<DB2>'))
+) AS replication_estimate;
+```
+
+The function returns a JSON document with monthly change estimates broken down by replication frequency:
+
+```
+FIFTEEN_MINS_TB = ...   -- if customer needs 15-min RPO
+ONE_HOUR_TB     = ...   -- typical default
+ONE_DAY_TB      = ...   -- low-frequency / data sharing
+```
+
+**Populates:**
+- `replication.monthly_change_TB` ← appropriate row based on customer's `replication_frequency`
+- `replication.replication_frequency` ← matches the chosen row (`FIFTEEN_MINS` | `ONE_HOUR` | `ONE_DAY`)
+
+If `SYSTEM$ESTIMATE_REPLICATION_COST` access is unavailable (preview gating), fall back to D3 + an empirical 28% monthly change rate as `ASSUMPTION`.
+
+### D3 — Storage growth (customer account)
+
+```sql
+-- Year-over-year storage growth per database (customer's primary account)
+SELECT
+    database_name,
+    ROUND(MAX(average_database_bytes) / POW(2, 30))                  AS high_GB,
+    ROUND(MIN(average_database_bytes) / POW(2, 30))                  AS low_GB,
+    ROUND(100 * (high_GB - low_GB) / IFF(low_GB::INT = 0, 1, low_GB)) AS pct_growth
+FROM snowflake.account_usage.database_storage_usage_history
+WHERE deleted IS NULL
+  AND average_database_bytes > 10 * POWER(2, 30)
+  AND usage_date > DATEADD('days', -365, CURRENT_DATE())
+GROUP BY 1
+ORDER BY 2 DESC;
+```
+
+**Populates:**
+- `replication.storage_growth_pct` ← weighted average of `pct_growth` across replicated databases (default 15% if no signal)
+
+If the customer's databases are <12 months old, narrow the date range and document the change in the evidence file.
+
+### Evidence file additions
+
+Append a new section to `temp/<customer-slug>-research-evidence.md`:
+
+```markdown
+## Replication signals (D1/D2/D3) — only when triggered
+Trigger source: <"context file mentions DR" | "Gong call: BCDR discussion" | "--mode dr flag">
+
+### D1 SNOWHOUSE — top databases by replicated TB
+Deployment: <DEPLOYMENT>  Account: <ACCOUNT>
+Total active TB: <N>  Total replicated TB: <N>  Clone factor: <N>
+| database | active_TB | replicated_TB | rows |
+|---|---|---|---|
+
+### D2 SYSTEM$ESTIMATE_REPLICATION_COST
+Databases scoped: <list>
+FIFTEEN_MINS_TB: <N>  ONE_HOUR_TB: <N>  ONE_DAY_TB: <N>
+Chosen frequency: <FIFTEEN_MINS|ONE_HOUR|ONE_DAY>  → monthly_change_TB = <N>
+
+### D3 — Storage growth (account_usage)
+Weighted growth pct: <N>%  Window: <date range>
+| database | low_GB | high_GB | pct_growth |
+|---|---|---|---|
+```

@@ -42,11 +42,15 @@ Build initial `meta` object:
   "hybrid_tables_storage_rate_per_gb": 0.34,
   "contract_years": [N],
   "generated_date": "[today YYYY-MM-DD]",
-  "ramp_curve": "linear",
+  "default_ramp_curve": "linear",
+  "default_dev_start_month": 2,
+  "default_go_live_month": 11,
   "pdf_version": "2026-05-12",
   "version_number": 1
 }
 ```
+
+The `default_*` fields seed per-workload defaults during Phase 3. They are not used directly in Phase 4 — every workload row carries its own `ramp_curve`, `dev_start_month`, `go_live_month`.
 
 Read reference documents in parallel:
 
@@ -223,6 +227,16 @@ Identify all distinct workload patterns and create one warehouse entry per patte
 
 Apply warehouse sizing rules from `sizing-methodology.md`. Apply MCW when concurrency rules trigger.
 
+**Per-workload ramp fields (REQUIRED on every workload row).** Each warehouse, serverless feature, AI feature, SPCS instance, OpenFlow instance, and collaboration account must carry:
+
+| Field | Default | Source |
+|---|---|---|
+| `dev_start_month` | 2 | `meta.default_dev_start_month` (override per workload if context indicates a later kickoff) |
+| `go_live_month` | 11 | `meta.default_go_live_month` (shorten if customer states a faster deadline; lengthen for complex migrations) |
+| `ramp_curve` | from `pricing.ramp_curves.recommended_by_workload_type[<workload kind>]` | See sizing-methodology.md "Choosing a curve" |
+
+When a workload is genuinely steady-state from month 1 (e.g., an ongoing production system being lifted), set `dev_start_month=1`, `go_live_month=1`, `ramp_curve="manual"` and the per-month factor stays at 1.0 throughout (the JS engine treats `manual` with `dev_start==go_live==1` as full ramp).
+
 ### Serverless Features
 
 For each of the 27 features in the spec template, set enabled=true only if there is EVIDENCE or a strong ASSUMPTION for that customer. Set all others to enabled=false with `ASSUMPTION: not required for this use case`.
@@ -264,21 +278,44 @@ Enable only if explicitly mentioned. For Openflow, always ask about source datab
 
 `collaboration.accounts[]`, each entry `{ id, type, label, warehouse_size, hours_per_day, days_per_month }`. `type` is either `"reader"` or `"managed"` and is display-only (same compute cost model). Create one entry per distinct account the customer plans to provision. Native Apps and Marketplace remain on `collaboration.native_apps` / `collaboration.marketplace` as subscription objects.
 
+### Replication / DR / Migration block
+
+**Activation trigger.** Add a `replication` object to the SIZING_SPEC if any of A / B / C / context-file mentions: BCDR, DR, disaster recovery, failover, replication, secondary region, data sharing provider, multi-region, migration to Snowflake. Also activate when `--mode replication` or `--mode dr` is on the command line.
+
+When triggered, run the D1 / D2 / D3 queries documented in `references/research-protocol.md` §7 and populate:
+
+```json
+"replication": {
+  "enabled": true,
+  "source_region": "AWS-Asia Pacific (Sydney)",
+  "target_region": "AWS-US East1 (N. Virginia)",
+  "initial_TB": 100,
+  "monthly_change_TB": 8,
+  "replication_frequency": "ONE_HOUR",
+  "storage_growth_pct": 0.15,
+  "yoy_pct": 0.10,
+  "compute_credits_per_TB": 4,
+  "replica_storage_per_tb_per_month": 23.0,
+  "ramp_curve": "fastest",
+  "dev_start_month": 1,
+  "go_live_month": 2,
+  "notes": "SOURCED: D2 SYSTEM$ESTIMATE_REPLICATION_COST ONE_HOUR_TB=8.0"
+}
+```
+
+If the trigger does not fire, omit the `replication` key entirely (the HTML template only renders the section when `__REPLICATION_JSON__ != null`).
+
+Region names MUST match keys in `pricing.replication.egress_matrix` exactly (e.g. `"AWS-Asia Pacific (Sydney)"` — including capitalization and parenthetical). Do NOT normalize to `"AWS Sydney"` or other shortenings.
+
 ### Storage
 
 Use stated data volumes from context. Apply compression defaults from `sizing-methodology.md`. Set time_travel_days=1 (default) and churn_rate=10% unless stated otherwise.
 
-### Growth rates
+### Growth rate
 
-Build `growth_rates` array:
+Set `meta.annual_growth_rate` from context (default 0.20 = 20%/yr). This applies to every workload from year 2 onwards. Year 1 ramp is handled per-workload by the Birdbox curve model — there is no `growth_rates` array anymore.
 
-```
-growth_rates[0] = ramp_year1  (default 0.70 for linear)
-growth_rates[y] = 1.0 × (1 + annual_growth)^(y-1)  for y >= 1
-```
-
-Use growth rate from context file if stated, otherwise 0.20 (20%/yr).
-Extend array to `contract_years` length.
+If different workloads have different growth rates, override per-workload via `growth_rate_override` on the row.
 
 ### Compile spec
 
@@ -291,29 +328,57 @@ Produce the complete JSON spec. Include:
 
 ---
 
-## Phase 4 — Apply multi-year growth
+## Phase 4 — Apply multi-year growth (per-workload monthly model)
 
-For each year 1 to N, compute year-level totals:
+Switch from the legacy `growth_rates[]` array to a per-month / per-workload model that integrates Birdbox ramp curves with the annual growth rate.
 
-| Component              | Formula                                                                |
-| ---------------------- | ---------------------------------------------------------------------- |
-| Warehouse credits/yr   | Σ(size_cr/hr × hrs/day × days/mo × avg_clusters) × 12 × ramp[y]  |
-| Serverless credits/yr  | monthly_serverless_credits × 12 × ramp[y]                            |
-| AI credits/yr          | monthly_ai_credits × 12 × ramp[y]                                    |
-| Storage cost/yr        | storage_tb(y) × storage_rate × 12                                    |
-| SPCS cost/yr           | Σ(instance_cr/hr × hrs/mo × count) × credit_rate × 12 × ramp[y]  |
-| Openflow cost/yr       | connections × vcpu × hours × 0.0225 × credit_rate × 12 × ramp[y] |
-| Transfer + Privatelink | tb × rate × 12                                                       |
+### Per-month factor
+
+For each workload row and each absolute month `m` (1-indexed across the full contract horizon):
+
+```
+relative_month = ((m - 1) MOD 12) + 1                  # month within the year, 1..12
+year_index     = ((m - 1) DIV 12)                      # 0 = year 1, 1 = year 2, ...
+
+ramp_factor    = clamp(((m_in_y1 - dev_start + 1) / (go_live - dev_start + 1)) ^ exponent, 0, 1)
+                 where m_in_y1 = m for year 1; for year 2+, ramp_factor = 1.0
+
+growth_factor  = (1 + annual_growth_rate) ^ year_index   # year 1 = 1.0, year 2 = 1+g, ...
+
+month_factor   = ramp_factor × growth_factor
+```
+
+`exponent` comes from `pricing.ramp_curves.exponents[ramp_curve]`.
+
+### Year totals
+
+```
+warehouse_credits_year_y    = Σ_workloads (cr_per_hr(size) × hrs/day × days/mo × avg_clusters) × Σ_months_in_y (month_factor)
+serverless_credits_year_y   = Σ_workloads (monthly_serverless_credits × Σ_months_in_y month_factor)
+ai_credits_year_y           = Σ_workloads (monthly_ai_credits × Σ_months_in_y month_factor)
+storage_cost_year_y         = active_TB(y) × storage_rate × 12     (already grows via storage growth model)
+spcs_cost_year_y            = Σ_instances  (instance_cr/hr × hrs/mo × count × credit_rate × Σ_months_in_y month_factor)
+openflow_cost_year_y        = Σ_instances  (connections × vcpu × hours × 0.0225 × credit_rate × Σ_months_in_y month_factor)
+transfer + privatelink      = tb × rate × 12
+replication_cost_year_y     = (active_TB(y) + monthly_change_TB(y) × 12) × cr_per_TB × credit_rate
+                            + monthly_change_TB(y) × 12 × egress_matrix[source][target]
+                            + avg_TB(y) × replica_storage_per_TB_per_month × 12
+                              (only if SIZING_SPEC.replication is present)
+```
+
+The legacy `× ramp[y]` shorthand is replaced by `× Σ_months_in_y month_factor` — i.e., the sum of 12 per-month factors instead of one annualized number. This makes each workload's ramp shape visible in the year-1 total.
 
 Print a summary table to the terminal (for SE reference):
 
 ```
-Year | Credits | Compute $ | Serverless $ | AI $ | Storage $ | Total $
-  1  |  XX,XXX | $XX,XXX   | $X,XXX       | $X   | $X,XXX    | $XX,XXX
-  2  |  XX,XXX | $XX,XXX   | $X,XXX       | $X   | $X,XXX    | $XX,XXX
-  3  |  XX,XXX | $XX,XXX   | $X,XXX       | $X   | $X,XXX    | $XX,XXX
+Year | Credits | Compute $ | Serverless $ | AI $ | Storage $ | Replication $ | Total $
+  1  |  XX,XXX | $XX,XXX   | $X,XXX       | $X   | $X,XXX    | $X,XXX        | $XX,XXX
+  2  |  XX,XXX | $XX,XXX   | $X,XXX       | $X   | $X,XXX    | $X,XXX        | $XX,XXX
+  3  |  XX,XXX | $XX,XXX   | $X,XXX       | $X   | $X,XXX    | $X,XXX        | $XX,XXX
 TCV: $XXX,XXX
 ```
+
+If `replication` is not present in SIZING_SPEC, omit the Replication column.
 
 ---
 
@@ -337,8 +402,8 @@ Where `customer-slug` = customer name lowercased, spaces replaced with hyphens.
 | Token | Value |
 |---|---|
 | `__BRAND_FONTS_CSS__` | full contents of `assets/branding/_brand_fonts.css` |
-| `__PRICING_DATA__` | JSON object of credit/storage rates (from Phase 2) |
-| `__SIZING_SPEC__` | complete SIZING_SPEC JSON object (from Phase 4) |
+| `__PRICING_DATA__` | full contents of `assets/snowflake_pricing_master.json` (now includes `ramp_curves` and `replication.egress_matrix`) |
+| `__SIZING_SPEC__` | complete SIZING_SPEC JSON object (from Phase 4) — includes per-workload `dev_start_month`/`go_live_month`/`ramp_curve` and optional `replication` block |
 | `__CUSTOMER__` | customer display name |
 | `__EDITION__` | Snowflake edition (`Enterprise` / `Business Critical`) |
 | `__CLOUD__` | cloud provider (`AWS` / `Azure` / `GCP`) |
@@ -355,9 +420,10 @@ Do **not** modify any other part of the template. The template already contains 
 **Quality check before reporting success (BLOCKING):**
 
 1. Confirm no `__TOKEN__` strings remain in the output (all 11 substituted).
-2. Verify `growth_rates` array length = `contract_years`.
+2. Verify the per-month factor model is wired through (not the legacy `growth_rates` array). `grep growth_rates temp/<slug>-<N>year-sizing.html` should return zero hits.
 3. Verify `credit_rate` in spec matches the region in the header.
-4. **Em-dash gate.** Run:
+4. If `SIZING_SPEC.replication` was populated, confirm both `source_region` and `target_region` are valid keys in `pricing.replication.egress_matrix` (`source_region` exists, and `target_region` exists in `egress_matrix[source_region]`).
+5. **Em-dash gate.** Run:
 
    ```bash
    python3 assets/emdash-check.py temp/<slug>-<N>year-sizing.html temp/<slug>-research-evidence.md
@@ -392,7 +458,7 @@ Print to terminal:
   2. [Workload label] — [XX,XXX] cr/yr ([XX]%)
   3. [Workload label] — [XX,XXX] cr/yr ([XX]%)
 
-⚠️  Requires customer confirmation:
+⚠️  Requires Confirmation:
   • [confirm_required item 1]
   • [confirm_required item 2]
   ...

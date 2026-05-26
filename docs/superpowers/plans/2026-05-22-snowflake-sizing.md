@@ -817,7 +817,7 @@ Two sections rendered from `SIZING_SPEC.assumptions` and `SIZING_SPEC.confirm_re
   <ul id="assumptions-list"><!-- rendered from SIZING_SPEC.assumptions --></ul>
 </div>
 <div class="confirm-section">
-  <h3>⚠️ Requires Customer Confirmation</h3>
+  <h3>⚠️ Requires Confirmation</h3>
   <ul id="confirm-list"><!-- rendered from SIZING_SPEC.confirm_required --></ul>
 </div>
 ```
@@ -1369,7 +1369,7 @@ Print to terminal:
   2. [Workload label] — [XX,XXX] cr/yr ([XX]%)
   3. [Workload label] — [XX,XXX] cr/yr ([XX]%)
 
-⚠️  Requires customer confirmation:
+⚠️  Requires Confirmation:
   • [confirm_required item 1]
   • [confirm_required item 2]
   ...

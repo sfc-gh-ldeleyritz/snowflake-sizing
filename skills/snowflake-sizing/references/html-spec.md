@@ -288,8 +288,10 @@ Card mutation handlers: `addAccount(type)`, `removeAccount(id)`, `updateAccount(
 - Cloud: select (AWS / Azure / GCP)
 - Region: grouped select populated from PRICING_DATA — updates credit_rate live
 - Contract years: select (1 / 2 / 3 / 4 / 5) — adds/removes year bars from chart
-- Ramp curve: select (Slowest 55% / Slow 65% / Linear 70% / Fast 80% / Fastest 90%)
-- Annual growth %: number input (overrides computed growth_rates)
+- Default Ramp curve: select (Slowest x^4 / Slow x^2 / Linear x / Fast x^0.5 / Fastest x^0.25 / Manual). Sets `meta.default_ramp_curve` AND propagates to every workload row's `ramp_curve` field for one-click rebaseline.
+- Dev start month: number input (1-36). Sets `meta.default_dev_start_month` AND propagates to every workload row.
+- Go-live month: number input (1-36). Sets `meta.default_go_live_month` AND propagates to every workload row.
+- Annual growth %: number input. Sets `meta.annual_growth_rate` (used by year 2+ scaling).
 
 ### 6. Scenario Comparison
 
@@ -298,43 +300,53 @@ Three side-by-side columns rendered as cards:
 | | Conservative | Expected | Aggressive |
 |---|---|---|---|
 | Growth | 10%/yr | 20%/yr | 35%/yr |
-| Ramp | Slowest (55%) | Linear (70%) | Fast (80%) |
+| Curve | slow (x^2) | linear (x) | fast (x^0.5) |
+| Go-live shift | +1 month later | unchanged | -1 month earlier |
 
 Each column shows: Year 1 / Year 2 / Year 3 / TCV. The "Expected" column is highlighted with `border: 2px solid var(--sf-blue)`.
 
-Each column has editable growth % and ramp selector so the SE can customise.
+Each column has read-only growth and curve indicators (the canonical edit paths are the per-workload ramp fields and the global defaults in the Global Settings tab).
 
 **Scenario toggle.** Above the grid: `<input type="checkbox" id="show-low-high" checked>` labeled *Show Conservative & Aggressive scenarios*. When unchecked, `updateScenarios()` filters the array to the Expected card only and adds the `only-expected` class to `.scenario-grid` (`grid-template-columns: minmax(0, 480px); justify-content: center;`) so the lone card doesn't stretch full-width. Hidden in print (`@media print` rule on `.scenario-toggle`).
 
 #### Scenario Calculation
 
-Each scenario computes its own year-by-year totals using `recalculate()` logic with overridden growth and ramp:
+Each scenario computes its own year-by-year totals using the per-month ramp helper:
 
 ```javascript
-function calcScenarioTCV(growthRate, rampYear1) {
+function scenarioRampForYear(sc, year) {
+  // sc = { growth, curve, shift }
+  const m = SIZING_SPEC.meta;
+  const synthRow = {
+    ramp_curve: sc.curve,
+    dev_start_month: m.default_dev_start_month,
+    go_live_month: Math.max(2, (m.default_go_live_month || 11) + sc.shift),
+  };
+  const saved = m.annual_growth_rate;
+  m.annual_growth_rate = sc.growth;
+  const r = rampMultiplierForYear(synthRow, year);
+  m.annual_growth_rate = saved;
+  return r;
+}
+
+function calcScenarioTCV(sc) {
   const years = SIZING_SPEC.meta.contract_years;
   const cr    = SIZING_SPEC.meta.credit_rate;
   const aiCr  = SIZING_SPEC.meta.ai_credit_rate;
   const sr    = SIZING_SPEC.meta.storage_rate_per_tb;
-
-  // Build growth_rates: [rampYear1, 1.0, (1+g)^1, (1+g)^2, ...]
-  const ramps = [rampYear1];
-  for (let y = 1; y < years; y++) {
-    ramps.push(Math.pow(1 + growthRate, y)); // y=1 → (1+g)^1, y=2 → (1+g)^2
-  }
-
   let tcv = 0;
   const yearCosts = [];
   for (let y = 1; y <= years; y++) {
-    const ramp = ramps[y - 1];
-    const whCredits  = SIZING_SPEC.workloads.reduce((s, w) => s + whMonthlyCredits(w) * 12, 0) * ramp;
-    const slCredits  = calcServerlessCredits() * 12 * ramp;
-    const aiCredits  = calcAICredits() * 12 * ramp;
+    const r = scenarioRampForYear(sc, y);
+    const whCredits  = SIZING_SPEC.workloads.reduce((s, w) => s + whMonthlyCredits(w) * 12, 0) * r;
+    const slCredits  = calcServerlessCredits() * 12 * r;
+    const aiCredits  = calcAICredits() * 12 * r;
     const storageCost = storageForYear(y) * sr * 12;
-    const spcsCost   = calcSPCSCost() * 12 * ramp;
-    const ofCost     = calcOpenflowCost(cr, ramp);
+    const spcsCost   = calcSPCSCost() * 12 * r;
+    const ofCost     = calcOpenflowCost(cr, r);
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled ? SIZING_SPEC.openflow_oracle.licensed_cores * 110 * 12 : 0;
-    const yearTotal = (whCredits + slCredits) * cr + aiCredits * aiCr + storageCost + spcsCost + ofCost + oracleCost;
+    const replication = calcReplicationForYear(y);  // not scaled by scenario ramp; replication has its own growth model
+    const yearTotal = (whCredits + slCredits) * cr + aiCredits * aiCr + storageCost + spcsCost + ofCost + oracleCost + replication.total_cost;
     yearCosts.push(yearTotal);
     tcv += yearTotal;
   }
@@ -343,14 +355,12 @@ function calcScenarioTCV(growthRate, rampYear1) {
 
 function updateScenarios() {
   const scenarios = [
-    { id: 'conservative', growth: 0.10, ramp: 0.55 },
-    { id: 'expected',     growth: 0.20, ramp: 0.70 },
-    { id: 'aggressive',   growth: 0.35, ramp: 0.80 },
+    { id: 'conservative', growth: 0.10, curve: 'slow',   shift: +1 },
+    { id: 'expected',     growth: 0.20, curve: 'linear', shift:  0 },
+    { id: 'aggressive',   growth: 0.35, curve: 'fast',   shift: -1 },
   ];
   for (const sc of scenarios) {
-    const g = parseFloat(document.getElementById(`sc-growth-${sc.id}`)?.value ?? sc.growth);
-    const r = parseFloat(document.getElementById(`sc-ramp-${sc.id}`)?.value  ?? sc.ramp);
-    const { tcv, yearCosts } = calcScenarioTCV(g, r);
+    const { tcv, yearCosts } = calcScenarioTCV(sc);
     document.getElementById(`sc-tcv-${sc.id}`).textContent = '$' + fmt(tcv);
     yearCosts.forEach((cost, i) => {
       const el = document.getElementById(`sc-yr${i+1}-${sc.id}`);
@@ -361,8 +371,8 @@ function updateScenarios() {
 ```
 
 Each scenario card must have:
-- Editable growth % input: `<input type="number" id="sc-growth-[id]" value="[default]" min="0" max="200" step="5" oninput="updateScenarios()">`
-- Editable ramp select: `<select id="sc-ramp-[id]" onchange="updateScenarios()"><option value="0.55">Slowest 55%</option><option value="0.65">Slow 65%</option><option value="0.70" selected>Linear 70%</option><option value="0.80">Fast 80%</option><option value="0.90">Fastest 90%</option></select>`
+- Read-only growth indicator: `<input type="text" disabled value="[growth]%/yr">`
+- Read-only curve indicator: `<input type="text" disabled value="[curve] · go-live month [shift-applied]">`
 - Year cost spans: `<span id="sc-yr1-[id]">`, `<span id="sc-yr2-[id]">`, `<span id="sc-yr3-[id]">`
 - TCV span: `<span id="sc-tcv-[id]">`
 
@@ -375,7 +385,7 @@ Two sections rendered from `SIZING_SPEC.assumptions` and `SIZING_SPEC.confirm_re
   <h3>Stated Assumptions</h3>
   <ul class="assumptions-list" id="assumptions-list"><!-- rendered by renderAssumptions() --></ul>
   <button class="add-item-btn" onclick="addAssumption()">+ Add Assumption</button>
-  <h3 style="margin-top: 24px;">⚠️ Requires Customer Confirmation</h3>
+  <h3 style="margin-top: 24px;">⚠️ Requires Confirmation</h3>
   <ul class="confirm-list" id="confirm-list"><!-- rendered by renderAssumptions() --></ul>
   <button class="add-item-btn" onclick="addConfirmItem()">+ Add Item</button>
 </div>
@@ -525,6 +535,96 @@ const PRICING_DATA = /* paste full snowflake_pricing_master.json here */;
 const SIZING_SPEC  = /* paste generated spec JSON here */;
 ```
 
+### Birdbox Ramp Curves (replaces legacy `growth_rates` array)
+
+The legacy `SIZING_SPEC.growth_rates` array is **gone**. Each workload row carries its own `dev_start_month`, `go_live_month`, `ramp_curve` fields. `meta.default_*` fields seed defaults for new rows. `meta.annual_growth_rate` drives year-2+ scaling for all categories.
+
+```javascript
+function rampExponentFor(curve) {
+  const exp = (PRICING_DATA && PRICING_DATA.ramp_curves && PRICING_DATA.ramp_curves.exponents) || {};
+  return (typeof exp[curve] === 'number') ? exp[curve] : 1.0;
+}
+function rampFactorForMonth(devStart, goLive, curve, m) {
+  if (curve === 'manual') return (devStart === 1 && goLive === 1) ? 1.0 : 0.0;
+  if (m < devStart) return 0;
+  if (m >= goLive)  return 1;
+  const denom = (goLive - devStart + 1);
+  if (denom <= 0) return 1;
+  return Math.pow((m - devStart + 1) / denom, rampExponentFor(curve));
+}
+function rampMultiplierForYear(row, year) {
+  // Returns the AVERAGE per-month factor for the 12 months in `year` (year is 1-indexed),
+  // multiplied by the cumulative annual-growth factor for years 2+.
+  // Caller multiplies by × 12 to get effective months-equivalent of full capacity.
+  const m = SIZING_SPEC.meta;
+  const annualGrowth = (m.annual_growth_rate != null) ? m.annual_growth_rate : 0.20;
+  const devStart = (row && row.dev_start_month != null) ? row.dev_start_month : (m.default_dev_start_month || 2);
+  const goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   || 11);
+  const curve   = (row && row.ramp_curve)              ? row.ramp_curve      : (m.default_ramp_curve || 'linear');
+  let avg;
+  if (year === 1) {
+    let sum = 0;
+    for (let mo = 1; mo <= 12; mo++) sum += rampFactorForMonth(devStart, goLive, curve, mo);
+    avg = sum / 12;
+  } else {
+    avg = 1.0;  // year 2+: full capacity, growth handled below
+  }
+  return avg * Math.pow(1 + annualGrowth, year - 1);
+}
+function defaultRampMultiplierForYear(year) { return rampMultiplierForYear(null, year); }
+```
+
+### Replication / DR cost engine
+
+```javascript
+function calcReplicationForYear(year) {
+  const rep = SIZING_SPEC.replication;
+  if (!rep || rep.enabled === false) {
+    return { compute_credits: 0, compute_cost: 0, egress_cost: 0, storage_cost: 0, total_cost: 0,
+             active_TB: 0, change_TB: 0, egress_rate: 0 };
+  }
+  const cr = SIZING_SPEC.meta.credit_rate;
+  const yoy = (rep.yoy_pct != null) ? rep.yoy_pct : 0.10;
+  const growth = (rep.storage_growth_pct != null) ? rep.storage_growth_pct : 0.15;
+  const credPerTB = (rep.compute_credits_per_TB != null) ? rep.compute_credits_per_TB : 4;
+  const storageRate = (rep.replica_storage_per_tb_per_month != null) ? rep.replica_storage_per_tb_per_month : 23;
+
+  let activeTB = rep.initial_TB || 0;
+  let growthTB = activeTB * growth;
+  let changeTB = (rep.monthly_change_TB || 0) * 12;
+  for (let y = 2; y <= year; y++) {
+    activeTB = activeTB + growthTB;
+    growthTB = growthTB * (1 + yoy);
+    changeTB = changeTB * (1 + yoy);
+  }
+  const avgTB = activeTB + (growthTB / 2);
+  const matrix = (PRICING_DATA.replication && PRICING_DATA.replication.egress_matrix) || {};
+  let egressRate = 0;
+  if (rep.source_region && rep.target_region) {
+    const row = matrix[rep.source_region];
+    if (row && typeof row[rep.target_region] === 'number') egressRate = row[rep.target_region];
+  }
+  // Year 1: includes initial seed transfer (matches Apr 2026 calculator math).
+  // Year 2+: only growth + change (steady-state delta).
+  const computeBasisTB = (year === 1) ? (activeTB + growthTB + changeTB) : (growthTB + changeTB);
+  const egressBasisTB  = (year === 1) ? (activeTB + growthTB + changeTB) : (growthTB + changeTB);
+  const computeCredits = computeBasisTB * credPerTB;
+  const computeCost    = computeCredits * cr;
+  const egressCost     = egressBasisTB * egressRate;
+  const storageCost    = avgTB * storageRate * 12;
+  return { compute_credits: computeCredits, compute_cost: computeCost,
+           egress_cost: egressCost, storage_cost: storageCost,
+           total_cost: computeCost + egressCost + storageCost,
+           active_TB: activeTB, change_TB: changeTB, egress_rate: egressRate, avg_TB: avgTB };
+}
+```
+
+A `<section id="replication-section">` is only rendered (display:block) when `SIZING_SPEC.replication` is present and `enabled !== false`. The panel exposes `source_region`, `target_region`, `initial_TB`, `monthly_change_TB`, `compute_credits_per_TB`, `replica_storage_per_tb_per_month`, `storage_growth_pct`, `yoy_pct` as editable controls. A summary table below shows year-by-year breakdown of compute/egress/storage/total. Region dropdowns are populated from `PRICING_DATA.replication.egress_matrix` keys.
+
+**Configuration tab placement.** The Replication / DR / Migration panel lives as one of the configuration tabs (`#tab-replication`) alongside Warehouses / Serverless / AI / SPCS / OpenFlow / Storage / Collaboration / Global Settings. The card uses the same `workload-card` + `controls-grid` + `justification` formatting as other tabs; its group-header row (`gh-cr-replication`, `gh-d-replication`) shows live monthly credits and dollars. When `SIZING_SPEC.replication` is absent or `enabled: false`, the tab shows a `+ Enable Replication / DR` add-button; clicking it calls `enableReplication()` to seed default values (N. Virginia → Oregon, 0 TB, 4 cr/TB, $23/TB/mo). The Delete button on the active card calls `disableReplication()` (sets `enabled: false`).
+
+**Live header updates.** The proposal header (Customer name, Edition, Cloud + Region, Credit rate, Years) is wrapped in spans with stable IDs (`hdr-customer`, `hdr-edition`, `hdr-cloud`, `hdr-region`, `hdr-credit-rate`, `hdr-years`). `updateHeaderInfo()` synchronises these spans from `SIZING_SPEC.meta` whenever `updateGlobal()` is called from the Global Settings tab, so any change there reflects immediately in the header without a page reload.
+
 ### Core Functions
 
 ```javascript
@@ -550,31 +650,27 @@ function recalculate() {
   const cr    = SIZING_SPEC.meta.credit_rate;
   const aiCr  = SIZING_SPEC.meta.ai_credit_rate;
   const sr    = SIZING_SPEC.meta.storage_rate_per_tb;
-  const ramps = SIZING_SPEC.growth_rates;
 
   const yearData = [];
 
   for (let y = 1; y <= years; y++) {
-    const ramp = ramps[y - 1] || ramps[ramps.length - 1];
-
-    // Warehouse credits (annual)
+    // Per-workload ramp: each warehouse row has its own dev_start/go_live/curve.
     const whCredits = SIZING_SPEC.workloads
-      .reduce((sum, w) => sum + whMonthlyCredits(w) * 12, 0) * ramp;
+      .reduce((sum, w) => sum + whMonthlyCredits(w) * 12 * rampMultiplierForYear(w, y), 0);
 
-    // Serverless credits (annual) — each feature uses its own formula
-    const slCredits = calcServerlessCredits() * 12 * ramp;
-
-    // AI credits (annual)
-    const aiCredits = calcAICredits() * 12 * ramp;
+    // Serverless / AI / SPCS / OpenFlow / Collab use the meta-default ramp (no per-row data captured).
+    const defRamp = defaultRampMultiplierForYear(y);
+    const slCredits = calcServerlessCredits() * 12 * defRamp;
+    const aiCredits = calcAICredits() * 12 * defRamp;
 
     // Storage cost (annual)
     const storageCost = storageForYear(y) * sr * 12;
 
     // SPCS cost (annual)
-    const spcsCost = calcSPCSCost() * 12 * ramp;
+    const spcsCost = calcSPCSCost() * 12 * defRamp;
 
     // OpenFlow cost (annual) - sums across openflow.instances[]
-    const ofCost = calcOpenflowCost(cr, ramp);
+    const ofCost = calcOpenflowCost(cr, defRamp);
 
     // Oracle Openflow (annual, not credit-based)
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled
@@ -585,21 +681,28 @@ function recalculate() {
     const transferCost = calcTransferCost() * 12;
 
     // Collaboration costs (annual)
-    const collabCost = calcCollabCost() * 12 * ramp;
+    const collabCost = calcCollabCost() * 12 * defRamp;
+
+    // Replication (annual) - has its own growth model (storage_growth_pct + yoy_pct), no ramp multiplier.
+    const replication = calcReplicationForYear(y);
 
     const computeCost  = whCredits  * cr;
     const serverlessCost = slCredits * cr;
     const aiCost       = aiCredits  * aiCr;
-    const otherCost    = spcsCost + ofCost + oracleCost + transferCost + collabCost;
+    const otherCost    = spcsCost + ofCost + oracleCost + transferCost + collabCost + replication.total_cost;
     const yearTotal    = computeCost + serverlessCost + aiCost + storageCost + otherCost;
 
-    yearData.push({ y, whCredits, slCredits, aiCredits, computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal });
+    yearData.push({ y, whCredits, slCredits, aiCredits,
+                    computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal,
+                    replicationCost: replication.total_cost,
+                    replicationDetail: replication });
   }
 
   updateKPIs(yearData);
   updateCharts(yearData);
   updateWorkloadCalcs();
   updateScenarios();
+  updateReplicationPanel(yearData);
 }
 ```
 
@@ -650,50 +753,99 @@ function calcServerlessCredits() {
 
 ### `calcAICredits()` — returns monthly AI credits
 
+All rates source from `PRICING_DATA.ai_features.*` — no hardcoded numbers. The function looks up rates by model name (Cortex Complete, SI/Agents, Fine-tuning) or by feature name (Cortex Search, Cortex Analyst API, Document AI, AI Parse Document). When a SIZING_SPEC field references a `model` that isn't in the pricing data, the rate falls through to 0.
+
 ```javascript
 function calcAICredits() {
   const ai = SIZING_SPEC.ai_cortex;
   let total = 0;
+  // Cortex Complete - Table 6(a)
   const aiModels = PRICING_DATA.ai_features.cortex_complete.data;
   const getRate = (model, type) => {
     const m = aiModels.find(x => x.model === model);
     return m ? (m[type] || 0) : 0;
   };
+  // Snowflake Intelligence / Cortex Agents / Cortex Analyst (via SI or Agents) - Table 6(d)
+  const siAgentsModels = (PRICING_DATA.ai_features.intelligence_agents_analyst || {}).data || [];
+  const getSIRate = (model, type) => {
+    const m = siAgentsModels.find(x => x.model === model);
+    return m ? (m[type] || 0) : 0;
+  };
+  // Other AI features (Cortex Search, Cortex Analyst API, Document AI, AI Parse Document) - Table 6(h)
+  const otherFeats = (PRICING_DATA.ai_features.other_ai_features || {}).data || [];
+  const getFeatRate = (featureName) => {
+    const f = otherFeats.find(x => x.feature === featureName);
+    return f ? (f.rate || 0) : 0;
+  };
+
   if (ai.cortex_complete.enabled)
     total += ai.cortex_complete.monthly_input_tokens_M  * getRate(ai.cortex_complete.model, 'input') +
              ai.cortex_complete.monthly_output_tokens_M * getRate(ai.cortex_complete.model, 'output');
-  if (ai.cortex_agents.enabled)
-    total += (ai.cortex_agents.monthly_input_tokens_M  * 1.88 +
-              ai.cortex_agents.monthly_output_tokens_M * 9.41);
-  if (ai.snowflake_intelligence.enabled)
-    total += (ai.snowflake_intelligence.monthly_input_tokens_M  * 2.51 +
-              ai.snowflake_intelligence.monthly_output_tokens_M * 12.55);
+
+  // SI/Agents/Cortex Analyst-via-SI now use cache_write and cache_read tokens too (Table 6d/6e have these columns).
+  // Default model claude-4-sonnet if SIZING_SPEC omits it.
+  if (ai.cortex_agents.enabled) {
+    const model = ai.cortex_agents.model || 'claude-4-sonnet';
+    total += (ai.cortex_agents.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
+             (ai.cortex_agents.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
+             (ai.cortex_agents.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
+             (ai.cortex_agents.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
+  }
+  if (ai.snowflake_intelligence.enabled) {
+    const model = ai.snowflake_intelligence.model || 'claude-4-sonnet';
+    total += (ai.snowflake_intelligence.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
+             (ai.snowflake_intelligence.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
+             (ai.snowflake_intelligence.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
+             (ai.snowflake_intelligence.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
+  }
   if (ai.cortex_code) {
+    const ccModel = ai.cortex_code.model || 'claude-4-sonnet';
+    const ccRate = getSIRate(ccModel, 'input');  // blended approximation
     ['cli', 'snowsight', 'desktop'].forEach(surface => {
       const cc = ai.cortex_code[surface];
       if (cc && cc.enabled) {
         const tokensM = cc.developers * cc.queries_per_dev_per_day *
                         cc.avg_tokens_per_query / 1_000_000 * 22;
-        total += tokensM * 2.51; // Table 6(e) blended rate; same per-token rate across all 3 surfaces
+        total += tokensM * ccRate;
       }
     });
   }
   if (ai.cortex_analyst.enabled)
-    total += ai.cortex_analyst.monthly_messages / 1000 * 67;
+    total += ai.cortex_analyst.monthly_messages / 1000 * getFeatRate('Cortex Analyst (API)');
   if (ai.cortex_search.enabled)
-    total += ai.cortex_search.indexed_data_gb * 6.3;
+    total += ai.cortex_search.indexed_data_gb * getFeatRate('Cortex Search');
   if (ai.document_ai.enabled)
-    total += ai.document_ai.compute_hours_monthly * 8;
+    total += ai.document_ai.compute_hours_monthly * getFeatRate('Document AI');
   if (ai.ai_parse_document_layout.enabled)
-    total += ai.ai_parse_document_layout.pages_per_month / 1000 * 3.33;
+    total += ai.ai_parse_document_layout.pages_per_month / 1000 * getFeatRate('AI Parse Document - Layout');
   if (ai.ai_parse_document_ocr.enabled)
-    total += ai.ai_parse_document_ocr.pages_per_month / 1000 * 0.5;
-  if (ai.cortex_fine_tuning.enabled)
-    total += ai.cortex_fine_tuning.training_tokens_M * 3.40;
-  const funcRates = { ai_classify: 1.39, ai_sentiment: 1.60, ai_summarize: 0.10, ai_translate: 1.50, ai_extract: 5.00, ai_transcribe: 1.30 };
-  for (const [key, rate] of Object.entries(funcRates)) {
+    total += ai.ai_parse_document_ocr.pages_per_month / 1000 * getFeatRate('AI Parse Document - OCR');
+
+  // Fine-tuning - Table 6(f)
+  if (ai.cortex_fine_tuning.enabled) {
+    const model = ai.cortex_fine_tuning.model || 'llama3.1-70b';
+    const ftData = (PRICING_DATA.ai_features.fine_tuning || {}).data || [];
+    const ft = ftData.find(x => x.model === model);
+    total += ai.cortex_fine_tuning.training_tokens_M * (ft ? (ft.training || 0) : 0);
+  }
+
+  // Utility functions - Table 6(c)
+  const utilFuncs = (PRICING_DATA.ai_features.utility_functions || {}).data || [];
+  const getUtilRate = (functionName) => {
+    const f = utilFuncs.find(x => x.function === functionName);
+    return f ? (f.rate || 0) : 0;
+  };
+  const funcMap = {
+    ai_classify: 'AI_CLASSIFY',
+    ai_sentiment: 'AI Sentiment',
+    ai_summarize: 'Summarize',
+    ai_translate: 'AI_TRANSLATE',
+    ai_extract: 'AI_EXTRACT (arctic-extract)',
+    ai_transcribe: 'AI_TRANSCRIBE'
+  };
+  for (const [key, featName] of Object.entries(funcMap)) {
     const f = ai.cortex_functions[key];
-    if (f && f.enabled) total += f.tokens_M_monthly * rate;
+    if (f && f.enabled) total += f.tokens_M_monthly * getUtilRate(featName);
   }
   if (ai.embeddings.enabled) total += ai.embeddings.tokens_M_monthly * 0.05;
   return total;

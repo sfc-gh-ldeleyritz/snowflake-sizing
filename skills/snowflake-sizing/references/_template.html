@@ -466,13 +466,13 @@ li:hover .item-delete-btn { display: inline; }
     </div>
     <div class="doc-meta">
       <div>CONSUMPTION ESTIMATE</div>
-      <div>Prepared: __DATE__</div>
-      <div>__EDITION__ &middot; __CLOUD__ __REGION__</div>
-      <div>$__CREDIT_RATE__/credit</div>
+      <div>Prepared: <span id="hdr-date">__DATE__</span></div>
+      <div><span id="hdr-edition">__EDITION__</span> &middot; <span id="hdr-cloud">__CLOUD__</span> <span id="hdr-region">__REGION__</span></div>
+      <div>$<span id="hdr-credit-rate">__CREDIT_RATE__</span>/credit</div>
     </div>
   </div>
-  <h1>__CUSTOMER__</h1>
-  <div class="header-subtitle">__YEARS__-Year Snowflake Consumption Estimate</div>
+  <h1 id="hdr-customer">__CUSTOMER__</h1>
+  <div class="header-subtitle"><span id="hdr-years">__YEARS__</span>-Year Snowflake Consumption Estimate</div>
 </div>
 
 <!-- 2. KPI Tiles -->
@@ -527,6 +527,7 @@ li:hover .item-delete-btn { display: inline; }
     <button class="tab-btn" data-tab="openflow">Openflow</button>
     <button class="tab-btn" data-tab="storage">Storage</button>
     <button class="tab-btn" data-tab="collab">Collaboration</button>
+    <button class="tab-btn" data-tab="replication">Replication</button>
     <button class="tab-btn" data-tab="global">Global Settings</button>
   </div>
 
@@ -565,6 +566,11 @@ li:hover .item-delete-btn { display: inline; }
     </div>
   </div>
 
+  <div class="tab-content" id="tab-replication" data-print-title="Replication / DR / Migration">
+    <div id="replication-container"></div>
+    <button class="add-btn" onclick="enableReplication()">+ Enable Replication / DR</button>
+  </div>
+
   <div class="tab-content" id="tab-global" data-print-title="Global Settings">
     <div id="global-container"></div>
   </div>
@@ -585,7 +591,7 @@ li:hover .item-delete-btn { display: inline; }
   <h3>Stated Assumptions</h3>
   <ul class="assumptions-list" id="assumptions-list"></ul>
   <button class="add-item-btn" onclick="addAssumption()">+ Add Assumption</button>
-  <h3 style="margin-top: 24px;">⚠️ Requires Customer Confirmation</h3>
+  <h3 style="margin-top: 24px;">⚠️ Requires Confirmation</h3>
   <ul class="confirm-list" id="confirm-list"></ul>
   <button class="add-item-btn" onclick="addConfirmItem()">+ Add Item</button>
 </div>
@@ -779,15 +785,22 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
 (function normalizeSpec() {
   if (SIZING_SPEC.openflow && !Array.isArray(SIZING_SPEC.openflow.instances)) {
     const o = SIZING_SPEC.openflow;
+    const vcpuToSize = v => v >= 8 ? 'Large' : v >= 4 ? 'Medium' : 'Small';
     SIZING_SPEC.openflow = {
       enabled: !!o.enabled,
       instances: o.enabled ? [{
         id: 'of-1',
         label: 'OpenFlow',
+        connector_type: o.connector_type || 'CDC',
         deployment: o.deployment || 'BYOC',
-        source_connections: o.source_connections || 0,
-        vcpu_per_connection: o.vcpu_per_connection || 0,
-        hours_monthly: o.hours_monthly || 0,
+        runtime_size: o.runtime_size || vcpuToSize(o.vcpu_per_connection || 4),
+        runtime_nodes: o.runtime_nodes || o.source_connections || 1,
+        byoc_region: o.byoc_region || 'us-east-1',
+        monthly_data_gb: o.monthly_data_gb || 0,
+        warehouse_size: o.warehouse_size || null,
+        warehouse_hours_monthly: o.warehouse_hours_monthly || 0,
+        hours_monthly: o.hours_monthly || 730,
+        source_connections: o.source_connections || 1,
       }] : [],
     };
   }
@@ -840,6 +853,22 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
       };
     }
   }
+
+  // Birdbox-style ramp curve defaults: seed meta-level defaults if missing.
+  const m = SIZING_SPEC.meta;
+  if (m.default_ramp_curve == null)     m.default_ramp_curve     = m.ramp_curve || 'linear';
+  if (m.default_dev_start_month == null) m.default_dev_start_month = 2;
+  if (m.default_go_live_month == null)   m.default_go_live_month   = 11;
+  if (m.annual_growth_rate == null)      m.annual_growth_rate      = 0.20;
+
+  // Per-workload ramp fields: fall back to meta defaults if missing.
+  if (Array.isArray(SIZING_SPEC.workloads)) {
+    SIZING_SPEC.workloads.forEach(w => {
+      if (w.dev_start_month == null) w.dev_start_month = m.default_dev_start_month;
+      if (w.go_live_month   == null) w.go_live_month   = m.default_go_live_month;
+      if (w.ramp_curve      == null) w.ramp_curve      = m.default_ramp_curve;
+    });
+  }
 })();
 
 // ========== Calculation engine ==========
@@ -847,6 +876,45 @@ function whMonthlyCredits(w) {
   const rate = WH_CREDITS[w.size] || 1;
   const avgClusters = (w.clusters_min + w.clusters_max) / 2;
   return rate * w.hours_per_day * w.days_per_month * avgClusters;
+}
+
+// ========== Birdbox ramp curve helpers ==========
+// PRICING_DATA.ramp_curves.exponents drives the shape: factor(m) = ((m - dev_start + 1) / (go_live - dev_start + 1)) ^ exponent.
+// rampMultiplierForYear returns the average factor across 12 months (so caller's "× 12 × ramp" math still holds).
+function rampExponentFor(curve) {
+  const exp = (PRICING_DATA && PRICING_DATA.ramp_curves && PRICING_DATA.ramp_curves.exponents) || {};
+  return (typeof exp[curve] === 'number') ? exp[curve] : 1.0;
+}
+function rampFactorForMonth(devStart, goLive, curve, m) {
+  if (curve === 'manual') return (devStart === 1 && goLive === 1) ? 1.0 : 0.0;
+  if (m < devStart) return 0;
+  if (m >= goLive)  return 1;
+  const denom = (goLive - devStart + 1);
+  if (denom <= 0) return 1;
+  const exponent = rampExponentFor(curve);
+  return Math.pow((m - devStart + 1) / denom, exponent);
+}
+function rampMultiplierForYear(row, year) {
+  // year is 1-indexed. Returns the average per-month factor for the 12 months in that year,
+  // multiplied by the cumulative annual-growth factor for years 2+.
+  const m = SIZING_SPEC.meta;
+  const annualGrowth = (m.annual_growth_rate != null) ? m.annual_growth_rate : 0.20;
+  const devStart = (row && row.dev_start_month != null) ? row.dev_start_month : (m.default_dev_start_month != null ? m.default_dev_start_month : 2);
+  const goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   != null ? m.default_go_live_month   : 11);
+  const curve   = (row && row.ramp_curve)              ? row.ramp_curve      : (m.default_ramp_curve || 'linear');
+  let avg;
+  if (year === 1) {
+    let sum = 0;
+    for (let mo = 1; mo <= 12; mo++) sum += rampFactorForMonth(devStart, goLive, curve, mo);
+    avg = sum / 12;
+  } else {
+    avg = 1.0;  // year 2+: workload is at full capacity for all 12 months
+  }
+  return avg * Math.pow(1 + annualGrowth, year - 1);
+}
+function defaultRampMultiplierForYear(year) {
+  // Used for non-workload categories that don't carry their own ramp fields.
+  return rampMultiplierForYear(null, year);
 }
 
 function storageForYear(year) {
@@ -905,42 +973,87 @@ function calcAICredits() {
     const m = aiModels.find(x => x.model === model);
     return m ? (m[type] || 0) : 0;
   };
+  // Snowflake Intelligence / Cortex Agents / Cortex Analyst (via SI or Agents) - Table 6(d)
+  const siAgentsModels = (PRICING_DATA.ai_features.intelligence_agents_analyst || {}).data || [];
+  const getSIRate = (model, type) => {
+    const m = siAgentsModels.find(x => x.model === model);
+    return m ? (m[type] || 0) : 0;
+  };
+  // Other AI features (Cortex Search, Cortex Analyst API, Document AI, AI Parse Document) - Table 6(h)
+  const otherFeats = (PRICING_DATA.ai_features.other_ai_features || {}).data || [];
+  const getFeatRate = (featureName) => {
+    const f = otherFeats.find(x => x.feature === featureName);
+    return f ? (f.rate || 0) : 0;
+  };
+  // Fine-tuning - Table 6(f)
+  const ftModels = (PRICING_DATA.ai_features.fine_tuning || {}).data || [];
+  const getFTRate = (model, type) => {
+    const m = ftModels.find(x => x.model === model);
+    return m ? (m[type] || 0) : 0;
+  };
+  // Utility functions - Table 6(c)
+  const utilFuncs = (PRICING_DATA.ai_features.utility_functions || {}).data || [];
+  const getUtilRate = (functionName) => {
+    const f = utilFuncs.find(x => x.function === functionName);
+    return f ? (f.rate || 0) : 0;
+  };
+
   if (ai.cortex_complete && ai.cortex_complete.enabled)
     total += (ai.cortex_complete.monthly_input_tokens_M || 0)  * getRate(ai.cortex_complete.model, 'input') +
              (ai.cortex_complete.monthly_output_tokens_M || 0) * getRate(ai.cortex_complete.model, 'output');
-  if (ai.cortex_agents && ai.cortex_agents.enabled)
-    total += ((ai.cortex_agents.monthly_input_tokens_M || 0) * 1.88 +
-              (ai.cortex_agents.monthly_output_tokens_M || 0) * 9.41);
-  if (ai.snowflake_intelligence && ai.snowflake_intelligence.enabled)
-    total += ((ai.snowflake_intelligence.monthly_input_tokens_M || 0) * 2.51 +
-              (ai.snowflake_intelligence.monthly_output_tokens_M || 0) * 12.55);
+  if (ai.cortex_agents && ai.cortex_agents.enabled) {
+    const model = ai.cortex_agents.model || 'claude-4-sonnet';
+    total += (ai.cortex_agents.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
+             (ai.cortex_agents.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
+             (ai.cortex_agents.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
+             (ai.cortex_agents.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
+  }
+  if (ai.snowflake_intelligence && ai.snowflake_intelligence.enabled) {
+    const model = ai.snowflake_intelligence.model || 'claude-4-sonnet';
+    total += (ai.snowflake_intelligence.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
+             (ai.snowflake_intelligence.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
+             (ai.snowflake_intelligence.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
+             (ai.snowflake_intelligence.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
+  }
   if (ai.cortex_code) {
+    // Cortex Code bills at the SI/Agents rate. Default model is claude-4-sonnet (or override per-surface).
+    const ccDefaultModel = ai.cortex_code.model || 'claude-4-sonnet';
+    const ccRate = getSIRate(ccDefaultModel, 'input');  // input rate as blended approximation
     ['cli', 'snowsight', 'desktop'].forEach(surface => {
       const cc = ai.cortex_code[surface];
       if (cc && cc.enabled) {
         const tokensM = (cc.developers || 0) * (cc.queries_per_dev_per_day || 0) *
                         (cc.avg_tokens_per_query || 0) / 1000000 * 22;
-        total += tokensM * 2.51;
+        total += tokensM * ccRate;
       }
     });
   }
   if (ai.cortex_analyst && ai.cortex_analyst.enabled)
-    total += (ai.cortex_analyst.monthly_messages || 0) / 1000 * 67;
+    total += (ai.cortex_analyst.monthly_messages || 0) / 1000 * getFeatRate('Cortex Analyst (API)');
   if (ai.cortex_search && ai.cortex_search.enabled)
-    total += (ai.cortex_search.indexed_data_gb || 0) * 6.3;
+    total += (ai.cortex_search.indexed_data_gb || 0) * getFeatRate('Cortex Search');
   if (ai.document_ai && ai.document_ai.enabled)
-    total += (ai.document_ai.compute_hours_monthly || 0) * 8;
+    total += (ai.document_ai.compute_hours_monthly || 0) * getFeatRate('Document AI');
   if (ai.ai_parse_document_layout && ai.ai_parse_document_layout.enabled)
-    total += (ai.ai_parse_document_layout.pages_per_month || 0) / 1000 * 3.33;
+    total += (ai.ai_parse_document_layout.pages_per_month || 0) / 1000 * getFeatRate('AI Parse Document - Layout');
   if (ai.ai_parse_document_ocr && ai.ai_parse_document_ocr.enabled)
-    total += (ai.ai_parse_document_ocr.pages_per_month || 0) / 1000 * 0.5;
-  if (ai.cortex_fine_tuning && ai.cortex_fine_tuning.enabled)
-    total += (ai.cortex_fine_tuning.training_tokens_M || 0) * 3.40;
-  const funcRates = { ai_classify: 1.39, ai_sentiment: 1.60, ai_summarize: 0.10, ai_translate: 1.50, ai_extract: 5.00, ai_transcribe: 1.30 };
+    total += (ai.ai_parse_document_ocr.pages_per_month || 0) / 1000 * getFeatRate('AI Parse Document - OCR');
+  if (ai.cortex_fine_tuning && ai.cortex_fine_tuning.enabled) {
+    const model = ai.cortex_fine_tuning.model || 'llama3.1-70b';
+    total += (ai.cortex_fine_tuning.training_tokens_M || 0) * getFTRate(model, 'training');
+  }
   if (ai.cortex_functions) {
-    for (const [key, rate] of Object.entries(funcRates)) {
+    const funcMap = {
+      ai_classify: 'AI_CLASSIFY',
+      ai_sentiment: 'AI Sentiment',
+      ai_summarize: 'Summarize',
+      ai_translate: 'AI_TRANSLATE',
+      ai_extract: 'AI_EXTRACT (arctic-extract)',
+      ai_transcribe: 'AI_TRANSCRIBE'
+    };
+    for (const [key, featName] of Object.entries(funcMap)) {
       const f = ai.cortex_functions[key];
-      if (f && f.enabled) total += (f.tokens_M_monthly || 0) * rate;
+      if (f && f.enabled) total += (f.tokens_M_monthly || 0) * getUtilRate(featName);
     }
   }
   if (ai.embeddings && ai.embeddings.enabled) total += (ai.embeddings.tokens_M_monthly || 0) * 0.05;
@@ -988,13 +1101,140 @@ function calcCollabCost() {
   }, 0);
 }
 
+// OpenFlow cost constants — sourced from official Openflow pricing calculator
+// SPCS rates: Snowflake Credit Consumption Table, Table 1(d) — credits per compute pool node/hr
+const _OF_SPCS_RATES   = { Small: 0.11, Medium: 0.41, Large: 0.83 };
+const _OF_CTRL_POOL    = 0.11;   // CPU_X64_S control pool, always-on, per deployment
+// BYOC vCPU counts per runtime size — Openflow documentation
+const _OF_BYOC_VCPU    = { Small: 1, Medium: 4, Large: 8 };
+const _OF_BYOC_CR_VCPU = 0.0225; // credits per vCPU per hour, Table 1(g)
+// Warehouse credits per hour for MERGE operations
+const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
+// BYOC region pricing — fixed monthly (EKS+mgmt+NAT+NLB+agent+EBS+secrets) and per-node EC2 hourly
+// Source: AWS Price List API as of 2025-11-16 via official calculator fetch_byoc_pricing.py
+const _OF_BYOC_REG = {
+  'us-east-1':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
+  'us-west-2':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
+  'eu-west-1':      { fixed: 505.79, small: 0.2247, medium: 0.8988, large: 1.7976, ebs: 0.088  },
+  'eu-west-2':      { fixed: 522.57, small: 0.2331, medium: 0.9324, large: 1.8648, ebs: 0.0928 },
+  'eu-central-1':   { fixed: 537.74, small: 0.2415, medium: 0.966,  large: 1.932,  ebs: 0.0952 },
+  'ap-southeast-1': { fixed: 560.53, small: 0.252,  medium: 1.008,  large: 2.016,  ebs: 0.096  },
+  'ap-northeast-1': { fixed: 575.49, small: 0.2604, medium: 1.0416, large: 2.0832, ebs: 0.096  },
+};
+
 function calcOpenflowCost(cr, ramp) {
   const of = SIZING_SPEC.openflow;
   if (!of || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
-  return of.instances.reduce((sum, inst) => {
-    return sum + (inst.source_connections || 0) * (inst.vcpu_per_connection || 0) *
-                 (inst.hours_monthly || 0) * 0.0225 * cr * 12 * ramp;
-  }, 0);
+
+  let total = 0;
+
+  // SPCS control pool: one per deployment (added once if any SPCS instance exists)
+  const hasSpcs = of.instances.some(inst => (inst.deployment || 'BYOC') === 'SPCS');
+  if (hasSpcs) {
+    total += _OF_CTRL_POOL * 730 * 12 * ramp * cr;
+  }
+
+  // BYOC fixed infrastructure: one per deployment regardless of instance count
+  const byocInsts = of.instances.filter(inst => (inst.deployment || 'BYOC') === 'BYOC');
+  if (byocInsts.length > 0) {
+    const reg = (_OF_BYOC_REG[byocInsts[0].byoc_region] || _OF_BYOC_REG['us-east-1']);
+    total += reg.fixed * 12; // fixed infra is always-on, no ramp
+  }
+
+  for (const inst of of.instances) {
+    const deployment   = inst.deployment || 'BYOC';
+    const size         = inst.runtime_size || 'Medium';
+    const nodes        = inst.runtime_nodes || inst.source_connections || 1;
+    const poolNodes    = Math.ceil(nodes / 3);
+    const dataGb       = inst.monthly_data_gb || 0;
+    const whSize       = inst.warehouse_size;
+    const whHours      = inst.warehouse_hours_monthly || 0;
+
+    if (deployment === 'SPCS') {
+      // SPCS: compute pool credits (packing ratio 3:1)
+      const rate = _OF_SPCS_RATES[size] || 0.41;
+      total += poolNodes * rate * 730 * 12 * ramp * cr;
+    } else {
+      // BYOC: EC2 + EBS per compute pool node (always-on, no ramp)
+      const reg  = _OF_BYOC_REG[inst.byoc_region] || _OF_BYOC_REG['us-east-1'];
+      const ec2Rate = reg[size.toLowerCase()] || reg.medium;
+      const ebsCost = 200 * reg.ebs * poolNodes;
+      total += (ec2Rate * 730 * poolNodes + ebsCost) * 12;
+      // BYOC vCPU Snowflake credits (ramped)
+      const vcpus = (_OF_BYOC_VCPU[size] || 4) * nodes;
+      total += vcpus * 730 * _OF_BYOC_CR_VCPU * cr * 12 * ramp;
+    }
+
+    // Snowpipe Streaming: data ingestion cost (all connector types)
+    if (dataGb > 0) {
+      total += dataGb * 0.0037 * cr * 12 * ramp;
+    }
+
+    // Warehouse MERGE cost (optional — CDC workloads with dedicated warehouse)
+    if (whSize && whHours > 0) {
+      total += (_OF_WH_CR[whSize] || 1) * whHours * cr * 12 * ramp;
+    }
+  }
+
+  return total;
+}
+
+// ========== Replication / DR / Migration cost ==========
+// Fields on SIZING_SPEC.replication (when present and enabled):
+//   source_region, target_region, initial_TB, monthly_change_TB,
+//   storage_growth_pct, yoy_pct, compute_credits_per_TB, replica_storage_per_tb_per_month
+// Pricing source: PRICING_DATA.replication.egress_matrix[source][target] = $/TB
+function calcReplicationForYear(year) {
+  const rep = SIZING_SPEC.replication;
+  if (!rep || rep.enabled === false) {
+    return { compute_credits: 0, compute_cost: 0, egress_cost: 0, storage_cost: 0, total_cost: 0,
+             active_TB: 0, change_TB: 0, egress_rate: 0 };
+  }
+  const cr = SIZING_SPEC.meta.credit_rate;
+  const yoy = (rep.yoy_pct != null) ? rep.yoy_pct : 0.10;
+  const growth = (rep.storage_growth_pct != null) ? rep.storage_growth_pct : 0.15;
+  const credPerTB = (rep.compute_credits_per_TB != null) ? rep.compute_credits_per_TB : 4;
+  const storageRate = (rep.replica_storage_per_tb_per_month != null) ? rep.replica_storage_per_tb_per_month : 23;
+
+  // Year-by-year storage and change projections
+  let activeTB = rep.initial_TB || 0;
+  let growthTB = activeTB * growth;
+  let changeTB = (rep.monthly_change_TB || 0) * 12;
+  for (let y = 2; y <= year; y++) {
+    activeTB = activeTB + growthTB;
+    growthTB = growthTB * (1 + yoy);
+    changeTB = changeTB * (1 + yoy);
+  }
+  const avgTB = activeTB + (growthTB / 2);
+
+  // Egress lookup
+  const egressMatrix = (PRICING_DATA.replication && PRICING_DATA.replication.egress_matrix) || {};
+  let egressRate = 0;
+  if (rep.source_region && rep.target_region) {
+    const row = egressMatrix[rep.source_region];
+    if (row && typeof row[rep.target_region] === 'number') {
+      egressRate = row[rep.target_region];
+    }
+  }
+
+  // Year 1: includes initial seed transfer for compute and egress (matches Apr 2026 calculator math).
+  // Year 2+: only growth + change (steady-state delta).
+  const computeBasisTB = (year === 1)
+    ? (activeTB + growthTB + changeTB)
+    : (growthTB + changeTB);
+  const egressBasisTB  = (year === 1)
+    ? (activeTB + growthTB + changeTB)
+    : (growthTB + changeTB);
+
+  const computeCredits = computeBasisTB * credPerTB;
+  const computeCost    = computeCredits * cr;
+  const egressCost     = egressBasisTB * egressRate;
+  const storageCost    = avgTB * storageRate * 12;
+  const totalCost      = computeCost + egressCost + storageCost;
+
+  return { compute_credits: computeCredits, compute_cost: computeCost,
+           egress_cost: egressCost, storage_cost: storageCost, total_cost: totalCost,
+           active_TB: activeTB, change_TB: changeTB, egress_rate: egressRate, avg_TB: avgTB };
 }
 
 function recalculate() {
@@ -1002,28 +1242,35 @@ function recalculate() {
   const cr    = SIZING_SPEC.meta.credit_rate;
   const aiCr  = SIZING_SPEC.meta.ai_credit_rate;
   const sr    = SIZING_SPEC.meta.storage_rate_per_tb;
-  const ramps = SIZING_SPEC.growth_rates;
   const yearData = [];
 
   for (let y = 1; y <= years; y++) {
-    const ramp = ramps[y - 1] || ramps[ramps.length - 1];
-    const whCredits = SIZING_SPEC.workloads.reduce((sum, w) => sum + whMonthlyCredits(w) * 12, 0) * ramp;
-    const slCredits = calcServerlessCredits() * 12 * ramp;
-    const aiCredits = calcAICredits() * 12 * ramp;
+    // Per-workload ramp: each warehouse row uses its own dev_start/go_live/curve.
+    const whCredits = SIZING_SPEC.workloads.reduce((sum, w) => {
+      return sum + whMonthlyCredits(w) * 12 * rampMultiplierForYear(w, y);
+    }, 0);
+    // Serverless and AI use the meta-default ramp (no per-feature ramp data captured today).
+    const defRamp = defaultRampMultiplierForYear(y);
+    const slCredits = calcServerlessCredits() * 12 * defRamp;
+    const aiCredits = calcAICredits() * 12 * defRamp;
     const storageCost = storageForYear(y) * sr * 12;
-    const spcsCost = calcSPCSCost() * 12 * ramp;
-    const ofCost = calcOpenflowCost(cr, ramp);
+    const spcsCost = calcSPCSCost() * 12 * defRamp;
+    const ofCost   = calcOpenflowCost(cr, defRamp);
     const oracleCost = SIZING_SPEC.openflow_oracle.enabled
       ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * 110 * 12
       : 0;
     const transferCost = calcTransferCost() * 12;
-    const collabCost = calcCollabCost() * 12 * ramp;
-    const computeCost  = whCredits  * cr;
+    const collabCost = calcCollabCost() * 12 * defRamp;
+    const replication  = calcReplicationForYear(y);
+    const computeCost    = whCredits  * cr;
     const serverlessCost = slCredits * cr;
-    const aiCost       = aiCredits  * aiCr;
-    const otherCost    = spcsCost + ofCost + oracleCost + transferCost + collabCost;
-    const yearTotal    = computeCost + serverlessCost + aiCost + storageCost + otherCost;
-    yearData.push({ y, whCredits, slCredits, aiCredits, computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal });
+    const aiCost         = aiCredits  * aiCr;
+    const otherCost      = spcsCost + ofCost + oracleCost + transferCost + collabCost + replication.total_cost;
+    const yearTotal      = computeCost + serverlessCost + aiCost + storageCost + otherCost;
+    yearData.push({ y, whCredits, slCredits, aiCredits,
+                    computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal,
+                    replicationCost: replication.total_cost,
+                    replicationDetail: replication });
   }
   updateKPIs(yearData);
   updateCharts(yearData);
@@ -1031,6 +1278,7 @@ function recalculate() {
   updateWorkloadCalcs();
   updateGroupHeaderTotals();
   updateScenarios();
+  updateReplicationPanel(yearData);
 }
 
 // ========== Group-header monthly totals ==========
@@ -1066,6 +1314,12 @@ function updateGroupHeaderTotals() {
 
   const collabMonthly = calcCollabCost();
   set('gh-cr-collab', collabMonthly); set('gh-d-collab', collabMonthly * cr);
+
+  // Replication: show monthly average (year-1 total / 12) so the group-header reads consistently.
+  const rep1 = calcReplicationForYear(1);
+  const repMonthlyCredits = (rep1.compute_credits || 0) / 12;
+  const repMonthlyDollars = (rep1.total_cost || 0) / 12;
+  set('gh-cr-replication', repMonthlyCredits); set('gh-d-replication', repMonthlyDollars);
 }
 
 function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
@@ -1209,14 +1463,24 @@ function updateGlobal(field, value) {
   }
   if (field === 'contract_years') {
     SIZING_SPEC.meta.contract_years = +value;
-    // Extend or trim growth_rates
-    const annualGrowth = 0.30; // can be made configurable
-    const ramp = SIZING_SPEC.growth_rates[0];
-    const newRamps = [ramp];
-    for (let y = 1; y < +value; y++) newRamps.push(Math.pow(1 + annualGrowth, y - 1));
-    SIZING_SPEC.growth_rates = newRamps;
+    // No more growth_rates array - per-workload ramps + meta.annual_growth_rate handle this.
   }
+  updateHeaderInfo();
   recalculate();
+}
+
+// Keep the proposal header in sync with meta whenever Global Settings change.
+function updateHeaderInfo() {
+  const m = SIZING_SPEC.meta;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('hdr-customer', m.customer || '');
+  set('hdr-edition', m.edition || '');
+  set('hdr-cloud', m.cloud || '');
+  set('hdr-region', m.region || '');
+  set('hdr-credit-rate', (m.credit_rate != null ? m.credit_rate : '').toString());
+  set('hdr-years', (m.contract_years != null ? m.contract_years : '').toString());
+  // Update the document title to match the customer name.
+  if (m.customer) document.title = m.customer + ' - Snowflake Consumption Estimate';
 }
 
 function updateWorkloadCalcs() {
@@ -1256,10 +1520,12 @@ function updateScenarios() {
   const showLowHigh = document.getElementById('show-low-high')?.checked ?? true;
   const grid = document.getElementById('scenarios');
   if (grid) grid.classList.toggle('only-expected', !showLowHigh);
+  // Each scenario carries its own (curve, go_live shift, growth) tuple.
+  // The shift moves go_live earlier (negative) or later (positive) relative to per-workload setting.
   const scenarios = [
-    showLowHigh && { name: 'Conservative', growth: 0.10, ramp: 0.55, cls: '' },
-    { name: 'Expected',     growth: 0.30, ramp: 0.70, cls: 'expected' },
-    showLowHigh && { name: 'Aggressive',   growth: 0.35, ramp: 0.80, cls: '' },
+    showLowHigh && { name: 'Conservative', growth: 0.10, curve: 'slow',   shift: +1, cls: '' },
+    { name: 'Expected',     growth: 0.20, curve: 'linear', shift:  0, cls: 'expected' },
+    showLowHigh && { name: 'Aggressive',   growth: 0.35, curve: 'fast',   shift: -1, cls: '' },
   ].filter(Boolean);
   const years = SIZING_SPEC.meta.contract_years;
   const cr    = SIZING_SPEC.meta.credit_rate;
@@ -1268,14 +1534,26 @@ function updateScenarios() {
   const baseWHmonthly = SIZING_SPEC.workloads.reduce((s, w) => s + whMonthlyCredits(w), 0);
   const baseSLmonthly = calcServerlessCredits();
   const baseAImonthly = calcAICredits();
+  const m = SIZING_SPEC.meta;
+  // Scenario per-year ramp uses the meta default window with the scenario's curve and shifted go-live.
+  const scenarioRampForYear = (sc, year) => {
+    const synthRow = {
+      ramp_curve: sc.curve,
+      dev_start_month: m.default_dev_start_month,
+      go_live_month: Math.max(2, (m.default_go_live_month || 11) + sc.shift),
+    };
+    const savedGrowth = m.annual_growth_rate;
+    m.annual_growth_rate = sc.growth;  // temporarily swap for scenario growth
+    const r = rampMultiplierForYear(synthRow, year);
+    m.annual_growth_rate = savedGrowth;
+    return r;
+  };
 
   const html = scenarios.map(sc => {
-    const ramps = [sc.ramp];
-    for (let y = 1; y < years; y++) ramps.push(Math.pow(1 + sc.growth, y - 1));
     let yearRows = '';
     let tcv = 0;
     for (let y = 1; y <= years; y++) {
-      const r = ramps[y - 1];
+      const r = scenarioRampForYear(sc, y);
       const wh = baseWHmonthly * 12 * r * cr;
       const sl = baseSLmonthly * 12 * r * cr;
       const ai = baseAImonthly * 12 * r * aiCr;
@@ -1284,15 +1562,16 @@ function updateScenarios() {
       tcv += total;
       yearRows += `<div class="scenario-row"><span>Year ${y}</span><span>$${fmt(total)}</span></div>`;
     }
+    const goLiveLabel = Math.max(2, (m.default_go_live_month || 11) + sc.shift);
     return `<div class="scenario-card ${sc.cls}">
       <div class="scenario-title">${sc.name}</div>
-      <div style="font-size: 12px; color: var(--gray-600);">${(sc.growth*100).toFixed(0)}%/yr growth &middot; ${(sc.ramp*100).toFixed(0)}% ramp</div>
+      <div style="font-size: 12px; color: var(--gray-600);">${(sc.growth*100).toFixed(0)}%/yr growth &middot; ${sc.curve} curve &middot; go-live month ${goLiveLabel}</div>
       <div class="scenario-tcv">$${fmt(tcv)}</div>
       ${yearRows}
       <div class="scenario-row total"><span>TCV</span><span>$${fmt(tcv)}</span></div>
       <div class="scenario-controls">
         <label>Growth %<input type="number" value="${(sc.growth*100).toFixed(0)}" min="0" max="100" disabled></label>
-        <label>Ramp %<input type="number" value="${(sc.ramp*100).toFixed(0)}" min="0" max="100" disabled></label>
+        <label>Curve<input type="text" value="${sc.curve}" disabled></label>
       </div>
     </div>`;
   }).join('');
@@ -1850,6 +2129,10 @@ function populateGlobalSettings() {
   }
   document.getElementById('global-container').innerHTML = `
     <div class="storage-form">
+      <label>Customer name
+        <input type="text" value="${(m.customer || '').replace(/"/g, '&quot;')}"
+               onchange="updateGlobal('customer', this.value)">
+      </label>
       <label>Edition
         <select onchange="updateGlobal('edition', this.value)">
           ${['Standard','Enterprise','Business Critical','VPS'].map(e => `<option value="${e}" ${e===m.edition?'selected':''}>${e}</option>`).join('')}
@@ -1869,31 +2152,204 @@ function populateGlobalSettings() {
           ${[1,2,3,4,5].map(y => `<option value="${y}" ${y===m.contract_years?'selected':''}>${y}</option>`).join('')}
         </select>
       </label>
-      <label>Ramp curve
+      <label>Default Ramp curve
         <select onchange="
-          const map = {slowest: 0.55, slow: 0.65, linear: 0.70, fast: 0.80, fastest: 0.90};
-          SIZING_SPEC.growth_rates[0] = map[this.value];
+          SIZING_SPEC.meta.default_ramp_curve = this.value;
+          SIZING_SPEC.workloads.forEach(w => { w.ramp_curve = this.value; });
           recalculate();">
-          <option value="slowest">Slowest (55%)</option>
-          <option value="slow">Slow (65%)</option>
-          <option value="linear" selected>Linear (70%)</option>
-          <option value="fast">Fast (80%)</option>
-          <option value="fastest">Fastest (90%)</option>
+          <option value="slowest"${m.default_ramp_curve==='slowest'?' selected':''}>Slowest (x^4)</option>
+          <option value="slow"${m.default_ramp_curve==='slow'?' selected':''}>Slow (x^2)</option>
+          <option value="linear"${(m.default_ramp_curve==='linear' || !m.default_ramp_curve)?' selected':''}>Linear (x)</option>
+          <option value="fast"${m.default_ramp_curve==='fast'?' selected':''}>Fast (x^0.5)</option>
+          <option value="fastest"${m.default_ramp_curve==='fastest'?' selected':''}>Fastest (x^0.25)</option>
+          <option value="manual"${m.default_ramp_curve==='manual'?' selected':''}>Manual (override)</option>
         </select>
       </label>
-      <label>Annual growth %
-        <input type="number" value="30" min="0" max="100"
+      <label>Dev start (month)
+        <input type="number" min="1" max="36" value="${m.default_dev_start_month || 2}"
                onchange="
-          const g = +this.value / 100;
-          for (let y = 1; y < SIZING_SPEC.meta.contract_years; y++) {
-            SIZING_SPEC.growth_rates[y] = Math.pow(1 + g, y - 1);
-          }
+          SIZING_SPEC.meta.default_dev_start_month = +this.value;
+          SIZING_SPEC.workloads.forEach(w => { w.dev_start_month = +this.value; });
+          recalculate();">
+      </label>
+      <label>Go-live (month)
+        <input type="number" min="1" max="36" value="${m.default_go_live_month || 11}"
+               onchange="
+          SIZING_SPEC.meta.default_go_live_month = +this.value;
+          SIZING_SPEC.workloads.forEach(w => { w.go_live_month = +this.value; });
+          recalculate();">
+      </label>
+      <label>Annual growth %
+        <input type="number" value="${Math.round((m.annual_growth_rate ?? 0.20) * 100)}" min="0" max="100"
+               onchange="
+          SIZING_SPEC.meta.annual_growth_rate = +this.value / 100;
           recalculate();">
       </label>
       <label>Credit rate
         <input type="number" value="${m.credit_rate}" step="0.01" disabled style="background: var(--gray-100);">
       </label>
     </div>`;
+}
+
+// ========== Replication / DR panel ==========
+function regionOptionsForReplication() {
+  const matrix = (PRICING_DATA.replication && PRICING_DATA.replication.egress_matrix) || {};
+  const sources = Object.keys(matrix).sort();
+  const targetSet = new Set();
+  for (const src of sources) {
+    for (const t of Object.keys(matrix[src] || {})) targetSet.add(t);
+  }
+  return { sources, targets: Array.from(targetSet).sort() };
+}
+
+function enableReplication() {
+  // Initialize a default replication block when the SE clicks the + Enable button.
+  if (!SIZING_SPEC.replication) SIZING_SPEC.replication = {};
+  Object.assign(SIZING_SPEC.replication, {
+    enabled: true,
+    source_region: SIZING_SPEC.replication.source_region || 'AWS-US East1 (N. Virginia)',
+    target_region: SIZING_SPEC.replication.target_region || 'AWS-US West2 (Oregon)',
+    initial_TB: SIZING_SPEC.replication.initial_TB ?? 0,
+    monthly_change_TB: SIZING_SPEC.replication.monthly_change_TB ?? 0,
+    replication_frequency: SIZING_SPEC.replication.replication_frequency || 'ONE_HOUR',
+    storage_growth_pct: SIZING_SPEC.replication.storage_growth_pct ?? 0.15,
+    yoy_pct: SIZING_SPEC.replication.yoy_pct ?? 0.10,
+    compute_credits_per_TB: SIZING_SPEC.replication.compute_credits_per_TB ?? 4,
+    replica_storage_per_tb_per_month: SIZING_SPEC.replication.replica_storage_per_tb_per_month ?? 23,
+  });
+  renderReplicationPanel();
+  recalculate();
+}
+
+function disableReplication() {
+  if (SIZING_SPEC.replication) SIZING_SPEC.replication.enabled = false;
+  renderReplicationPanel();
+  recalculate();
+}
+
+function updateReplication(field, value) {
+  if (!SIZING_SPEC.replication) return;
+  // Coerce numeric fields
+  const numericFields = new Set([
+    'initial_TB', 'monthly_change_TB', 'compute_credits_per_TB',
+    'replica_storage_per_tb_per_month', 'storage_growth_pct', 'yoy_pct'
+  ]);
+  if (numericFields.has(field)) value = +value;
+  SIZING_SPEC.replication[field] = value;
+  recalculate();
+}
+
+function renderReplicationPanel() {
+  const container = document.getElementById('replication-container');
+  if (!container) return;
+  const rep = SIZING_SPEC.replication;
+
+  // Empty / disabled state: show the same prompt as other empty tabs
+  if (!rep || rep.enabled === false) {
+    container.innerHTML =
+      groupHeaderRow('Replication', 'Source / Target / TB / Credits/TB / Storage rate', 'gh-cr-replication', 'gh-d-replication') +
+      '<p style="color: var(--gray-600); font-style: italic;">No replication / DR / migration configured. Click + Enable Replication / DR to add a replica relationship.</p>';
+    return;
+  }
+
+  const { sources, targets } = regionOptionsForReplication();
+  const srcOpts = sources.map(s => `<option value="${s}" ${s === rep.source_region ? 'selected' : ''}>${s}</option>`).join('');
+  const tgtOpts = targets.map(t => `<option value="${t}" ${t === rep.target_region ? 'selected' : ''}>${t}</option>`).join('');
+  const freqOpts = ['FIFTEEN_MINS','ONE_HOUR','ONE_DAY']
+    .map(f => `<option value="${f}" ${f === rep.replication_frequency ? 'selected' : ''}>${f}</option>`)
+    .join('');
+
+  const matrix = (PRICING_DATA.replication && PRICING_DATA.replication.egress_matrix) || {};
+  const egressRate = (matrix[rep.source_region] || {})[rep.target_region] ?? 0;
+
+  container.innerHTML =
+    groupHeaderRow('Replication', 'Source / Target / TB / Credits/TB / Storage rate', 'gh-cr-replication', 'gh-d-replication') +
+    `<div class="workload-card" data-id="rep-1">
+      <div class="workload-header">
+        <input type="text" class="card-label-edit" value="${(rep.label || 'Primary -> Replica').replace(/"/g, '&quot;')}"
+               onchange="updateReplication('label', this.value)" aria-label="Replication label">
+        <span class="workload-calc" id="calc-replication"></span>
+        <button class="delete-btn" onclick="disableReplication()" title="Disable replication / DR">Delete</button>
+      </div>
+      <div class="controls-grid">
+        <label>Source region
+          <select onchange="updateReplication('source_region', this.value)">${srcOpts}</select>
+        </label>
+        <label>Target region
+          <select onchange="updateReplication('target_region', this.value)">${tgtOpts}</select>
+        </label>
+        <label>Initial TB
+          <input type="number" min="0" step="0.1" value="${rep.initial_TB || 0}"
+                 onchange="updateReplication('initial_TB', this.value)">
+        </label>
+        <label>Monthly change TB
+          <input type="number" min="0" step="0.1" value="${rep.monthly_change_TB || 0}"
+                 onchange="updateReplication('monthly_change_TB', this.value)">
+        </label>
+        <label>Replication frequency
+          <select onchange="updateReplication('replication_frequency', this.value)">${freqOpts}</select>
+        </label>
+        <label>Compute credits/TB
+          <input type="number" min="1" max="20" step="0.1" value="${rep.compute_credits_per_TB || 4}"
+                 onchange="updateReplication('compute_credits_per_TB', this.value)">
+        </label>
+        <label>Replica storage $/TB/mo
+          <input type="number" min="0" step="0.5" value="${rep.replica_storage_per_tb_per_month || 23}"
+                 onchange="updateReplication('replica_storage_per_tb_per_month', this.value)">
+        </label>
+        <label>Storage growth %/yr
+          <input type="number" min="0" max="100" step="1" value="${Math.round((rep.storage_growth_pct ?? 0.15) * 100)}"
+                 onchange="updateReplication('storage_growth_pct', +this.value / 100)">
+        </label>
+        <label>YoY change %
+          <input type="number" min="0" max="100" step="1" value="${Math.round((rep.yoy_pct ?? 0.10) * 100)}"
+                 onchange="updateReplication('yoy_pct', +this.value / 100)">
+        </label>
+      </div>
+      <div class="justification">
+        <strong>${rep.source || 'ASSUMPTION'}:</strong> ${rep.notes || rep.justification || 'Replication / DR. Egress rate from PRICING_DATA.replication.egress_matrix.'}
+        <br><span style="color:var(--gray-600);font-size:12px;">Egress rate: $${egressRate.toFixed(0)}/TB · Year 1 includes initial seed transfer · Year 2+ uses delta only.</span>
+      </div>
+      <div id="replication-summary" style="margin-top: 12px; font-size: 13px; color: var(--gray-700);"></div>
+    </div>`;
+}
+
+function updateReplicationPanel(yearData) {
+  const rep = SIZING_SPEC.replication;
+  if (!rep || rep.enabled === false) return;
+  const sumEl = document.getElementById('replication-summary');
+  if (!sumEl) return;
+  const rows = (yearData || []).map(yd => {
+    const d = yd.replicationDetail || {};
+    return `<tr><td style="padding:4px 6px;">Year ${yd.y}</td>
+              <td style="padding:4px 6px;">${fmt(d.active_TB || 0)} TB</td>
+              <td style="padding:4px 6px;">${fmt(d.change_TB || 0)} TB</td>
+              <td style="padding:4px 6px;">$${fmt(d.compute_cost || 0)}</td>
+              <td style="padding:4px 6px;">$${fmt(d.egress_cost || 0)}</td>
+              <td style="padding:4px 6px;">$${fmt(d.storage_cost || 0)}</td>
+              <td style="padding:4px 6px;"><strong>$${fmt(d.total_cost || 0)}</strong></td></tr>`;
+  }).join('');
+  sumEl.innerHTML = `
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px;">
+      <thead>
+        <tr style="background: var(--gray-100); text-align: left;">
+          <th style="padding: 6px;">Year</th>
+          <th style="padding: 6px;">Active TB</th>
+          <th style="padding: 6px;">Change TB</th>
+          <th style="padding: 6px;">Compute $</th>
+          <th style="padding: 6px;">Egress $</th>
+          <th style="padding: 6px;">Storage $</th>
+          <th style="padding: 6px;">Total $</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  // Update card-level workload-calc summary
+  const calcEl = document.getElementById('calc-replication');
+  if (calcEl && yearData && yearData[0]) {
+    const yr1 = yearData[0].replicationDetail || {};
+    calcEl.textContent = `${fmt(yr1.active_TB || 0)} TB active · ${fmt(yr1.change_TB || 0)} TB/yr change · $${(yr1.egress_rate || 0).toFixed(0)}/TB egress`;
+  }
 }
 
 function renderAssumptions() {
@@ -1970,6 +2426,8 @@ document.addEventListener('DOMContentLoaded', () => {
   populateStoragePanel();
   populateCollabPanel();
   renderAssumptions();
+  renderReplicationPanel();
+  updateHeaderInfo();
   recalculate();
 });
 

@@ -244,38 +244,144 @@ Default: 3x compression if unknown.
 
 ---
 
-## Ramp-Up Curves (Year 1 multiplier)
+## Ramp-Up Curves (Birdbox per-workload model)
 
-New workloads don't hit full consumption on day one.
+Each workload row carries three ramp inputs that determine its month-by-month consumption:
 
-| Curve | Year 1 Multiplier | Use When |
-|---|---|---|
-| Slowest | 55% | Heavy migration; >12 month rollout |
-| Slow | 65% | Phased migration; 6–12 month rollout |
-| Linear | 70% | Standard new deployment (default) |
-| Fast | 80% | Replacing existing system; team ready |
-| Fastest | 90% | Lift-and-shift; immediate full usage |
+- `dev_start_month` — first month of any consumption (typically 2; month 1 reserved for setup/onboarding)
+- `go_live_month` — month at which consumption reaches 100% of steady-state (typically 11)
+- `ramp_curve` — one of `slowest | slow | linear | fast | fastest | manual`
 
-### Multi-year `growth_rates` array
+### The factor formula
 
-Generated as: `[ramp_year1, 1.0, (1+g), (1+g)², ...]` where `g` = annual growth rate (default 0.20).
+```
+factor(m) = clamp(((m − dev_start + 1) / (go_live − dev_start + 1)) ^ exponent, 0, 1)
+```
 
-Examples:
-- 3 years, 20% growth, linear ramp: `[0.70, 1.00, 1.20]`
-- 5 years, 20% growth, fast ramp:   `[0.80, 1.00, 1.20, 1.44, 1.73]`
-- 3 years, 30% growth, slow ramp:   `[0.65, 1.00, 1.30]`
+Where `exponent` comes from `pricing.ramp_curves.exponents`:
+
+| Curve | Exponent | Shape | Typical Use |
+|---|---|---|---|
+| Slowest | 4.0 | Slow start, gradual acceleration | Heavy migration, >12 month rollout |
+| Slow | 2.0 | Quadratic ramp | Phased migration, 6–12 month rollout |
+| Linear | 1.0 | Steady straight line | Standard new deployment (default) |
+| Fast | 0.5 | Square-root: quick early gains | Replacing existing system; team ready |
+| Fastest | 0.25 | Sharp early ramp, tail to 100% | Lift-and-shift; immediate full usage |
+| Manual | 0 | All months = 0 | Caller overrides per-month values |
+
+For `m < dev_start` factor is 0; for `m > go_live` factor is 1. After go-live, the existing annual `growth_rate` applies to subsequent years.
+
+### Choosing a curve
+
+The agent should default to `pricing.ramp_curves.recommended_by_workload_type[<workload kind>]`, e.g.:
+
+- migration → slow
+- new_BI_dashboard, new_data_pipeline, new_ELT → linear
+- ML_training → slow ; ML_inference → fast
+- Cortex_pilot → fastest ; Cortex_production → fast
+- DR_replication → fastest
+- lift_and_shift → fast
+
+### Year 1 effective multiplier examples
+
+For the default window (`dev_start=2`, `go_live=11`), the average of factor(1..12) is roughly:
+
+| Curve | Avg factor across 12 months |
+|---|---|
+| Slowest | 0.31 |
+| Slow | 0.43 |
+| Linear | 0.54 |
+| Fast | 0.69 |
+| Fastest | 0.79 |
+
+These are **derived**, not configured — Phase 4 sums per-month factors directly rather than using a single multiplier.
+
+### Multi-year monthly model
+
+Phase 4 produces a per-month credit array, not a per-year multiplier. Year totals come from `sum(factor(m) × monthly_credits × growth_factor(year(m)))` where `growth_factor` applies the annual `growth_rate` from year 2 onwards.
 
 ---
 
 ## The Three-Scenario Rule
 
-Always present three TCV scenarios in the HTML:
+Always present three TCV scenarios in the HTML. Scenarios shift `ramp_curve` and `go_live_month` together so they remain physically meaningful:
 
-| Scenario | Growth Rate | Ramp | Intent |
-|---|---|---|---|
-| Conservative | 10%/yr | Slowest (55%) | Minimum commitment anchor |
-| Expected | 20%/yr | Linear (70%) | Recommended contract value |
-| Aggressive | 35%/yr | Fast (80%) | Innovation + full adoption |
+| Scenario | Growth Rate | Ramp Curve | Go-live shift | Intent |
+|---|---|---|---|---|
+| Conservative | 10%/yr | slow | +1 month later | Minimum commitment anchor |
+| Expected | 20%/yr | linear | unchanged | Recommended contract value |
+| Aggressive | 35%/yr | fast | −1 month earlier | Innovation + full adoption |
+
+---
+
+## Replication Sizing
+
+Activate this section when the context mentions BCDR / DR / replication / data sharing / migration. Pricing data lives in `pricing.replication`.
+
+### Inputs (per replication relationship)
+
+| Field | Source |
+|---|---|
+| `source_region` | Customer Snowflake account region (Source Deployment) |
+| `target_region` | Replica region OR `Egress Cost Optimizer (ECO) Cache` |
+| `initial_TB` | Active bytes at start. Measure with `SYSTEM$ESTIMATE_REPLICATION_COST` or sum `STAT_ACTIVE_BYTES` (see research-protocol.md) |
+| `monthly_change_TB` | Monthly bytes replicated. Measure via `FIFTEEN_MINS_TB / ONE_HOUR_TB / ONE_DAY_TB` from `SYSTEM$ESTIMATE_REPLICATION_COST` |
+| `storage_growth_pct` | Yearly. Use `account_usage.database_storage_usage_history` query in research-protocol.md. Default: 15%. |
+| `yoy_pct` | Year-over-year increase in changes + storage. Default: 10%. |
+| `compute_credits_per_TB` | Default 4 from `pricing.replication.compute_credits_per_TB.default`. Range 3–5. Use 4–5 for small payloads with high object count (metadata scan dominates). |
+| `replica_storage_$_per_TB_per_month` | Target deployment's storage rate from `pricing.storage` |
+
+### Formulas (3-year)
+
+```
+year_1_active_TB     = initial_TB
+year_n_active_TB     = year_(n−1)_active_TB + year_(n−1)_growth_TB
+year_1_growth_TB     = initial_TB × storage_growth_pct
+year_n_growth_TB     = year_(n−1)_growth_TB × (1 + yoy_pct)
+year_1_change_TB     = monthly_change_TB × 12
+year_n_change_TB     = year_(n−1)_change_TB × (1 + yoy_pct)
+
+# Compute and egress have a year-1 special case to account for the initial seed transfer:
+year_1_basis_TB      = active_TB + growth_TB + change_TB    (= end-of-year storage + annual change)
+year_n>1_basis_TB    = growth_TB + change_TB                 (= incremental delta only)
+
+annual_compute_credits  = basis_TB × compute_credits_per_TB
+annual_compute_cost     = annual_compute_credits × $/credit
+annual_egress_cost      = basis_TB × egress_matrix[source_region][target_region]
+annual_replica_storage  = avg_TB × replica_storage_$/TB/mo × 12
+                        where avg_TB = active_TB + (growth_TB / 2)
+
+annual_total            = annual_compute_cost + annual_egress_cost + annual_replica_storage
+```
+
+Year-1 special case (`active + growth + change` basis) reflects that replication needs to seed the entire primary state into the target. From year 2 onwards, only the incremental delta crosses the wire. This matches the Apr 2026 Replication Cost Calculator output exactly (verified against the documented $160,444.54 example for Thailand → ECO Cache, 100 TB initial, 8 TB/month change, 15% growth, 10% YoY).
+
+### Egress matrix lookup
+
+The matrix `pricing.replication.egress_matrix[source][target]` returns `$/TB`. Diagonal entries (same region) are 0. Convention: rows = source, cols = target.
+
+If `target_region == "Egress Cost Optimizer (ECO) Cache"`, additional ECO Cache update-frequency multipliers apply — see `pricing.replication.eco_cache.update_frequency_factors`.
+
+### Compute credits/TB selection
+
+| Payload Profile | Credits/TB |
+|---|---|
+| Large databases, few objects (e.g., wide fact tables) | 3 |
+| Mixed (default) | 4 |
+| Many small objects, high DDL churn (metadata-heavy) | 5 |
+
+When in doubt, use 4 and flag `REQUIRES_CONFIRMATION` so the SE can validate against `SYSTEM$ESTIMATE_REPLICATION_COST` output.
+
+---
+
+## Migration Scenario
+
+A migration is replication used as a one-way bulk transfer from a source deployment (or external system) into Snowflake. Use the same replication formulas with these adjustments:
+
+- `monthly_change_TB` ≈ `initial_TB / migration_window_months` for the migration window, then drops to ongoing change rate (often near 0 if the source is decommissioned).
+- `ramp_curve` defaults to `slow` (matches the gradual cutover most enterprise migrations follow).
+- After cutover, `replica_storage_*` becomes primary storage cost — fold it into the standard storage line, not the replication line.
+- Egress only applies if data leaves a paid region. Same-region or in-cloud migrations may have $0 egress.
 
 ---
 
