@@ -42,7 +42,7 @@ evidence fragment.
 
 ## PROHIBITED
 
-- Do NOT run Glean searches (research-glean-agent's job).
+- Do NOT run Glean searches - B1/B2/B3 are pre-fetched by the parent main agent (Phase 1.7 of the snowflake-sizing skill); Glean MCP OAuth does not propagate to subagents.
 - Do NOT run Replication SQL (research-replication-agent's job).
 - Do NOT write to the final evidence path - the coordinator concatenates.
 - Do NOT include raw transcripts in the return summary; the fragment file

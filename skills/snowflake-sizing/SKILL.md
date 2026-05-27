@@ -102,16 +102,60 @@ are not discounted) and seed `list_credit_rate` to the same value as
 
 ---
 
+## Phase 1.7 - Glean pre-fetch (main agent)
+
+Glean MCP OAuth is session-bound and does not propagate to subagents - so
+B1/B2/B3 must run in **this** main-agent context, not inside the
+research-coordinator. The results are then forwarded to the coordinator
+in-memory (no JSON sidecar on disk).
+
+**Skip path.** If `--skip-glean` was passed AND the user has confirmed in
+chat (per the EXCEPTIONS clause in the research sub-skill), set
+`glean_skipped = true` and proceed to Routing without running queries.
+
+**Standard path.** Run B1, B2, B3 in a single parallel `mcp__glean__search`
+batch using the verbatim `query` / `app` / `num_results` matrix in
+`references/research-protocol.md` Section 1. If the customer name has a
+parenthetical short form (e.g. `"GSMA Intelligence (GSMAi)"`), use the full
+name for B1 and the short form for B2/B3.
+
+For each result, capture `{ title, datasource, snippet (<=200 chars), url,
+date }`. Build the in-memory `pre_fetched_glean` object:
+
+```json
+{
+  "B1": {"query": "<verbatim>", "app": null,         "hits": <n>, "results": [ {title, datasource, snippet, url, date}, ... ]},
+  "B2": {"query": "<verbatim>", "app": "gong",       "hits": <n>, "results": [ ... ]},
+  "B3": {"query": "<verbatim>", "app": "salescloud", "hits": <n>, "results": [ ... ]}
+}
+```
+
+If the parallel batch errors out (Glean MCP not configured, OAuth expired,
+etc.), abort with the setup instructions:
+
+```
+Glean MCP is not configured or its session expired. Run:
+   cortex mcp add glean https://snowflake-be.glean.com/mcp/default --transport http
+Then re-invoke this skill.
+```
+
+This replaces the Glean preflight that the coordinator used to run.
+
+---
+
 ## Routing
 
 Invoke the three sub-skills in sequence. Each one reads only the references
 it needs - main-agent context stays slim.
 
 1. **research** - `sub-skills/research/SKILL.md`
-   Phase 1.5 preflight (Glean MCP + SNOWHOUSE) and Phase 2 research.
-   Delegated to `agents/research-coordinator.md` which fans out three
-   specialist agents (Glean / Gong / Replication) in parallel so transcripts
-   and Glean blobs stay out of main context. Returns top 3 findings +
+   Phase 1.5 preflight (SNOWHOUSE only - Glean preflight is implicit in
+   Phase 1.7 above) and Phase 2 research. Delegated to
+   `agents/research-coordinator.md` which fans out two-or-three specialist
+   agents (Gong / optional Replication) in parallel. The coordinator
+   receives the `pre_fetched_glean` object (or `glean_skipped: true`) and
+   transforms it into the Glean section of the evidence file directly -
+   there is no Glean specialist subagent. Returns top 3 findings +
    evidence file path.
 
 2. **build-spec** - `sub-skills/build-spec/SKILL.md`

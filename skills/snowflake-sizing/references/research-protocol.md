@@ -6,6 +6,13 @@ This is the operational reference for Phase 2 of `SKILL.md`. Read it once at the
 
 ## 1. Glean MCP queries (B1, B2, B3)
 
+**Executor: main agent** (Phase 1.7 of `SKILL.md`). Glean MCP OAuth is
+session-bound and does not propagate to subagents, so B1/B2/B3 must run
+in the main-agent context. The research-coordinator does not call Glean
+directly - it receives a `pre_fetched_glean` blob from the parent and
+transforms it into the Glean section of the evidence file using the
+markdown template at the bottom of this section.
+
 Tool: `mcp__glean__search` (the host exposes the Glean MCP server registered as `glean`; the legacy `mcp__glean_default__search` alias is no longer used).
 
 | Call | `query` | `app` filter | `num_results` | Purpose |
@@ -17,6 +24,36 @@ Tool: `mcp__glean__search` (the host exposes the Glean MCP server registered as 
 Substitute `<customer>` with the parsed customer name. If the customer name has a parenthetical short form (e.g. `"GSMA Intelligence (GSMAi)"`), run B1 with the full name and B2/B3 with the short form.
 
 For each Glean result, record: title, datasource, snippet (first 200 chars), URL, date.
+
+### Glean evidence section template (emitted by research-coordinator)
+
+```markdown
+## Glean evidence (B1 / B2 / B3)
+
+### B1 - Account-level
+Query: "<verbatim B1.query>"
+Hits: <B1.hits>
+
+| # | Title | Datasource | Date | URL |
+|---|---|---|---|---|
+| 1 | ... | drive | YYYY-MM-DD | ... |
+
+Snippet highlights:
+- <title>: <snippet first ~200 chars>
+- ...
+
+### B2 - Gong-indexed
+Query: "<verbatim B2.query>" (app=gong)
+Hits: <B2.hits>
+
+[same table + snippet structure]
+
+### B3 - Salesforce
+Query: "<verbatim B3.query>" (app=salescloud)
+Hits: <B3.hits>
+
+[same table + snippet structure]
+```
 
 ---
 
@@ -186,9 +223,21 @@ ASSUMPTION is only allowed when **all three** of A (context file), B (Glean), an
 
 ---
 
-## 6. Pre-fetched batch mode
+## 6. Pre-fetched mode (standard for Glean; optional for Gong)
 
-If the parent invocation passed `Pre-fetched Glean Results:` and `Pre-fetched Gong Results:` blobs in the prompt, parse those blobs and skip the live B/C calls. Still write the evidence file from the pre-fetched data — the audit trail is required regardless of how the data was fetched.
+**Glean is always pre-fetched.** The main agent runs B1/B2/B3 inline in
+Phase 1.7 of `SKILL.md` and forwards the results to the
+research-coordinator as a `Pre-fetched Glean Results:` blob in the
+coordinator's prompt. The coordinator emits the Glean evidence section
+into the final audit file using the template in Section 1 of this
+document - there is no live Glean call inside any subagent.
+
+**Gong may be pre-fetched** by a higher-level batch orchestrator (e.g. a
+sizing-batch wrapper). When `Pre-fetched Gong Results:` is present in the
+coordinator's prompt, the coordinator forwards it to the gong specialist,
+which parses the blob and skips the live C1/C2 SQL. The audit trail in
+`temp/<slug>-research-evidence.md` is required regardless of how the data
+was fetched.
 
 ---
 
