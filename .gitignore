@@ -6,3 +6,6 @@ docs/
 sizings/*.json
 sizings/*.html
 !sizings/.gitkeep
+__pycache__/
+**/__pycache__/
+*.pyc

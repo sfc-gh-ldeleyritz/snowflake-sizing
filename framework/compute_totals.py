@@ -1,0 +1,370 @@
+#!/usr/bin/env python3
+"""Python port of the JS sizing math used by proposal-template.html.
+
+This is the authoritative source for the drift-prone "core" TCV components:
+warehouse compute, serverless, AI/Cortex, and storage. SPCS, OpenFlow,
+replication, data-transfer, and collaboration stay JS-side for now (rarely
+configured, low risk of formula divergence). The point of this module is to
+eliminate the previous-session bug where the JS storage formula computed
+$426k while Python's simpler formula computed $416k - same root values, two
+slightly different formulas, $10k delta.
+
+Public surface:
+
+    compute_core_totals(spec, pricing) -> dict
+
+The returned dict has shape:
+
+    {
+      "schema_version": 1,
+      "computed_at": "<UTC ISO-8601>",
+      "computed_by": "framework/compute_totals.py",
+      "scope": "warehouse | serverless | ai | storage (core)",
+      "warehouse_credits_per_year": [Y1, Y2, Y3, ...],
+      "serverless_credits_per_year": [...],
+      "ai_credits_per_year":         [...],
+      "storage_active_tb_per_year":  [...],
+      "compute_cost_per_year":       [...],   # warehouse_credits * credit_rate
+      "serverless_cost_per_year":    [...],   # serverless_credits * credit_rate
+      "ai_cost_per_year":            [...],   # ai_credits * ai_credit_rate
+      "storage_cost_per_year":       [...],   # active_tb * storage_rate * 12
+      "core_year_total":             [...],   # sum of the four cost arrays
+      "core_tcv":                    <float>  # sum across years
+    }
+
+The HTML template reads these values to render the headline KPIs on first
+load instead of recomputing them in JS. Live recalculate() still runs JS
+math for slider deltas; the core_* arrays stop the first-load drift.
+"""
+from __future__ import annotations
+
+import datetime as _dt
+import json
+import pathlib
+from typing import Optional
+
+# ── JS-replica constants (must match proposal-template.html) ──────────────── #
+
+WH_CREDITS = {
+    "XS": 1, "S": 2, "M": 4, "L": 8, "XL": 16,
+    "2XL": 32, "3XL": 64, "4XL": 128,
+    "X-Small": 1, "Small": 2, "Medium": 4, "Large": 8, "X-Large": 16,
+    "2X-Large": 32, "3X-Large": 64, "4X-Large": 128,
+}
+
+RAMP_EXPONENTS = {
+    "slowest": 4.0, "slow": 2.0, "linear": 1.0,
+    "fast": 0.5, "fastest": 0.25, "manual": 0.0,
+}
+
+# Mirrors JS computeMultipliers map in calcServerlessCredits().
+_SERVERLESS_COMPUTE_MULTIPLIERS = {
+    "serverless_tasks": 0.9, "serverless_tasks_flex": 0.5, "serverless_alerts": 0.9,
+    "clustered_tables": 2.0, "materialized_views": 2.0, "search_optimization": 2.0,
+    "query_acceleration": 1.0, "replication": 2.0, "backup": 2.0,
+    "failsafe_recovery": 0.9, "data_quality_monitoring": 2.0, "trust_center": 1.0,
+    "table_optimization": 0.75, "storage_lifecycle_policy": 0.5, "copy_files": 2.0,
+    "organization_usage": 1.0, "sensitive_data_classification": 0.9,
+}
+
+# Cortex_functions key -> pricing-data feature name (mirrors JS funcMap).
+_CORTEX_FN_TO_FEATURE = {
+    "ai_classify":   "AI_CLASSIFY",
+    "ai_sentiment":  "AI Sentiment",
+    "ai_summarize":  "Summarize",
+    "ai_translate":  "AI_TRANSLATE",
+    "ai_extract":    "AI_EXTRACT (arctic-extract)",
+    "ai_transcribe": "AI_TRANSCRIBE",
+}
+
+
+# ── Core math ─────────────────────────────────────────────────────────────── #
+
+def ramp_factor_for_month(dev_start: int, go_live: int, curve: str, m: int) -> float:
+    if curve == "manual":
+        return 1.0 if (dev_start == 1 and go_live == 1) else 0.0
+    if m < dev_start:
+        return 0.0
+    if m >= go_live:
+        return 1.0
+    denom = go_live - dev_start + 1
+    if denom <= 0:
+        return 1.0
+    exp = RAMP_EXPONENTS.get(curve, 1.0)
+    f = ((m - dev_start + 1) / denom) ** exp
+    return min(1.0, max(0.0, f))
+
+
+def ramp_multiplier_for_year(dev_start: int, go_live: int, curve: str, year: int) -> float:
+    """Average ramp factor across the 12 months in `year` (1-indexed)."""
+    offset = (year - 1) * 12
+    return sum(
+        ramp_factor_for_month(dev_start, go_live, curve, offset + m)
+        for m in range(1, 13)
+    ) / 12.0
+
+
+def default_ramp_multiplier_for_year(meta: dict, year: int) -> float:
+    dev = int(meta.get("default_dev_start_month", 2) or 2)
+    go = int(meta.get("default_go_live_month", 11) or 11)
+    curve = meta.get("default_ramp_curve", "linear") or "linear"
+    return ramp_multiplier_for_year(dev, go, curve, year)
+
+
+def wh_monthly_credits(w: dict) -> float:
+    rate = WH_CREDITS.get(w.get("size", "XS"), 1)
+    cmin = w.get("clusters_min", 1) or 0
+    cmax = w.get("clusters_max", 1) or 0
+    avg_clusters = (cmin + cmax) / 2.0
+    return (
+        rate
+        * (w.get("hours_per_day", 0) or 0)
+        * (w.get("days_per_month", 0) or 0)
+        * avg_clusters
+    )
+
+
+def storage_active_tb(spec: dict, year: int) -> float:
+    """Replicates JS storageForYear() exactly: base + time-travel + fail-safe."""
+    st = spec.get("storage", {}).get("standard", {}) or {}
+    raw = st.get("raw_tb_year1", 0) or 0
+    comp = (st.get("compression_ratio") or 1) or 1
+    growth = (st.get("annual_growth_pct", 0) or 0) / 100.0
+    tt = st.get("time_travel_days", 1) or 1
+    churn = (st.get("churn_rate_pct", 0) or 0) / 100.0
+    base = raw / comp
+    grown = base * ((1 + growth) ** (year - 1))
+    tt_oh = grown * churn * (tt / 30.0)
+    fs_oh = grown * churn * (7.0 / 30.0)
+    return grown + tt_oh + fs_oh
+
+
+# ── Serverless ────────────────────────────────────────────────────────────── #
+
+def serverless_monthly_credits(spec: dict) -> float:
+    sl = spec.get("serverless", {}) or {}
+    total = 0.0
+
+    def _on(key):
+        f = sl.get(key)
+        return isinstance(f, dict) and f.get("enabled")
+
+    # Per-feature volume-priced rules (mirror JS lines 941-961).
+    if _on("snowpipe"):
+        total += (sl["snowpipe"].get("gb_per_month", 0) or 0) * 0.0037
+    if _on("snowpipe_streaming"):
+        total += (sl["snowpipe_streaming"].get("uncompressed_gb_per_month", 0) or 0) * 0.0037
+    if _on("snowpipe_streaming_classic"):
+        total += (sl["snowpipe_streaming_classic"].get("client_instances", 0) or 0) * 0.01 * 730
+    if _on("open_catalog"):
+        total += (sl["open_catalog"].get("requests_per_month_M", 0) or 0) * 0.5
+    if _on("telemetry_data_ingest"):
+        total += (sl["telemetry_data_ingest"].get("gb_per_month", 0) or 0) * 0.0212
+    if _on("archive_storage_retrieval"):
+        total += (sl["archive_storage_retrieval"].get("files_per_month", 0) or 0) / 1000 * 0.05
+    if _on("archive_storage_write"):
+        total += (sl["archive_storage_write"].get("files_per_month", 0) or 0) / 1000 * 0.05
+    if _on("logging"):
+        total += (sl["logging"].get("file_batches_per_month", 0) or 0) / 1000 * 0.28
+    if _on("automated_refresh"):
+        total += (sl["automated_refresh"].get("files_per_month", 0) or 0) / 1000 * 0.06
+    if _on("hybrid_tables_requests"):
+        f = sl["hybrid_tables_requests"]
+        total += ((f.get("reads_gb_monthly", 0) or 0) / 30.0) + ((f.get("writes_gb_monthly", 0) or 0) / 7.5)
+
+    # Compute-hour features.
+    for key, mult in _SERVERLESS_COMPUTE_MULTIPLIERS.items():
+        if _on(key):
+            total += (sl[key].get("compute_hours_monthly", 0) or 0) * mult
+    return total
+
+
+# ── AI / Cortex ───────────────────────────────────────────────────────────── #
+
+def _by_key(rows, key, value):
+    for r in rows or []:
+        if r.get(key) == value:
+            return r
+    return None
+
+
+def ai_monthly_credits(spec: dict, pricing: dict) -> float:
+    ai = spec.get("ai_cortex", {}) or {}
+    feats = (pricing.get("ai_features") or {})
+    cc_models = ((feats.get("cortex_complete") or {}).get("data") or [])
+    si_models = ((feats.get("intelligence_agents_analyst") or {}).get("data") or [])
+    other_feats = ((feats.get("other_ai_features") or {}).get("data") or [])
+    ft_models = ((feats.get("fine_tuning") or {}).get("data") or [])
+    util_funcs = ((feats.get("utility_functions") or {}).get("data") or [])
+
+    def cc_rate(model, t):
+        m = _by_key(cc_models, "model", model) or {}
+        return m.get(t, 0) or 0
+
+    def si_rate(model, t):
+        m = _by_key(si_models, "model", model) or {}
+        return m.get(t, 0) or 0
+
+    def feat_rate(name):
+        m = _by_key(other_feats, "feature", name) or {}
+        return m.get("rate", 0) or 0
+
+    def ft_rate(model, t):
+        m = _by_key(ft_models, "model", model) or {}
+        return m.get(t, 0) or 0
+
+    def util_rate(name):
+        m = _by_key(util_funcs, "function", name) or {}
+        return m.get("rate", 0) or 0
+
+    total = 0.0
+
+    cc = ai.get("cortex_complete") or {}
+    if cc.get("enabled"):
+        total += (cc.get("monthly_input_tokens_M", 0) or 0) * cc_rate(cc.get("model"), "input")
+        total += (cc.get("monthly_output_tokens_M", 0) or 0) * cc_rate(cc.get("model"), "output")
+
+    for feat_key in ("cortex_agents", "snowflake_intelligence"):
+        f = ai.get(feat_key) or {}
+        if f.get("enabled"):
+            model = f.get("model") or "claude-4-sonnet"
+            total += (f.get("monthly_input_tokens_M", 0) or 0) * si_rate(model, "input")
+            total += (f.get("monthly_output_tokens_M", 0) or 0) * si_rate(model, "output")
+            total += (f.get("monthly_cache_write_tokens_M", 0) or 0) * si_rate(model, "cache_write")
+            total += (f.get("monthly_cache_read_tokens_M", 0) or 0) * si_rate(model, "cache_read")
+
+    cco = ai.get("cortex_code") or {}
+    if cco:
+        cc_model = cco.get("model") or "claude-4-sonnet"
+        cc_in_rate = si_rate(cc_model, "input")
+        for surface in ("cli", "snowsight", "desktop"):
+            s = cco.get(surface)
+            if isinstance(s, dict) and s.get("enabled"):
+                tokens_M = (
+                    (s.get("developers", 0) or 0)
+                    * (s.get("queries_per_dev_per_day", 0) or 0)
+                    * (s.get("avg_tokens_per_query", 0) or 0)
+                    / 1_000_000
+                    * 22
+                )
+                total += tokens_M * cc_in_rate
+
+    ca = ai.get("cortex_analyst") or {}
+    if ca.get("enabled"):
+        total += (ca.get("monthly_messages", 0) or 0) / 1000.0 * feat_rate("Cortex Analyst (API)")
+
+    cs = ai.get("cortex_search") or {}
+    if cs.get("enabled"):
+        total += (cs.get("indexed_data_gb", 0) or 0) * feat_rate("Cortex Search")
+
+    da = ai.get("document_ai") or {}
+    if da.get("enabled"):
+        total += (da.get("compute_hours_monthly", 0) or 0) * feat_rate("Document AI")
+
+    apl = ai.get("ai_parse_document_layout") or {}
+    if apl.get("enabled"):
+        total += (apl.get("pages_per_month", 0) or 0) / 1000.0 * feat_rate("AI Parse Document - Layout")
+
+    apo = ai.get("ai_parse_document_ocr") or {}
+    if apo.get("enabled"):
+        total += (apo.get("pages_per_month", 0) or 0) / 1000.0 * feat_rate("AI Parse Document - OCR")
+
+    cft = ai.get("cortex_fine_tuning") or {}
+    if cft.get("enabled"):
+        model = cft.get("model") or "llama3.1-70b"
+        total += (cft.get("training_tokens_M", 0) or 0) * ft_rate(model, "training")
+
+    cf = ai.get("cortex_functions") or {}
+    if isinstance(cf, dict):
+        for key, feat_name in _CORTEX_FN_TO_FEATURE.items():
+            f = cf.get(key)
+            if isinstance(f, dict) and f.get("enabled"):
+                total += (f.get("tokens_M_monthly", 0) or 0) * util_rate(feat_name)
+
+    em = ai.get("embeddings") or {}
+    if em.get("enabled"):
+        # Hard-coded JS rate for embeddings (line 1068) - intentionally
+        # not in pricing JSON; kept as constant to mirror exactly.
+        total += (em.get("tokens_M_monthly", 0) or 0) * 0.05
+
+    return total
+
+
+# ── Public entry point ────────────────────────────────────────────────────── #
+
+def compute_core_totals(spec: dict, pricing: dict) -> dict:
+    meta = spec.get("meta", {}) or {}
+    years = int(meta.get("contract_years", 3) or 3)
+    cr = float(meta.get("credit_rate", 0) or 0)
+    ai_cr = float(meta.get("ai_credit_rate", cr) or cr)
+    sr = float(meta.get("storage_rate_per_tb", 0) or 0)
+    workloads = spec.get("workloads", []) or []
+
+    sl_monthly = serverless_monthly_credits(spec)
+    ai_monthly = ai_monthly_credits(spec, pricing)
+
+    wh_credits_yr = []
+    sl_credits_yr = []
+    ai_credits_yr = []
+    st_tb_yr = []
+    compute_cost_yr = []
+    sl_cost_yr = []
+    ai_cost_yr = []
+    st_cost_yr = []
+    core_total_yr = []
+
+    for y in range(1, years + 1):
+        wh_credits = sum(
+            wh_monthly_credits(w) * 12 * ramp_multiplier_for_year(
+                int(w.get("dev_start_month", meta.get("default_dev_start_month", 2)) or 2),
+                int(w.get("go_live_month", meta.get("default_go_live_month", 11)) or 11),
+                w.get("ramp_curve", meta.get("default_ramp_curve", "linear")) or "linear",
+                y,
+            )
+            for w in workloads
+        )
+        def_ramp = default_ramp_multiplier_for_year(meta, y)
+        sl_credits = sl_monthly * 12 * def_ramp
+        ai_credits = ai_monthly * 12 * def_ramp
+        st_tb = storage_active_tb(spec, y)
+
+        compute_cost = wh_credits * cr
+        sl_cost = sl_credits * cr
+        ai_cost = ai_credits * ai_cr
+        st_cost = st_tb * sr * 12
+        core_total = compute_cost + sl_cost + ai_cost + st_cost
+
+        wh_credits_yr.append(round(wh_credits, 2))
+        sl_credits_yr.append(round(sl_credits, 2))
+        ai_credits_yr.append(round(ai_credits, 2))
+        st_tb_yr.append(round(st_tb, 4))
+        compute_cost_yr.append(round(compute_cost, 2))
+        sl_cost_yr.append(round(sl_cost, 2))
+        ai_cost_yr.append(round(ai_cost, 2))
+        st_cost_yr.append(round(st_cost, 2))
+        core_total_yr.append(round(core_total, 2))
+
+    return {
+        "schema_version": 1,
+        "computed_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        "computed_by": "framework/compute_totals.py",
+        "scope": "warehouse | serverless | ai | storage (core; excludes spcs/openflow/replication/transfer/collab)",
+        "warehouse_credits_per_year": wh_credits_yr,
+        "serverless_credits_per_year": sl_credits_yr,
+        "ai_credits_per_year": ai_credits_yr,
+        "storage_active_tb_per_year": st_tb_yr,
+        "compute_cost_per_year": compute_cost_yr,
+        "serverless_cost_per_year": sl_cost_yr,
+        "ai_cost_per_year": ai_cost_yr,
+        "storage_cost_per_year": st_cost_yr,
+        "core_year_total": core_total_yr,
+        "core_tcv": round(sum(core_total_yr), 2),
+    }
+
+
+def load_pricing(plugin_root: Optional[pathlib.Path] = None) -> dict:
+    """Load assets/snowflake_pricing_master.json. Helper for CLI use."""
+    if plugin_root is None:
+        plugin_root = pathlib.Path(__file__).resolve().parent.parent
+    path = plugin_root / "assets" / "snowflake_pricing_master.json"
+    return json.loads(path.read_text(encoding="utf-8"))

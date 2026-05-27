@@ -7,6 +7,12 @@ Loaded by: `sub-skills/build-spec/SKILL.md`. The full canonical contract is in
 `framework/sizing_spec_schema.json`; this document is the human-readable lookup
 for the most common footguns.
 
+> **In v1.8 spec-prepare.py auto-corrects the most common legacy field names**
+> (marked **[auto-fixed]** below). The patch dict you write is allowed to
+> use the legacy name; spec-prepare logs a rename warning and writes the
+> corrected name to the final spec. The PreToolUse hook still blocks legacy
+> names that escape spec-prepare so the JS renderer never sees them.
+
 ---
 
 ## Top-level structure
@@ -27,32 +33,39 @@ clusters_min, clusters_max, auto_suspend_seconds,
 source, ramp_curve, dev_start_month, go_live_month
 ```
 
-No `avg_clusters` - replaced by `clusters_min` + `clusters_max`. The JS engine
+`avg_clusters` is **[auto-fixed]** by spec-prepare into `clusters_min` +
+`clusters_max` (both equal to the original avg). The JS engine then
 computes `avg = (clusters_min + clusters_max) / 2`.
 
 ## AI / Cortex field names
 
-| Feature | Correct path | Wrong (never use) |
-|---|---|---|
-| Cortex Complete tokens | `ai_cortex.cortex_complete.monthly_input_tokens_M` + `monthly_output_tokens_M` (millions) | `monthly_tokens_input` |
-| Cortex Search index | `ai_cortex.cortex_search.indexed_data_gb` | `indexed_gb` |
-| AI Extract | `ai_cortex.cortex_functions.ai_extract.tokens_M_monthly` | top-level `ai_cortex.ai_extract` |
-| Serverless compute features | `compute_hours_monthly` on each serverless item | `monthly_credits` |
-| Storage volume | `storage.standard.raw_tb_year1` | `storage.raw_tb` |
-| OpenFlow MERGE warehouse | `warehouse_size: "X-Small"` (full name) | `"XS"` (abbreviation) |
+| Feature | Correct path | Wrong (never use) | Auto-fixed? |
+|---|---|---|---|
+| Cortex Complete tokens | `ai_cortex.cortex_complete.monthly_input_tokens_M` + `monthly_output_tokens_M` (millions) | `monthly_tokens_input` | **yes** |
+| Cortex Search index | `ai_cortex.cortex_search.indexed_data_gb` | `indexed_gb` | **yes** |
+| AI Extract | `ai_cortex.cortex_functions.ai_extract.tokens_M_monthly` | top-level `ai_cortex.ai_extract` | no - hook blocks |
+| Serverless compute features | `compute_hours_monthly` on each serverless item | `monthly_credits` | **yes** |
+| Storage growth (Standard) | `storage.standard.annual_growth_pct` | `storage_growth_pct` | **yes** |
+| Storage volume | `storage.standard.raw_tb_year1` | `storage.raw_tb` | no - hook blocks |
+| OpenFlow MERGE warehouse | `warehouse_size: "X-Small"` (full name) | `"XS"` (abbreviation) | no - hook blocks |
 
-## Required ai_cortex sub-keys (12)
+## Required ai_cortex sub-keys (9 in v1.8, down from 12)
 
-All of these MUST be present in `ai_cortex` even if disabled. `populateAIPanel()`
-dereferences each one without optional chaining; missing any one throws a
-TypeError at boot and the page silently renders as $0.
+All of these MUST be present in `ai_cortex` even if disabled. The skeleton
+ships them; spec-prepare deep-merges your patch over them. Missing any
+one trips the schema validator and the PreToolUse hook.
 
 ```
 cortex_complete, cortex_agents, snowflake_intelligence,
 cortex_code, cortex_analyst, cortex_search,
-document_ai, ai_parse_document_layout, ai_parse_document_ocr,
 cortex_fine_tuning, cortex_functions, embeddings
 ```
+
+The previously-required `document_ai`, `ai_parse_document_layout`, and
+`ai_parse_document_ocr` are now optional. The HTML template uses optional
+chaining for the only on-render dereference, so a sizing without those
+keys renders correctly. Supply them in the patch only when the customer
+actively uses Document AI.
 
 ## Required cortex_functions sub-keys (6)
 

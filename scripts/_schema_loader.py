@@ -74,7 +74,12 @@ class SchemaLoader:
 
     def required_ai_cortex(self) -> list:
         out = self.get("properties", "ai_cortex", "required")
-        _assert("required_ai_cortex", out, lambda x: len(x) == 12, "exactly 12 entries")
+        # Trimmed from 12 -> 9 in v1.8: document_ai,
+        # ai_parse_document_layout, ai_parse_document_ocr are now optional in
+        # the schema (the HTML template uses optional chaining for them).
+        # Keeping them out of `required` lets a sizing omit those keys when
+        # the customer doesn't use Document AI without breaking validation.
+        _assert("required_ai_cortex", out, lambda x: len(x) == 9, "exactly 9 entries")
         return out
 
     def required_cortex_functions(self) -> list:

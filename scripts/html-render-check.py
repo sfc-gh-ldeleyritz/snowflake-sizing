@@ -3,21 +3,22 @@
 
 Two-stage gate:
 
-  1. Real-JS execution — invokes the sidecar `html-render-check.mjs` under
+  1. Real-JS execution - invokes the sidecar `html-render-check.mjs` under
      Node, which extracts the inline <script> block, runs it inside a
      stubbed-DOM `vm` context, fires the DOMContentLoaded handler, and reports
      whether boot succeeded and what `kpi-tcv` textContent ended up. This is
      the source-of-truth gate: it exercises populate*Panel() / recalculate()
      exactly as the browser does, so a missing-but-template-required key
-     (e.g. ai_cortex.document_ai) that throws a TypeError at boot is caught.
+     (e.g. ai_cortex.document_ai before v1.8) that throws a TypeError at
+     boot is caught.
 
-  2. Python TCV math — re-implements the warehouse-credit + storage portion
-     of recalculate() in Python and confirms the math produces a non-zero
-     TCV. This is a secondary sanity check that detects credit_rate=0,
+  2. Python TCV math - delegates to framework/compute_totals.py which ports
+     the warehouse / serverless / AI / storage portions of recalculate()
+     exactly. This is a secondary sanity check that detects credit_rate=0,
      empty workloads, and ramps that schedule everything outside year 1.
 
 Both gates must pass. The python math is also reported alongside the JS
-result so divergence (>5%) is flagged.
+result so divergence (JS < Python) is flagged.
 
 Exit 0 if all input files pass both gates. Exit 1 if any fails, with the
 reason printed.
@@ -32,114 +33,45 @@ import shutil
 import subprocess
 import sys
 
-# ── JS-replica constants ───────────────────────────────────────────────────── #
+_THIS_DIR = pathlib.Path(__file__).resolve().parent
+_PLUGIN_ROOT = _THIS_DIR.parent
+sys.path.insert(0, str(_PLUGIN_ROOT / "framework"))
+from compute_totals import compute_core_totals, load_pricing  # noqa: E402
 
-WH_CREDITS = {
-    "XS": 1, "S": 2, "M": 4, "L": 8, "XL": 16,
-    "2XL": 32, "3XL": 64, "4XL": 128,
-    # Full-name aliases used in the template
-    "X-Small": 1, "Small": 2, "Medium": 4, "Large": 8, "X-Large": 16,
-    "2X-Large": 32, "3X-Large": 64, "4X-Large": 128,
-}
-
-RAMP_EXPONENTS = {
-    "slowest": 4.0, "slow": 2.0, "linear": 1.0,
-    "fast": 0.5, "fastest": 0.25, "manual": 0.0,
-}
-
-# ── Core math replicas ─────────────────────────────────────────────────────── #
-
-def ramp_factor_for_month(dev_start, go_live, curve, m):
-    """Replica of JS rampFactorForMonth()."""
-    if curve == "manual":
-        return 1.0 if (dev_start == 1 and go_live == 1) else 0.0
-    if m < dev_start:
-        return 0.0
-    if m >= go_live:
-        return 1.0
-    denom = go_live - dev_start + 1
-    if denom <= 0:
-        return 1.0
-    exp = RAMP_EXPONENTS.get(curve, 1.0)
-    f = ((m - dev_start + 1) / denom) ** exp
-    return min(1.0, max(0.0, f))
-
-
-def ramp_multiplier_for_year(dev_start, go_live, curve, year):
-    """Replica of JS rampMultiplierForYear() — average factor over 12 months."""
-    offset = (year - 1) * 12
-    total = sum(
-        ramp_factor_for_month(dev_start, go_live, curve, offset + m)
-        for m in range(1, 13)
-    )
-    return total / 12.0
-
-
-def wh_monthly_credits(w):
-    """Replica of JS whMonthlyCredits(w)."""
-    rate = WH_CREDITS.get(w.get("size", "XS"), 1)
-    clusters_min = w.get("clusters_min", 1)
-    clusters_max = w.get("clusters_max", 1)
-    avg_clusters = (clusters_min + clusters_max) / 2.0
-    return rate * w.get("hours_per_day", 0) * w.get("days_per_month", 0) * avg_clusters
-
-
-def storage_for_year(spec, year):
-    """Simplified replica of JS storageForYear() — returns active TB."""
-    st = spec.get("storage", {}).get("standard", {})
-    if not st:
-        return 0.0
-    raw_tb = st.get("raw_tb_year1", 0)
-    comp = st.get("compression_ratio", 3) or 3
-    growth = (st.get("annual_growth_pct", 0) or 0) / 100.0
-    tt = st.get("time_travel_days", 1) or 1
-    active_tb = (raw_tb / comp) * (1 + tt / 7) * ((1 + growth) ** (year - 1))
-    return active_tb
+# ── JS-replica constants kept for legacy callers ──────────────────────────── #
+# Some external scripts import these from here. The canonical source is
+# framework/compute_totals.py, but we re-expose to avoid breaking imports.
+from compute_totals import WH_CREDITS, RAMP_EXPONENTS  # noqa: F401, E402
+from compute_totals import (  # noqa: F401, E402
+    ramp_factor_for_month,
+    ramp_multiplier_for_year,
+    wh_monthly_credits,
+    storage_active_tb as storage_for_year,
+)
 
 
 def compute_year_totals(spec):
+    """Back-compat shim that delegates to framework/compute_totals.py.
+
+    Returns the same list-of-dicts shape historical callers expect:
+    { year, wh_credits, compute_cost, storage_cost, year_total }
     """
-    Compute per-year cost breakdown, mirroring JS recalculate().
-
-    Returns list of dicts: { year, wh_credits, compute_cost, storage_cost, year_total }
-    Only warehouse compute and storage are replicated here — serverless, AI,
-    SPCS, and OpenFlow are not included (they are often zero or small).
-    """
-    meta = spec.get("meta", {})
-    years = int(meta.get("contract_years", 3))
-    cr = float(meta.get("credit_rate", 0))
-    sr = float(meta.get("storage_rate_per_tb", 0))
-
-    # Default ramp for storage growth
-    default_dev = int(meta.get("default_dev_start_month", 2))
-    default_go  = int(meta.get("default_go_live_month", 11))
-
-    workloads = spec.get("workloads", [])
-    year_data = []
-
-    for y in range(1, years + 1):
-        wh_credits = 0.0
-        for w in workloads:
-            monthly = wh_monthly_credits(w)
-            dev_start = int(w.get("dev_start_month", default_dev))
-            go_live   = int(w.get("go_live_month",   default_go))
-            curve     = w.get("ramp_curve", "linear")
-            ramp      = ramp_multiplier_for_year(dev_start, go_live, curve, y)
-            wh_credits += monthly * 12 * ramp
-
-        compute_cost  = wh_credits * cr
-        storage_cost  = storage_for_year(spec, y) * sr * 12
-        year_total    = compute_cost + storage_cost
-
-        year_data.append({
-            "year":         y,
-            "wh_credits":   wh_credits,
-            "compute_cost": compute_cost,
-            "storage_cost": storage_cost,
-            "year_total":   year_total,
+    pricing = load_pricing(_PLUGIN_ROOT)
+    ct = compute_core_totals(spec, pricing)
+    out = []
+    years = len(ct["core_year_total"])
+    for i in range(years):
+        out.append({
+            "year": i + 1,
+            "wh_credits": ct["warehouse_credits_per_year"][i],
+            "compute_cost": ct["compute_cost_per_year"][i],
+            "storage_cost": ct["storage_cost_per_year"][i],
+            # year_total is the FULL core (warehouse + serverless + AI + storage)
+            # so the JS-vs-Python check stays meaningful as JS renders more
+            # categories beyond what Python covers.
+            "year_total": ct["core_year_total"][i],
         })
-
-    return year_data
+    return out
 
 
 # ── Node sidecar invocation ────────────────────────────────────────────────── #

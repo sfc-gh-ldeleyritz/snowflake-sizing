@@ -100,8 +100,10 @@ it needs - main-agent context stays slim.
 
 1. **research** - `sub-skills/research/SKILL.md`
    Phase 1.5 preflight (Glean MCP + SNOWHOUSE) and Phase 2 research.
-   Delegated to `agents/research-agent.md` so transcripts and Glean blobs
-   stay out of main context. Returns top 3 findings + evidence file path.
+   Delegated to `agents/research-coordinator.md` which fans out three
+   specialist agents (Glean / Gong / Replication) in parallel so transcripts
+   and Glean blobs stay out of main context. Returns top 3 findings +
+   evidence file path.
 
 2. **build-spec** - `sub-skills/build-spec/SKILL.md`
    Phases 3 + 4. Assembles SIZING_SPEC from evidence; applies per-month ramp
@@ -119,12 +121,17 @@ it needs - main-agent context stays slim.
 
 - `hooks/preflight.py` (UserPromptSubmit) - injects setup reminders before
   the skill even starts running.
-- `hooks/validate-sizing-json.py` (PostToolUse) - blocks `Write` to
-  `sizings/*.json` on any structural error.
-- `hooks/content-hygiene.py` (PostToolUse) - blocks `Write` to
-  `sizings/*.html` on forbidden patterns in customer-facing text.
+- `hooks/sizing-guard.py` (PreToolUse on Write) - single consolidated guard
+  that blocks bad writes BEFORE the file lands. For `sizings/*.json` it
+  schema-validates, detects legacy field names with auto-fix suggestions,
+  and rejects leakage fields. For `sizings/*.html` it scans for em-dashes,
+  content-hygiene tokens, unsubstituted `__TOKEN__` leftovers, and runs
+  the Node sidecar JS render check (catches $0-renders). For
+  `temp/*-evidence*.md` it scans for em-dashes only.
 - `hooks/session.py` (SessionStart, source=startup only) - cleans stale
   research-evidence files older than 30 days.
 
-All hooks share validation rules with the scripts via `scripts/_schema_loader.py`,
-which loads `framework/sizing_spec_schema.json` as the single source of truth.
+The hook shares its validation logic with `scripts/spec-prepare.py` via
+direct module import, and both pull required-field lists from
+`scripts/_schema_loader.py` which loads `framework/sizing_spec_schema.json`
+as the single source of truth.

@@ -1,67 +1,54 @@
 ---
 name: snowflake-sizing-render-html
-description: Phase 5 + 6 of snowflake-sizing - serialize SIZING_SPEC, substitute template tokens, run the parallel quality gates, and print the final summary.
+description: Phase 5 + 6 of snowflake-sizing - substitute template tokens, write the HTML (the PreToolUse sizing-guard hook validates pre-write), print the final summary.
 ---
 
 # Render-HTML sub-skill (snowflake-sizing)
 
 Loaded by the parent `snowflake-sizing` skill after the build-spec sub-skill
-returns. Inputs available: complete `SIZING_SPEC` dict, `meta` object,
-year-by-year totals from Phase 4.
+returns. Inputs available: complete `SIZING_SPEC` JSON written by
+spec-prepare.py to `sizings/<slug>-<N>year-sizing-v<version>-<date>.json`,
+including the `computed_totals` block.
 
-Load these references on demand from `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/`:
+Load this reference on demand from `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/`:
 
 - `html-spec.md` - the full template token + DOM-shape reference (1000+ lines, only loaded HERE)
-- `content-hygiene.md` - the visible-text rules (also referenced by the gate)
 
 ---
 
-## Phase 5 - Generate spec + HTML, run parallel gates
+## Phase 5 - Generate HTML
 
 Output paths (both go to the git-tracked `sizings/` directory):
 
 ```
-Spec:  sizings/<customer-slug>-<N>year-sizing-v<version>-<YYYY-MM-DD>.json
+Spec:  sizings/<customer-slug>-<N>year-sizing-v<version>-<YYYY-MM-DD>.json   (already written by spec-prepare in Phase 3)
 HTML:  sizings/<customer-slug>-<N>year-sizing-v<version>-<YYYY-MM-DD>.html
 ```
 
-Where `customer-slug` is the customer name lowercased with spaces -> hyphens
-and non-alphanumerics stripped, `version` is `SIZING_SPEC.meta.version_number`
-(set to 1 in Phase 1), and `YYYY-MM-DD` is today's date.
+The single PreToolUse hook `hooks/sizing-guard.py` runs automatically on
+both Writes:
 
-### Step 1 - Write the spec JSON FIRST
+- **JSON Write** (handled by spec-prepare in Phase 3): the hook re-checks
+  schema validity, legacy field names, and leakage fields. spec-prepare's
+  output is built to pass; the hook is a belt-and-braces guard.
+- **HTML Write** (this phase): the hook scans for em-dashes, content-hygiene
+  tokens, unsubstituted template tokens, and runs the Node sidecar render
+  check. Block on any failure - retry the HTML write after fixing the
+  underlying SIZING_SPEC.
 
-Serialize the complete `SIZING_SPEC` as pretty-printed JSON and Write to
-`sizings/<slug>-<N>year-sizing-v<version>-<date>.json`. The PostToolUse hook
-`hooks/validate-sizing-json.py` runs automatically and BLOCKS on any
-structural error. If blocked, fix the spec and re-Write.
-
-The JSON write must succeed before touching the template - if HTML
-generation fails downstream, the spec is already saved.
-
-### Step 2 - Run spec-validate (BLOCKING)
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/spec-validate.py sizings/<slug>-<N>year-sizing-v<version>-<date>.json
-```
-
-If exit code is non-zero, fix the field-name errors flagged and re-Write the
-JSON before continuing. Both the script and the PostToolUse hook share the
-schema-driven validation in `framework/sizing_spec_schema.json` via
-`scripts/_schema_loader.py`.
-
-### Step 3 - Generate the HTML
+### Step 1 - Generate the HTML
 
 1. Read `${CLAUDE_PLUGIN_ROOT}/assets/templates/proposal-template.html`
 2. Read `${CLAUDE_PLUGIN_ROOT}/assets/branding/_brand_fonts.css`
-3. Substitute every token below (NOW load `references/html-spec.md` if you
+3. Read the spec JSON written in Phase 3.
+4. Substitute every token below (NOW load `references/html-spec.md` if you
    need detail on the DOM contract):
 
 | Token | Value |
 |---|---|
 | `__BRAND_FONTS_CSS__` | full contents of `_brand_fonts.css` |
 | `__PRICING_DATA__` | full contents of `assets/snowflake_pricing_master.json` |
-| `__SIZING_SPEC__` | the complete SIZING_SPEC JSON (from Phase 4) |
+| `__SIZING_SPEC__` | the complete SIZING_SPEC JSON (read from the file) |
 | `__CUSTOMER__` | customer display name |
 | `__EDITION__` | Snowflake edition |
 | `__CLOUD__` | `AWS` / `Azure` / `GCP` |
@@ -71,40 +58,29 @@ schema-driven validation in `framework/sizing_spec_schema.json` via
 | `__DATE__` | today's date (YYYY-MM-DD) |
 | `__PDF_VERSION__` | `meta.pdf_version` |
 
-4. Write the result to `sizings/<slug>-<N>year-sizing-v<version>-<date>.html`.
-   The `hooks/content-hygiene.py` PostToolUse hook runs automatically and
-   BLOCKS on forbidden patterns (citation prefixes / internal artefact
-   filenames / etc. in customer-facing text). If blocked, fix the SIZING_SPEC
-   visible-text fields, regenerate the HTML, and re-Write.
+5. Write the result to `sizings/<slug>-<N>year-sizing-v<version>-<date>.html`.
+   The PreToolUse hook will scan and either approve or block. If blocked,
+   the agent sees the specific failures (em-dash location, forbidden-token
+   line number, unsubstituted token, or JS render trace) and must fix the
+   underlying SIZING_SPEC and re-Write.
 
 Do NOT modify any other part of the template.
 
-### Step 4 - Run the three independent quality gates IN PARALLEL
+### Step 2 - Confirm hook approval
 
-In a single Bash invocation, run all three checks simultaneously using
-background jobs and `wait`. They are independent and read-only on the
-artifacts.
+After the Write succeeds (no `decision: block` from the hook), the HTML
+is on disk and structurally validated. No additional manual gate scripts
+need to be run; `hooks/sizing-guard.py` already covered:
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/html-render-check.py    sizings/<slug>-...html > /tmp/render.txt 2>&1 &
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/emdash-check.py         sizings/<slug>-...html temp/<slug>-research-evidence.md > /tmp/emdash.txt 2>&1 &
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/content-hygiene-check.py sizings/<slug>-...html > /tmp/hygiene.txt 2>&1 &
-wait
-cat /tmp/render.txt /tmp/emdash.txt /tmp/hygiene.txt
-```
+- Em-dash scan
+- Content-hygiene scan (forbidden tokens / internal artefact filenames)
+- Substitution-completeness (no `__TOKEN__` left)
+- Node sidecar render check (DOM parses, kpi-tcv resolves to non-zero)
 
-All three must exit 0. If any one failed:
-
-- `html-render-check` failure - the page would render as $0 in a real browser.
-  Read the JS stack trace, fix the root cause in the SIZING_SPEC, and re-do
-  steps 1-4. Common causes: zero `credit_rate`, missing AI key, all ramps
-  outside year 1.
-- `emdash-check` failure - replace each U+2014 occurrence with ` - ` (space
-  hyphen space) in the source artifact (likely the SIZING_SPEC) and re-do
-  steps 1-4.
-- `content-hygiene-check` failure - rewrite the offending fields in the
-  SIZING_SPEC as plain customer-facing prose (no citation prefixes, no file
-  names, no personal names) and re-do steps 1-4.
+The legacy standalone scripts (`scripts/emdash-check.py`,
+`scripts/content-hygiene-check.py`, `scripts/html-render-check.py`) remain
+available for manual / verbose runs but the agent does not need to
+invoke them in the normal path.
 
 ---
 
@@ -118,10 +94,7 @@ Generated:
    sizings/<slug>-<N>year-sizing-v<version>-<date>.json   (portable sizing spec)
    temp/<slug>-research-evidence.md                       (Glean + Gong audit trail)
 
-   spec-validate: PASS
-   html-render-check: PASS
-   emdash check: PASS
-   content hygiene: PASS
+   sizing-guard hook: PASS  (schema, hygiene, em-dash, render)
 
 <CUSTOMER> - <N>-Year Consumption Estimate
   Edition: <EDITION> | <CLOUD> <REGION> | $<CREDIT_RATE>/credit
@@ -130,7 +103,9 @@ Generated:
   Year 2:  $<XX,XXX>
   Year 3:  $<XX,XXX>
   --------------------
-  TCV:     $<XXX,XXX>
+  Core TCV (build-time, spec-prepare): $<XXX,XXX>
+  Full TCV (render-time, JS): $<XXX,XXX>
+  (Delta = SPCS + OpenFlow + Replication + Transfer + Collab, computed JS-side)
 
 Top 3 workloads by credit volume:
   1. <Workload label> - <XX,XXX> cr/yr (<XX>%)

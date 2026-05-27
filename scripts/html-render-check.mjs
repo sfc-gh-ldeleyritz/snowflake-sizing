@@ -192,12 +192,25 @@ const ChartDataLabelsStub = { id: 'datalabels' };
 // Build the sandbox and run
 // ────────────────────────────────────────────────────────────────────────────
 
+// Console stub: mute the embedded script's diagnostic output so it doesn't
+// pollute the sidecar's stdout (which carries the JSON result line). The
+// embedded HTML may call console.info/log for build-time TCV diagnostics;
+// route everything to stderr instead so a developer can still see it via
+// the sidecar's stderr but the JSON parser on stdout stays clean.
+const sandboxConsole = {
+  log:   (...a) => process.stderr.write('[sandbox.log] '   + a.join(' ') + '\n'),
+  info:  (...a) => process.stderr.write('[sandbox.info] '  + a.join(' ') + '\n'),
+  warn:  (...a) => process.stderr.write('[sandbox.warn] '  + a.join(' ') + '\n'),
+  error: (...a) => process.stderr.write('[sandbox.error] ' + a.join(' ') + '\n'),
+  debug: () => {},
+};
+
 const sandbox = {
   document: stubDocument,
   window: stubWindow,
   Chart: ChartStub,
   ChartDataLabels: ChartDataLabelsStub,
-  console,
+  console: sandboxConsole,
   setTimeout, clearTimeout, setInterval, clearInterval,
   Math, Date, JSON, Object, Array, String, Number, Boolean, RegExp,
   Map, Set, WeakMap, WeakSet, Symbol, Promise, Error, TypeError, RangeError,

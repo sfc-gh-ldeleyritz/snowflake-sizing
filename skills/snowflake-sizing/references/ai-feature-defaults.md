@@ -4,31 +4,30 @@ Loaded by: `sub-skills/build-spec/SKILL.md` Phase 3.
 
 ---
 
-## Document AI - deprecated, but keys still required
+## Document AI - optional placeholder shape
 
 Document AI is deprecated for new sizing - prefer `ai_extract` (under
 `ai_cortex.cortex_functions`) with appropriate token volumes (default 70M
 tokens/month when document extraction is a primary use case).
 
-However, the keys `document_ai`, `ai_parse_document_layout`, and
-`ai_parse_document_ocr` MUST still be present in `ai_cortex` because
-`populateAIPanel()` reads `ai.document_ai.enabled` and
-`ai.document_ai.compute_hours_monthly` directly without optional chaining.
-Omitting them throws a TypeError at boot, the `DOMContentLoaded` handler
-aborts, and the page silently renders all dollar values as $0.
-
-Use the disabled-placeholder shapes:
+The three keys `document_ai`, `ai_parse_document_layout`, and
+`ai_parse_document_ocr` are now OPTIONAL. The HTML template uses optional
+chaining (`ai.document_ai?.enabled`) for the only on-render dereference, and
+the TCV math has always guarded the others with `&&`. Spec-prepare's
+skeleton omits them; supply them in the patch only when the customer
+actively uses Document AI:
 
 ```json
-"document_ai":               { "enabled": false, "compute_hours_monthly": 0 },
-"ai_parse_document_layout":  { "enabled": false, "pages_per_month": 0 },
-"ai_parse_document_ocr":     { "enabled": false, "pages_per_month": 0 }
+"document_ai":               { "enabled": true, "compute_hours_monthly": 80 },
+"ai_parse_document_layout":  { "enabled": true, "pages_per_month": 50000 },
+"ai_parse_document_ocr":     { "enabled": true, "pages_per_month": 25000 }
 ```
 
-See `examples/acme-financial-3year-sizing.json` for the canonical placeholder
-shape, and `framework/sizing_spec_schema.json` `properties.ai_cortex.required`
-for the full list of 12 required keys (also enforced by `scripts/spec-validate.py`
-and `hooks/validate-sizing-json.py`).
+Required `ai_cortex` keys are now 9 (down from 12): `cortex_complete`,
+`cortex_agents`, `snowflake_intelligence`, `cortex_code`, `cortex_analyst`,
+`cortex_search`, `cortex_fine_tuning`, `cortex_functions`, `embeddings`.
+See `framework/sizing_spec_schema.json` `properties.ai_cortex.required` for
+the canonical list (also enforced by `scripts/_schema_loader.py`).
 
 ## Default model for cortex_complete
 

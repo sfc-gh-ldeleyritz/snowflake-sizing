@@ -1879,12 +1879,12 @@ function populateAIPanel() {
         </div>
       </div>
       <div class="ai-row">
-        <label><input type="checkbox" ${ai.document_ai.enabled ? 'checked' : ''}
+        <label><input type="checkbox" ${ai.document_ai?.enabled ? 'checked' : ''}
                onchange="updateAI('document_ai', 'enabled', this.checked)"> Document AI${tt('document_ai')}</label>
         <span></span>
         <span></span>
         <div class="input-with-unit">
-          <input type="number" min="0" placeholder="Hours" value="${ai.document_ai.compute_hours_monthly}"
+          <input type="number" min="0" placeholder="Hours" value="${ai.document_ai?.compute_hours_monthly ?? 0}"
                  oninput="updateAI('document_ai', 'compute_hours_monthly', +this.value)">
           <span class="unit-chip">hrs/mo</span>
         </div>
@@ -2594,6 +2594,21 @@ document.addEventListener('DOMContentLoaded', () => {
   applyDiscount();
   updateHeaderInfo();
   recalculate();
+  // Surface the Python build-time TCV (from spec-prepare) alongside the JS
+  // render-time TCV, for debug + verification. The two should agree on the
+  // "core" categories (warehouse + serverless + AI + storage) to the cent.
+  // JS-only categories (SPCS / OpenFlow / Replication / Transfer / Collab)
+  // explain any positive delta. Negative delta indicates a bug.
+  if (SIZING_SPEC.computed_totals && typeof console !== 'undefined') {
+    const ct = SIZING_SPEC.computed_totals;
+    const jsTcv = (document.getElementById('kpi-tcv') || {}).textContent || '$0';
+    console.info(
+      '[sizing] build-time core TCV (spec-prepare): $' +
+      Math.round(ct.core_tcv).toLocaleString('en-US') +
+      '  |  render-time TCV (JS): ' + jsTcv +
+      '  |  scope of build-time: ' + (ct.scope || '?')
+    );
+  }
 });
 
 // ========== Print / PDF reflow ==========

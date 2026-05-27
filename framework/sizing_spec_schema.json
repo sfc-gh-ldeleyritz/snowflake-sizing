@@ -315,7 +315,6 @@
       "required": [
         "cortex_complete", "cortex_agents", "snowflake_intelligence",
         "cortex_code", "cortex_analyst", "cortex_search",
-        "document_ai", "ai_parse_document_layout", "ai_parse_document_ocr",
         "cortex_fine_tuning", "cortex_functions", "embeddings"
       ],
       "additionalProperties": false,

@@ -1,22 +1,12 @@
 {
-  "PostToolUse": [
+  "PreToolUse": [
     {
       "matcher": "Write",
       "hooks": [
         {
           "type": "command",
-          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/validate-sizing-json.py",
-          "timeout": 15
-        }
-      ]
-    },
-    {
-      "matcher": "Write",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/content-hygiene.py",
-          "timeout": 15
+          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/sizing-guard.py",
+          "timeout": 45
         }
       ]
     }

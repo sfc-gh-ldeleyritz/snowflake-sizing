@@ -1,5 +1,52 @@
 # snowflake-sizing changelog
 
+## [v1.9.0] — Speed, error-prevention, and hooks consolidation
+
+The previous-session retrospective on the Momentum Group sizing run identified four classes of in-flight correction, all traceable to four root causes: (1) hand-assembled JSON dicts with no skeleton, (2) post-write rather than pre-write validation, (3) HTML template hard-derefs of optional schema fields, and (4) JS-vs-Python TCV drift from divergent storage formulas. This release closes all four classes and additionally fans out the research phase into three parallel specialists.
+
+### Added
+
+- **`framework/sizing_spec_skeleton.json` + `scripts/regen_skeleton.py`.** A schema-derived, structurally complete neutral skeleton with every required key (9 `ai_cortex` placeholders, 27 serverless placeholders, eight optional-but-JS-required top-level blocks like `spcs` / `openflow` / `replication` / `data_transfer`). The build-spec phase clones the skeleton via deep-merge instead of constructing the dict from scratch, eliminating the entire class of "missing required key" errors. `regen_skeleton.py --check` is a CI-safe drift detector that exits non-zero when the skeleton falls out of sync with the schema.
+- **`scripts/spec-prepare.py`.** Build-time normalizer the agent calls before Write. Deep-merges a small customer-specific patch over the skeleton; auto-renames every legacy field name (`storage_growth_pct` → `annual_growth_pct`, `monthly_tokens_input` → `monthly_input_tokens_M`, `indexed_gb` → `indexed_data_gb`, `monthly_credits` → `compute_hours_monthly`, `avg_clusters` → `clusters_min`/`clusters_max`); strips internal markers (`utility_queries_reference`, `_skeleton_marker`, `_comment`, `__doc__`); stamps an authoritative `computed_totals` block; runs schema validation in-process. Each rename is logged as a warning so the agent can fix the source patch on the next iteration.
+- **`framework/compute_totals.py`.** Python port of the JS `recalculate()` core math (warehouse + serverless + AI + storage). Formulas now match the JS template to the cent for these four categories — closing the $416k-vs-$426k drift class. Output stamped into `SIZING_SPEC.computed_totals` by spec-prepare.
+- **`hooks/sizing-guard.py`.** Single consolidated PreToolUse hook firing on `Write` to `sizings/*.json`, `sizings/*.html`, and `temp/*-evidence*.md`. JSON path: schema-validates, detects legacy field names with auto-fix suggestions, rejects leakage fields. HTML path: em-dash, content-hygiene tokens, unsubstituted `__TOKEN__` leftovers, and Node sidecar JS render check. Evidence-md path: em-dash scan (the previous-session bug had em-dashes leak through evidence files into customer text). Pre-write means the agent sees the error before the file lands; the retry loop is one Write attempt instead of write-validate-edit-rewrite.
+- **`agents/research-coordinator.md`** + three specialists (`research-glean-agent.md`, `research-gong-agent.md`, `research-replication-agent.md`). Phase 2 research is now fanned out across three parallel agents (Glean B1/B2/B3, Gong C1/C2, optional Replication D1/D2/D3). Each specialist owns a fragment file under `temp/`; the coordinator concatenates them into the final evidence path. Wall-clock time drops; main-agent context still sees only the slim summary contract.
+
+### Changed
+
+- **`framework/sizing_spec_schema.json` `ai_cortex.required` trimmed 12 → 9.** `document_ai`, `ai_parse_document_layout`, `ai_parse_document_ocr` are now optional. The HTML template uses optional chaining (`ai.document_ai?.enabled`) for the only on-render dereference and `&&` guards everywhere else, so a sizing without those keys renders correctly. Supply them in the patch only when the customer actively uses Document AI. This fully closes the v1.7.0 silent-`$0` bug class — the keys are no longer a footgun.
+- **`assets/templates/proposal-template.html`** — `populateAIPanel()` row for `document_ai` now uses `ai.document_ai?.enabled` and `ai.document_ai?.compute_hours_monthly ?? 0`. The `DOMContentLoaded` handler logs build-time core TCV (from `SIZING_SPEC.computed_totals`) alongside render-time JS TCV via `console.info`, providing a runtime audit trail for spotting Python-vs-JS drift.
+- **`scripts/html-render-check.py`** refactored to delegate to `framework/compute_totals.py`. The Python TCV math is no longer duplicated; the back-compat shim `compute_year_totals(spec)` now returns full-core totals (warehouse + serverless + AI + storage) instead of warehouse + storage only, making the JS-vs-Python cross-check tighter.
+- **`scripts/html-render-check.mjs`** — sandbox `console` rerouted to `process.stderr` with `[sandbox.*]` prefixes so the embedded HTML's `console.info` / `console.warn` / etc. no longer pollutes the JSON result line on stdout.
+- **`scripts/_schema_loader.py`** — `required_ai_cortex()` invariant updated from "exactly 12 entries" to "exactly 9 entries" with an inline comment pointing at the v1.8 trim.
+- **`hooks/hooks.json`** — `PostToolUse` block removed; replaced with a single `PreToolUse` matcher routing all `Write` events to `hooks/sizing-guard.py`.
+- **`skills/snowflake-sizing/SKILL.md`** — Phase 2 routing now points at `agents/research-coordinator.md`; "Hooks active" section rewritten to reflect the consolidated `sizing-guard.py` and remove the two retired PostToolUse hooks.
+- **`sub-skills/build-spec/SKILL.md`** — Phase 3 rewritten from "construct the SIZING_SPEC dict" to "build a small patch dict and run `scripts/spec-prepare.py --patch <patch.json> --out <spec.json>`". Phase 4 is now "inspect `computed_totals`" (the Python math is authoritative; manual hand-computation is gone).
+- **`sub-skills/render-html/SKILL.md`** — Step 4 (the manual three-script parallel gate) collapsed into "the PreToolUse hook already covered all four checks; confirm it approved". The manual scripts (`emdash-check.py`, `content-hygiene-check.py`, `html-render-check.py`) remain available for verbose runs but are no longer part of the agent's normal path.
+- **`sub-skills/research/SKILL.md`** — points at `agents/research-coordinator.md`; preflight detail moves to the coordinator (still hard-gates on Glean MCP + SNOWHOUSE).
+- **`references/ai-feature-defaults.md`** — Document AI section rewritten: keys are now optional, supply via patch only when used, required `ai_cortex` count is 9.
+- **`references/field-names.md`** — added an "Auto-fixed?" column flagging which legacy names spec-prepare rewrites silently versus which still trip the PreToolUse hook. Updated the `ai_cortex` count from 12 to 9 with a footnote on the Document AI optionality.
+- **`hooks/preflight.py` context-reminder banner** — refreshed for v1.9 to reference `hooks/sizing-guard.py`, the spec-prepare flow, the 9-key `ai_cortex` count, and the optional Document AI placeholders. The previous banner advertised `hooks/content-hygiene.py` and `hooks/validate-sizing-json.py` (both deleted) and "all 12 ai_cortex keys" (now 9).
+
+### Removed
+
+- **`hooks/validate-sizing-json.py`.** Replaced by the consolidated `hooks/sizing-guard.py`.
+- **`hooks/content-hygiene.py`.** Replaced by the consolidated `hooks/sizing-guard.py`.
+- **`agents/research-agent.md`.** Replaced by the coordinator + three specialists.
+
+### Verified
+
+- Skeleton ↔ schema in sync: `python3 scripts/regen_skeleton.py --check` exits 0.
+- Existing `examples/acme-financial-3year-sizing.json` continues to validate; rendering it still produces the byte-stable JS TCV ($466,635) it produced before this release.
+- The previous-session failure mode (deleting `ai_cortex.document_ai` from a known-good spec → `TypeError` at boot → page renders $0) now succeeds: the JS engine renders the same $466,635 with the keys absent.
+- `scripts/spec-prepare.py` correctly auto-renames every legacy field on a synthetic patch dict carrying all six known footguns, strips the `_comment` and `_skeleton_marker` markers, computes a non-zero core TCV, and produces a spec that passes the consolidated hook on first Write.
+- The PreToolUse hook blocks legacy field names, leakage fields, em-dashes, content-hygiene tokens, and unsubstituted template tokens with actionable line-numbered error messages; it approves clean specs silently.
+
+### Known follow-ups (not in this release)
+
+- `scripts/spec-validate.py`, `scripts/_schema_loader.py` docstrings, `framework/sizing_spec_schema.json` description string, and `references/content-hygiene.md` still reference the retired hook filenames in their prose. These are doc-only references; they do not affect runtime behaviour. Cleanup in a follow-up release.
+- The full TCV (including SPCS / OpenFlow / Replication / Transfer / Collab) is still JS-computed at render time; spec-prepare's `computed_totals` covers only the four "core" categories. Porting the remaining math to Python would let JS read the entire TCV from `computed_totals` directly. Tracked as a future enhancement.
+
 ## [v1.8.0] — Pricing JSON verification and label fixes (May 2026 consumption table)
 
 ### Fixed
