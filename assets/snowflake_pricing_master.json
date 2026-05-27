@@ -3,8 +3,8 @@
     "effective_date": "2026-05-12",
     "source": "Snowflake Service Consumption Table",
     "description": "Complete Snowflake Pricing Reference - All Components (incl. ramp curves & replication)",
-    "version": "2.2",
-    "last_updated": "2026-05-26",
+    "version": "2.3",
+    "last_updated": "2026-05-27",
     "source_pdf": "CreditConsumptionTable.pdf",
     "regions_covered": 55
   },
@@ -696,7 +696,7 @@
   },
   "spcs": {
     "cpu": {
-      "description": "Table 1(e) - SPCS CPU Compute Credits/Hour",
+      "description": "Table 1(f) - SPCS CPU Compute Credits/Hour",
       "data": [
         {
           "family": "CPU_X64_XS",
@@ -742,7 +742,7 @@
       ]
     },
     "gpu": {
-      "description": "Table 1(g) - SPCS GPU Compute Credits/Hour",
+      "description": "Table 1(f) - SPCS GPU Compute Credits/Hour",
       "data": [
         {
           "family": "GPU_NV_XS",
@@ -1789,15 +1789,11 @@
         {
           "function": "Summarize",
           "rate": 0.1
-        },
-        {
-          "function": "Translate",
-          "rate": 1.5
         }
       ]
     },
     "other_ai_features": {
-      "description": "Table 6(h) - Other AI Features",
+      "description": "Table 6(g) - Other AI Features",
       "data": [
         {
           "feature": "AI Parse Document - Layout",

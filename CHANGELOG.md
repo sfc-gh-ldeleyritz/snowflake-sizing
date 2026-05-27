@@ -1,5 +1,22 @@
 # snowflake-sizing changelog
 
+## [v1.8.0] — Pricing JSON verification and label fixes (May 2026 consumption table)
+
+### Fixed
+
+- **`spcs.cpu.description` referenced wrong table number.** Said `"Table 1(e)"` (Adaptive Compute); corrected to `"Table 1(f)"` (Gen1 SPCS CPU).
+- **`spcs.gpu.description` referenced wrong table number.** Said `"Table 1(g)"` (Gen2 SPCS); corrected to `"Table 1(f)"` (Gen1 SPCS GPU, which shares the same table as CPU/HIGHMEM).
+- **`ai_features.other_ai_features.description` referenced wrong table number.** Said `"Table 6(h)"` (Provisioned Throughput); corrected to `"Table 6(g)"` (Other AI Features).
+- **Spurious `Translate` entry removed from `ai_features.utility_functions`.** A duplicate `{"function": "Translate", "rate": 1.5}` entry existed alongside the correct `AI_TRANSLATE` entry; only `AI_TRANSLATE` appears in PDF Table 6(a). The duplicate has been removed.
+
+### Added
+
+- **`scripts/verify-pricing-json.py`** — comprehensive spot-check script that encodes ground-truth values from every table in the May 12 2026 Snowflake Service Consumption Table PDF (Tables 1(a)–8) and compares them against `assets/snowflake_pricing_master.json`. Covers all 55 regions × 4 editions for credit pricing, all warehouse sizes, all SPCS families, all AI model rates, all storage and data-transfer tables, serverless multipliers, and org-usage tiers. Exits 0 when all checks pass.
+
+### Changed
+
+- **`assets/snowflake_pricing_master.json` metadata bumped.** `version` 2.2 → 2.3, `last_updated` updated to 2026-05-27 to reflect the May 12 2026 consumption table.
+
 ## [v1.7.0] — Defense-in-depth fix for the silent `$0` AI-key bug
 
 ### Fixed
