@@ -650,6 +650,7 @@ const PRICING_DATA = __PRICING_DATA__;
 /* __SIZING_SPEC_BEGIN__ */
 const SIZING_SPEC = __SIZING_SPEC__;
 /* __SIZING_SPEC_END__ */
+const COMPUTED_TOTALS = __COMPUTED_TOTALS__;
 const SF_CHART_PALETTE = ['#11567F', '#1B7BAE', '#29B5E8', '#76D0F1', '#A0BBCC'];
 
 const WH_CREDITS = { XS:1, S:2, M:4, L:8, XL:16, '2XL':32, '3XL':64, '4XL':128 };
@@ -2593,6 +2594,18 @@ document.addEventListener('DOMContentLoaded', () => {
   renderReplicationPanel();
   applyDiscount();
   updateHeaderInfo();
+  // Pre-populate KPI tiles from Python-computed values (Python is authoritative
+  // for warehouse+serverless+AI+storage). recalculate() runs immediately after
+  // and may produce a higher total when SPCS/OpenFlow/etc. are included.
+  if (typeof COMPUTED_TOTALS !== 'undefined' && COMPUTED_TOTALS.core_year_total) {
+    const ct = COMPUTED_TOTALS;
+    const coreTcv = (ct.core_year_total || []).reduce((s, v) => s + v, 0);
+    const coreYr1 = (ct.core_year_total || [])[0] || 0;
+    const _el = (id) => document.getElementById(id);
+    if (_el('kpi-tcv'))    _el('kpi-tcv').textContent    = '$' + Math.round(coreTcv).toLocaleString('en-US');
+    if (_el('kpi-yr1'))    _el('kpi-yr1').textContent    = '$' + Math.round(coreYr1).toLocaleString('en-US');
+    if (_el('kpi-commit')) _el('kpi-commit').textContent = '$' + Math.round(coreTcv).toLocaleString('en-US');
+  }
   recalculate();
   // Surface the Python build-time TCV (from spec-prepare) alongside the JS
   // render-time TCV, for debug + verification. The two should agree on the

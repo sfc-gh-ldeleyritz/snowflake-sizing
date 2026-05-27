@@ -6,7 +6,7 @@
     "region": "Europe (London)",
     "credit_rate": 4.0,
     "ai_credit_rate": 2.0,
-    "storage_rate_per_tb": 25.0,
+    "storage_rate_per_tb": 24.0,
     "hybrid_tables_storage_rate_per_gb": 0.34,
     "contract_years": 3,
     "generated_date": "2026-05-25",
@@ -373,7 +373,7 @@
     "Storage compression: 3x (default for structured relational data from SQL Server).",
     "Storage growth: 30% annually (SOURCED: stated requirement).",
     "Time travel: 1 day (Enterprise default), 10% churn rate.",
-    "Storage rate: $25/TB/month (proxy for AWS Europe London using EU Dublin rate; London not in pricing table).",
+    "AWS Europe (London) on-demand storage rate per pricing table ($24.00/TB/month).",
     "AI/Cortex features: NOT enabled (SOURCED: 'No Snowflake AI features planned initially').",
     "SPCS, Openflow, Postgres, Hybrid Tables: NOT enabled (no evidence in context).",
     "Replication / Multi-region: NOT enabled (no DR or multi-region requirement stated).",
@@ -385,19 +385,19 @@
   ],
   "confirm_required": [
     {
-      "item": "Power BI concurrency: confirm 40 concurrent users is peak, not total. If peak is higher, MCW max may need to increase to 5 (impact: +30-50% on Power BI compute, ~+\u00a340-80k Year 1).",
+      "item": "Power BI concurrency: confirm 40 concurrent users is peak, not total. If peak is higher, MCW max may need to increase to 5 (impact: +30-50% on Power BI compute, ~+£40-80k Year 1).",
       "impact_pct": 0.15
     },
     {
-      "item": "Weekend operation: confirm no batch processing on weekends. 7-day operation would add ~36% to compute cost (~+\u00a3100k Year 1).",
+      "item": "Weekend operation: confirm no batch processing on weekends. 7-day operation would add ~36% to compute cost (~+£100k Year 1).",
       "impact_pct": 0.36
     },
     {
-      "item": "Year 2 real-time fraud detection: needs separate sizing. Snowpipe Streaming + dedicated S/M warehouse 24/7 could add ~\u00a3150-250k/yr starting Year 2.",
+      "item": "Year 2 real-time fraud detection: needs separate sizing. Snowpipe Streaming + dedicated S/M warehouse 24/7 could add ~£150-250k/yr starting Year 2.",
       "impact_pct": 0.2
     },
     {
-      "item": "Compression ratio: confirm 3x assumption with sample data. Range 2x-5x = +/-40% on storage cost (~+/-\u00a33-5k/yr).",
+      "item": "Compression ratio: confirm 3x assumption with sample data. Range 2x-5x = +/-40% on storage cost (~+/-£3-5k/yr).",
       "impact_pct": 0.05
     },
     {
@@ -405,7 +405,7 @@
       "impact_pct": 0.1
     },
     {
-      "item": "Data Science peak: confirm whether ML training will require larger warehouse (L/XL) periodically. Could add \u00a320-40k/yr.",
+      "item": "Data Science peak: confirm whether ML training will require larger warehouse (L/XL) periodically. Could add £20-40k/yr.",
       "impact_pct": 0.05
     },
     {
