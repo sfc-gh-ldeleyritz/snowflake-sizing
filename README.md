@@ -40,7 +40,7 @@ Three artifacts:
 - `sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.json` — portable sizing spec (the `SIZING_SPEC` object). Source of truth for the HTML and future export formats (PPTX, DOCX, XLSX).
 - `temp/<customer-slug>-research-evidence.md` — Glean + Gong audit trail (B1/B2/B3 hits, Gong call inventory with retry log, verbatim transcript turns, and sizing-impacting findings).
 
-The `sizings/` directory is git-tracked so specs and proposals are version-controlled alongside the plugin. `temp/` is git-ignored (scratch files only).
+The `sizings/` directory holds customer outputs; the generated `.html` and `.json` files are git-ignored (only the directory itself ships, via `.gitkeep`). `temp/` is also git-ignored (scratch files only).
 
 ### Sizing Spec (`.json`)
 

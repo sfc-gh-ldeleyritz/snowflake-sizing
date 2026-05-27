@@ -1,5 +1,63 @@
 # snowflake-sizing changelog
 
+## [v1.7.0] — Defense-in-depth fix for the silent `$0` AI-key bug
+
+### Fixed
+
+- **Silent `$0` page-render failure caused by missing `ai_cortex.document_ai`.** Symptom: `spec-validate.py`, the PostToolUse hook, `html-render-check.py`, em-dash, and content-hygiene gates all passed, but the rendered HTML proposal sat at `$0` for every KPI. Root cause: `populateAIPanel()` in `assets/templates/proposal-template.html` reads `ai.document_ai.enabled` (and other keys) without optional chaining; missing keys throw a `TypeError` at boot, the `DOMContentLoaded` handler aborts before `recalculate()` runs, and the page stays at its placeholder zeros. Compounding the bug, `SKILL.md` Phase 3 explicitly told agents *"Do NOT include `document_ai`, `ai_parse_document_layout`, or `ai_parse_document_ocr` in any spec"* — directly conflicting with the template's runtime requirement.
+
+### Changed
+
+- **`SKILL.md` § AI Feature Defaults rewritten.** The "do NOT include" guidance is replaced with: *Document AI is deprecated for new sizing — but the keys MUST still be present in `ai_cortex` because `populateAIPanel()` reads them without optional chaining; omission throws a TypeError and the page silently renders as $0. Use the documented disabled-placeholder shapes.* The new section enumerates the required placeholder shapes for `document_ai`, `ai_parse_document_layout`, and `ai_parse_document_ocr`, and points at the schema for the full list of 12 required `ai_cortex` keys.
+- **`scripts/spec-validate.py` now enforces presence of every template-required AI key.** New `TEMPLATE_REQUIRED_AI_KEYS` constant lists all 12 entries (mirroring `framework/sizing_spec_schema.json` `properties.ai_cortex.required`); a parallel `TEMPLATE_REQUIRED_CORTEX_FUNCTIONS` constant covers the 6 sub-functions iterated unconditionally by `populateAIPanel()`. Each missing key produces a hard error that names the key, explains the failure mode (TypeError → silent `$0`), and points at the schema.
+- **`hooks/validate-sizing-json.py` mirrors the same checks** so the `PostToolUse` hook blocks Write at the source. Both validators share the same constants list to prevent drift.
+- **`scripts/html-render-check.py` upgraded to a real-JS execution gate.** Previously the script re-implemented the warehouse-credit math in Python and never exercised the actual DOM-rendering path. It now invokes the new `scripts/html-render-check.mjs` sidecar, which extracts the inline `<script>` block, evaluates it inside a Node `vm` context with stub `document`/`window`/`Chart` globals, fires the captured `DOMContentLoaded` handler in a `try/catch`, and reports both whether the boot sequence threw and what `kpi-tcv` `textContent` ended up. Failure prints the actual JavaScript stack trace pointing at the offending `populateXPanel()` function. The Python warehouse-credit math is retained as a secondary sanity check; a `js_tcv < py_tcv` mismatch is flagged as a warning.
+- **`assets/snowflake_pricing_master.json` no longer references `research-protocol.md`.** The `utility_queries_reference` field that pointed at the internal markdown file (and tripped the content-hygiene gate when embedded in HTML) has been removed at source.
+
+### Added
+
+- **`scripts/html-render-check.mjs`** — Node 18+ sidecar that runs the proposal HTML's inline `<script>` block in a stubbed-DOM `vm` context. Returns `{ok, kpi_tcv, error, stack}` JSON. Catches missing-template-required-key errors that the Python math gate cannot.
+- **Regression test confirming all four gates work for the same bug class.** Negative case: deliberately deleting `ai_cortex.document_ai` from a known-good spec / HTML now produces clear, named-key errors from `spec-validate.py`, the PostToolUse hook, AND the JS render check (with stack frame at `populateAIPanel`). Positive case: all four shipped specs (`gsmai`, `light-and-wonder`, `travelodge`, `examples/acme-financial`) continue to pass with zero false positives.
+
+## [v1.6.0] — Plugin layout aligned to monorepo conventions
+
+### Changed
+
+- **Folder reshape to match `snowflake-pptx` and other peer plugins.** `assets/` is now data-only; user-invokable utilities live in a new top-level `scripts/` directory; the HTML template moved out of `skills/.../references/` (which now holds markdown only) into `assets/templates/`.
+  - `assets/spec-validate.py` → `scripts/spec-validate.py`
+  - `assets/html-render-check.py` → `scripts/html-render-check.py`
+  - `assets/emdash-check.py` → `scripts/emdash-check.py`
+  - `skills/snowflake-sizing/references/_template.html` → `assets/templates/proposal-template.html`
+- **`.claude-plugin/plugin.json` now declares `"hooks": "hooks/hooks.json"`.** Without this key, the `PostToolUse` validator was registered only when the plugin happened to live at this developer's path — installs from elsewhere silently lost the hook. The validator now ships activated for every install.
+- **Hardcoded `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/...` paths replaced with `${CLAUDE_PLUGIN_ROOT}/...` throughout `SKILL.md`.** Affects the pricing-data read in Phase 1, the three reference-doc reads in Phase 1, the template + brand-fonts reads in Phase 5, and the three Phase 5 gate invocations (`scripts/spec-validate.py`, `scripts/html-render-check.py`, `scripts/emdash-check.py`). The plugin now works from any caller's working directory and any installer's plugin root, not just this developer's box.
+- **`SKILL.md` frontmatter trimmed** to `name` and `description` only. The `argument-hint` and `allowed-tools` keys are command-frontmatter fields (already correctly set on `commands/snowflake-sizing.md`); skill loaders ignore them. Removing the duplicates eliminates a drift source.
+- **`hooks/hooks.json` matcher tightened from `Write|Edit` → `Write`.** The validator already early-returned for `Edit` (partial-content payloads can't be structurally validated). Tightening the matcher avoids spurious hook invocations.
+- **`hooks/hooks.json` and `hooks/validate-sizing-json.py` normalised to `${CLAUDE_PLUGIN_ROOT}`.** Matches the convention used across `plugin-scaffolder` templates and the rest of the monorepo.
+
+### Fixed
+
+- **`hooks/validate-sizing-json.py` no longer prints the literal string `${CORTEX_PLUGIN_ROOT}` in block-decision error messages.** The schema reference now reads `framework/sizing_spec_schema.json (relative to plugin root)`, which is meaningful regardless of how the variable is expanded.
+- **`skills/snowflake-sizing/references/html-spec.md` template path corrected** from the old `skills/snowflake-sizing/references/_template.html` to the new `assets/templates/proposal-template.html`.
+- **`README.md` "sizings/ is git-tracked" claim corrected.** Generated `.html` and `.json` files in `sizings/` are now git-ignored (only `.gitkeep` ships) so customer outputs stay out of the plugin's git history.
+
+### Hygiene
+
+- **`.gitignore` expanded** to cover `.DS_Store`, `**/.DS_Store`, `.claude/settings.local.json`, and `sizings/*.{json,html}` (with `!sizings/.gitkeep` to preserve the directory).
+- **`git rm --cached`** applied to three previously-tracked `.DS_Store` files (`./`, `skills/`, `skills/snowflake-sizing/`) and four real-customer sizings (`gsmai-3year-sizing-v1-2026-05-26.{html,json}`, `light-and-wonder-3year-sizing-v1-2026-05-26.{html,json}`). Removes customer names from git going forward; the working-tree files are unchanged.
+
+### Files changed
+
+- `.claude-plugin/plugin.json` — added `"hooks"` key
+- `.gitignore` — added DS_Store / settings.local / sizings outputs
+- `README.md` — corrected "sizings/ is git-tracked" line
+- `skills/snowflake-sizing/SKILL.md` — frontmatter trim, all paths to `${CLAUDE_PLUGIN_ROOT}`, gate paths to `scripts/`, template path to `assets/templates/`
+- `skills/snowflake-sizing/references/html-spec.md` — template path reference
+- `hooks/hooks.json` — matcher narrowed, `${CLAUDE_PLUGIN_ROOT}` variable
+- `hooks/validate-sizing-json.py` — block-decision error message cleaned
+- File moves (git renames preserve history): 3 scripts `assets/` → `scripts/`; template `skills/.../references/_template.html` → `assets/templates/proposal-template.html`
+
+---
+
 ## [v1.5.0] — Default ramp window: dev_start=0, go_live=3
 
 ### Changed

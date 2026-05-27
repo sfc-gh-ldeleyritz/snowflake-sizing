@@ -1,2 +1,8 @@
 temp/
 docs/
+.DS_Store
+**/.DS_Store
+.claude/settings.local.json
+sizings/*.json
+sizings/*.html
+!sizings/.gitkeep

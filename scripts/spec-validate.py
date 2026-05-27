@@ -39,6 +39,36 @@ VALID_WH_SIZES = {"X-Small", "Small", "Medium", "Large", "X-Large",
 # Wrong OpenFlow warehouse_size abbreviations the agent sometimes emits
 WRONG_OF_WH_SIZES = {"XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"}
 
+# ai_cortex keys that must be present in every spec.
+#
+# These mirror framework/sizing_spec_schema.json `properties.ai_cortex.required`.
+# A subset is read UNCONDITIONALLY by populateAIPanel() in
+# assets/templates/proposal-template.html (no optional chaining), so omitting
+# them throws a TypeError at boot, aborts the DOMContentLoaded handler, and
+# silently renders every dollar value as $0. The remainder are required for
+# consistency so future renderer changes can rely on the contract.
+TEMPLATE_REQUIRED_AI_KEYS = [
+    "cortex_complete",            # populateAIPanel reads .model, .enabled, .monthly_input_tokens_M, .monthly_output_tokens_M
+    "cortex_agents",              # populateAIPanel reads .enabled, .monthly_input_tokens_M, .monthly_output_tokens_M
+    "snowflake_intelligence",     # populateAIPanel reads .enabled, .monthly_input_tokens_M, .monthly_output_tokens_M
+    "cortex_code",                # defensively guarded inline, but required by schema
+    "cortex_analyst",             # populateAIPanel reads .enabled, .monthly_messages
+    "cortex_search",              # populateAIPanel reads .enabled, .indexed_data_gb
+    "document_ai",                # populateAIPanel reads .enabled, .compute_hours_monthly
+    "ai_parse_document_layout",   # required by schema for AI feature consistency
+    "ai_parse_document_ocr",      # required by schema for AI feature consistency
+    "cortex_fine_tuning",         # required by schema for AI feature consistency
+    "cortex_functions",           # populateAIPanel iterates 6 sub-functions
+    "embeddings",                 # populateAIPanel reads .enabled, .tokens_M_monthly
+]
+
+# Sub-keys of cortex_functions iterated unconditionally by populateAIPanel
+# (line ~1895 in proposal-template.html — `cf.enabled`, `cf.tokens_M_monthly`).
+TEMPLATE_REQUIRED_CORTEX_FUNCTIONS = [
+    "ai_classify", "ai_sentiment", "ai_summarize",
+    "ai_translate", "ai_extract", "ai_transcribe",
+]
+
 
 def _dig(obj, *keys):
     """Return (value, True) if the key path exists, else (None, False)."""
@@ -119,6 +149,45 @@ def validate(path_str):
 
     # 4. AI field names
     ai = spec.get("ai_cortex", {})
+
+    # 4a. Template-required AI keys (presence check).
+    # populateAIPanel() in proposal-template.html dereferences these without
+    # optional chaining; missing any one throws a TypeError at boot and the
+    # whole page silently renders as $0. See TEMPLATE_REQUIRED_AI_KEYS comment.
+    if "ai_cortex" not in spec:
+        errors.append(
+            f"{path_str}: top-level 'ai_cortex' object is missing — "
+            "required by populateAIPanel() in the HTML template. "
+            "See framework/sizing_spec_schema.json properties.ai_cortex.required "
+            "for the full list of required sub-keys (set enabled:false on each "
+            "feature not in scope)."
+        )
+    else:
+        for key in TEMPLATE_REQUIRED_AI_KEYS:
+            if key not in ai:
+                errors.append(
+                    f"{path_str}: ai_cortex.{key} is missing — required by "
+                    "populateAIPanel() in the HTML template (it dereferences "
+                    "the key without optional chaining; omission throws "
+                    "TypeError and the page silently renders as $0). Set "
+                    "'enabled: false' if the feature is not used. See "
+                    "framework/sizing_spec_schema.json."
+                )
+
+        # 4b. cortex_functions sub-keys must all be present — populateAIPanel
+        #     iterates them with no presence guard.
+        if "cortex_functions" in ai:
+            cf_obj = ai.get("cortex_functions") or {}
+            if isinstance(cf_obj, dict):
+                for fn in TEMPLATE_REQUIRED_CORTEX_FUNCTIONS:
+                    if fn not in cf_obj:
+                        errors.append(
+                            f"{path_str}: ai_cortex.cortex_functions.{fn} is "
+                            "missing — required by populateAIPanel() (the "
+                            "renderer iterates all 6 ai_* SQL functions and "
+                            "reads .enabled / .tokens_M_monthly without a "
+                            "presence guard). Set 'enabled: false' if unused."
+                        )
 
     # cortex_complete: wrong field name
     cc = ai.get("cortex_complete", {})

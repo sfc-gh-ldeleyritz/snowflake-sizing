@@ -4,5 +4,6 @@
   "description": "Generate accurate, interactive Snowflake consumption estimates and customer-facing HTML pricing proposals from discovery notes and Glean research.",
   "author": { "name": "Alex Ross" },
   "commands": "commands",
-  "skills": "skills"
+  "skills": "skills",
+  "hooks": "hooks/hooks.json"
 }

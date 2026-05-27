@@ -8813,7 +8813,6 @@
         "PB": 1024
       },
       "note": "ECO Cache is a target-only option. Egress to ECO Cache is rated per the egress_matrix; compute is rated per update_frequency_factors."
-    },
-    "utility_queries_reference": "See skills/snowflake-sizing/references/research-protocol.md for SYSTEM$ESTIMATE_REPLICATION_COST and account_usage growth queries."
+    }
   }
 }

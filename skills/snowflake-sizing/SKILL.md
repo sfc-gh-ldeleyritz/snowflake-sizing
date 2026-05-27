@@ -1,8 +1,6 @@
 ---
 name: snowflake-sizing
 description: Generate a defensible Snowflake consumption estimate and interactive HTML pricing proposal from a customer context file and Glean research.
-argument-hint: "<context-file> [--customer \"Name\"] [--years 3] [--edition Enterprise] [--region \"AWS US East (Northern Virginia)\"]"
-allowed-tools: [Read, Write, Bash, WebFetch, snowflake_sql_execute, mcp__glean_default__search, mcp__glean_default__read_document, mcp__glean_default__chat, mcp__glean_default__employee_search]
 ---
 # Snowflake Sizing Skill
 
@@ -20,10 +18,10 @@ Parse `$ARGUMENTS`:
 - `--edition X` — Standard / Enterprise / Business Critical / VPS. Default: **Enterprise**.
 - `--region "X"` — full region string, e.g. `"AWS Europe (London)"`. If omitted, infer from context file; default to `"AWS Europe (London)`".
 
-Read pricing data using the absolute path (works regardless of working directory):
+Read pricing data using the plugin-relative path (works regardless of working directory):
 
 ```
-~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/assets/snowflake_pricing_master.json
+${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json
 ```
 
 Derive from pricing data:
@@ -72,11 +70,11 @@ The `default_*` fields seed per-workload defaults during Phase 3. They are not u
 
 **Scope reminder.** Per the AI Pricing Sales GTM FAQ, negotiated capacity discounts apply to Platform Credits only. AI Credits ($2.00 global / $2.20 regional) keep the on-demand rate; the discount block does **not** modify `meta.ai_credit_rate`.
 
-Read all four files in a single parallel batch (absolute paths — works regardless of working directory):
+Read all four files in a single parallel batch (plugin-relative paths — work regardless of working directory):
 
-1. `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/skills/snowflake-sizing/references/sizing-methodology.md`
-2. `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/skills/snowflake-sizing/references/html-spec.md`
-3. `~/Snowflake/Repos/aross-se-superpowers/plugins/snowflake-sizing/skills/snowflake-sizing/references/research-protocol.md`
+1. `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/sizing-methodology.md`
+2. `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/html-spec.md`
+3. `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/research-protocol.md`
 
 **Region name resolution (MANDATORY before pricing lookup)**
 
@@ -254,7 +252,15 @@ Citation labels (`SOURCED:`, `ASSUMPTION:`) are ONLY permitted inside the JSON `
 
 ### § AI Feature Defaults (MANDATORY)
 
-1. **Document AI is removed.** Do NOT include `document_ai`, `ai_parse_document_layout`, or `ai_parse_document_ocr` in any spec. These features are superseded by `ai_extract`. For document processing workloads, use `ai_extract` with appropriate token volumes (default 70M tokens/month when document extraction is a primary use case).
+1. **Document AI is deprecated for new sizing — but the keys are STILL REQUIRED in the spec.** For new document workloads, prefer `ai_extract` (under `ai_cortex.cortex_functions`) with appropriate token volumes (default 70M tokens/month when document extraction is a primary use case). However, the keys `document_ai`, `ai_parse_document_layout`, and `ai_parse_document_ocr` MUST still be present in `ai_cortex` because the HTML's `populateAIPanel()` renderer reads `ai.document_ai.enabled` and `ai.document_ai.compute_hours_monthly` directly without optional chaining — omitting them throws a TypeError at boot, the `DOMContentLoaded` handler aborts, and the page silently renders all dollar values as `$0`. Use these disabled-placeholder shapes:
+
+   ```json
+   "document_ai":               { "enabled": false, "compute_hours_monthly": 0 },
+   "ai_parse_document_layout":  { "enabled": false, "pages_per_month": 0 },
+   "ai_parse_document_ocr":     { "enabled": false, "pages_per_month": 0 }
+   ```
+
+   The full list of `ai_cortex` keys that MUST be present in every spec is enumerated under `properties.ai_cortex.required` in `framework/sizing_spec_schema.json` (12 entries total). Both `scripts/spec-validate.py` and `hooks/validate-sizing-json.py` now block writes that omit any of them. See the `examples/acme-financial-3year-sizing.json` for the canonical placeholder shape.
 
 2. **Default model for `cortex_complete`**: Always specify `claude-sonnet-4-6` (input: 1.65 AI cr/M, output: 8.25 AI cr/M). Do not use unlisted, older, or smaller models as defaults.
 
@@ -539,16 +545,16 @@ Where:
 
 1. **Write the spec file first.** Serialize the complete `SIZING_SPEC` object as pretty-printed JSON and write to `sizings/<customer-slug>-<N>year-sizing-v1-<date>.json`. This step must complete before touching the template — if HTML generation fails, the spec is already saved.
 
-2. Read `skills/snowflake-sizing/references/_template.html`
+2. Read `${CLAUDE_PLUGIN_ROOT}/assets/templates/proposal-template.html`
 
-3. Read `assets/branding/_brand_fonts.css`
+3. Read `${CLAUDE_PLUGIN_ROOT}/assets/branding/_brand_fonts.css`
 
 4. Substitute every token below — replace the exact token string with its value:
 
 | Token | Value |
 |---|---|
-| `__BRAND_FONTS_CSS__` | full contents of `assets/branding/_brand_fonts.css` |
-| `__PRICING_DATA__` | full contents of `assets/snowflake_pricing_master.json` (now includes `ramp_curves` and `replication.egress_matrix`) |
+| `__BRAND_FONTS_CSS__` | full contents of `${CLAUDE_PLUGIN_ROOT}/assets/branding/_brand_fonts.css` |
+| `__PRICING_DATA__` | full contents of `${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json` (now includes `ramp_curves` and `replication.egress_matrix`) |
 | `__SIZING_SPEC__` | complete SIZING_SPEC JSON object (from Phase 4) — includes per-workload `dev_start_month`/`go_live_month`/`ramp_curve` and optional `replication` block |
 | `__CUSTOMER__` | customer display name |
 | `__EDITION__` | Snowflake edition (`Enterprise` / `Business Critical`) |
@@ -572,17 +578,17 @@ Do **not** modify any other part of the template. The template already contains 
 5. **Spec structure gate (BLOCKING).** Run:
 
    ```bash
-   python3 assets/spec-validate.py sizings/<slug>-<N>year-sizing-v1-<date>.json
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/spec-validate.py sizings/<slug>-<N>year-sizing-v1-<date>.json
    ```
 
    If exit code is non-zero, fix the field-name errors flagged by the script before continuing. The most common failures: `warehouses` → `workloads`, `avg_clusters` → `clusters_min`/`clusters_max`, `storage.raw_tb` → `storage.standard.raw_tb_year1`.
 
-   The canonical JSON Schema for the full SIZING_SPEC (all fields, types, and enums) is at `${CORTEX_PLUGIN_ROOT}/framework/sizing_spec_schema.json`. The `hooks/validate-sizing-json.py` PostToolUse hook enforces the same rules automatically on every `Write` to `sizings/*.json`.
+   The canonical JSON Schema for the full SIZING_SPEC (all fields, types, and enums) is at `${CLAUDE_PLUGIN_ROOT}/framework/sizing_spec_schema.json`. The `hooks/validate-sizing-json.py` PostToolUse hook enforces the same rules automatically on every `Write` to `sizings/*.json`.
 
 6. **HTML render check gate (BLOCKING).** Run:
 
    ```bash
-   python3 assets/html-render-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/html-render-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html
    ```
 
    If exit code is non-zero, the script prints the $0 diagnosis (missing `workloads`, zero `credit_rate`, all ramps outside year 1, etc.). Fix the root cause in the JSON spec and re-run Phase 5 steps 4–6 until the gate passes. A passing gate prints the computed Year 1 / Year 2 / Year 3 / TCV summary — record these numbers in the Phase 6 output.
@@ -590,7 +596,7 @@ Do **not** modify any other part of the template. The template already contains 
 7. **Em-dash gate.** Run:
 
    ```bash
-   python3 assets/emdash-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html temp/<slug>-research-evidence.md
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/emdash-check.py sizings/<slug>-<N>year-sizing-v1-<date>.html temp/<slug>-research-evidence.md
    ```
 
    If exit code is non-zero, the script prints `file:line:col` for each U+2014 occurrence. Replace each em-dash with ` - ` (space hyphen space) in the source artifact and re-run the gate until it exits 0. Do NOT proceed to Phase 6 until the gate passes.

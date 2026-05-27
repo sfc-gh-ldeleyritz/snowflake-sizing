@@ -1,6 +1,6 @@
 # Snowflake Sizing HTML Specification
 
-> **Note:** The canonical HTML output is `skills/snowflake-sizing/references/_template.html`. This document describes its structure, data contracts (SIZING_SPEC schema, PRICING_DATA schema), and token substitution table. When modifying the template, keep this spec in sync.
+> **Note:** The canonical HTML output is `assets/templates/proposal-template.html`. This document describes its structure, data contracts (SIZING_SPEC schema, PRICING_DATA schema), and token substitution table. When modifying the template, keep this spec in sync.
 
 ## Token Substitution Table
 

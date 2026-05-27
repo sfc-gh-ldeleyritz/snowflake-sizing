@@ -1,12 +1,26 @@
 #!/usr/bin/env python3
 """Verify that a generated sizing HTML will render non-zero dollar values.
 
-Extracts the embedded SIZING_SPEC JSON from the HTML, then runs a Python
-replica of the JS recalculate() engine to compute Year 1 / Year 2 / Year 3
-compute + storage costs and the overall TCV.
+Two-stage gate:
 
-Exit 0 if TCV > 0 and Year 1 total > 0 for every input file.
-Exit 1 if any file computes $0 or cannot be parsed, with reasons printed.
+  1. Real-JS execution — invokes the sidecar `html-render-check.mjs` under
+     Node, which extracts the inline <script> block, runs it inside a
+     stubbed-DOM `vm` context, fires the DOMContentLoaded handler, and reports
+     whether boot succeeded and what `kpi-tcv` textContent ended up. This is
+     the source-of-truth gate: it exercises populate*Panel() / recalculate()
+     exactly as the browser does, so a missing-but-template-required key
+     (e.g. ai_cortex.document_ai) that throws a TypeError at boot is caught.
+
+  2. Python TCV math — re-implements the warehouse-credit + storage portion
+     of recalculate() in Python and confirms the math produces a non-zero
+     TCV. This is a secondary sanity check that detects credit_rate=0,
+     empty workloads, and ramps that schedule everything outside year 1.
+
+Both gates must pass. The python math is also reported alongside the JS
+result so divergence (>5%) is flagged.
+
+Exit 0 if all input files pass both gates. Exit 1 if any fails, with the
+reason printed.
 
 Usage:
     python3 html-render-check.py path1.html [path2.html ...]
@@ -14,6 +28,8 @@ Usage:
 import json
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 
 # ── JS-replica constants ───────────────────────────────────────────────────── #
@@ -126,6 +142,95 @@ def compute_year_totals(spec):
     return year_data
 
 
+# ── Node sidecar invocation ────────────────────────────────────────────────── #
+
+_THIS_DIR = pathlib.Path(__file__).resolve().parent
+_NODE_SIDECAR = _THIS_DIR / "html-render-check.mjs"
+
+
+def run_node_render_check(html_path):
+    """Invoke html-render-check.mjs under Node for the given HTML file.
+
+    Returns a dict with keys: ok, kpi_tcv, error, stack. If Node is missing
+    or the sidecar fails to launch, returns a dict with ok=False and a
+    descriptive error.
+    """
+    node_bin = shutil.which("node")
+    if node_bin is None:
+        return {
+            "ok": False,
+            "kpi_tcv": "$0",
+            "error": (
+                "Node.js is not on PATH — the JS render gate cannot run. "
+                "Install Node 18+ (`brew install node`) and re-run."
+            ),
+            "stack": None,
+        }
+
+    if not _NODE_SIDECAR.exists():
+        return {
+            "ok": False,
+            "kpi_tcv": "$0",
+            "error": f"Sidecar missing: {_NODE_SIDECAR}",
+            "stack": None,
+        }
+
+    try:
+        proc = subprocess.run(
+            [node_bin, str(_NODE_SIDECAR), str(html_path)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False,
+            "kpi_tcv": "$0",
+            "error": "Node sidecar timed out after 30s",
+            "stack": None,
+        }
+    except OSError as exc:
+        return {
+            "ok": False,
+            "kpi_tcv": "$0",
+            "error": f"Failed to launch Node sidecar — {exc}",
+            "stack": None,
+        }
+
+    if proc.returncode != 0:
+        return {
+            "ok": False,
+            "kpi_tcv": "$0",
+            "error": (
+                f"Node sidecar exited {proc.returncode}: {proc.stderr.strip()}"
+            ),
+            "stack": None,
+        }
+
+    try:
+        return json.loads(proc.stdout.strip())
+    except json.JSONDecodeError as exc:
+        return {
+            "ok": False,
+            "kpi_tcv": "$0",
+            "error": f"Sidecar produced invalid JSON: {exc}\n--stdout--\n{proc.stdout}",
+            "stack": None,
+        }
+
+
+def parse_dollar(s):
+    """Parse '$1,234,567' → 1234567.0, defensively. Empty / '$0' → 0.0."""
+    if not s:
+        return 0.0
+    cleaned = s.replace("$", "").replace(",", "").strip()
+    if not cleaned:
+        return 0.0
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 0.0
+
+
 # ── HTML parsing ───────────────────────────────────────────────────────────── #
 
 _SPEC_RE = re.compile(
@@ -178,12 +283,15 @@ def check_file(path_str):
             "(check for 'warehouses' key instead)"
         ]
 
-    year_data = compute_year_totals(spec)
-    years = len(year_data)
+    # ── Gate 1: Real-JS execution via Node sidecar ──────────────────────── #
+    js_result = run_node_render_check(p)
+    js_tcv = parse_dollar(js_result.get("kpi_tcv", "$0"))
 
-    tcv          = sum(y["year_total"]   for y in year_data)
+    # ── Gate 2: Python TCV math ─────────────────────────────────────────── #
+    year_data = compute_year_totals(spec)
+
+    py_tcv       = sum(y["year_total"]   for y in year_data)
     total_cr     = sum(y["wh_credits"]   for y in year_data)
-    yr1_compute  = year_data[0]["compute_cost"]  if year_data else 0
     yr1_total    = year_data[0]["year_total"]    if year_data else 0
 
     # Diagnosis helpers
@@ -192,7 +300,29 @@ def check_file(path_str):
     workloads    = spec.get("workloads", [])
     enabled_wls  = [w for w in workloads if w.get("hours_per_day", 0) > 0]
 
-    if tcv == 0 or yr1_total == 0:
+    # ── Failure paths ───────────────────────────────────────────────────── #
+
+    if not js_result.get("ok", False):
+        # The browser-equivalent JS execution either threw or produced $0.
+        # This is the source-of-truth failure: the page will render as $0
+        # in a real browser, regardless of what the Python math says.
+        out = [f"{path_str}: FAILED"]
+        err = js_result.get("error") or "unknown JS render failure"
+        out.append(f"  JS render gate: {err}")
+        stack = js_result.get("stack")
+        if stack:
+            # Trim to the first 3 frames — enough to locate the offending function.
+            stack_lines = [ln for ln in stack.splitlines() if ln.strip()][:4]
+            for ln in stack_lines:
+                out.append(f"    {ln.strip()}")
+        out.append(
+            f"  → The page will render as $0 in a real browser. "
+            f"Python TCV math computed {fmt(py_tcv)} but is not the "
+            f"source of truth for what the user sees."
+        )
+        return False, out
+
+    if py_tcv == 0 or yr1_total == 0:
         reasons = []
         if cr == 0:
             reasons.append("meta.credit_rate = 0 — pricing lookup may have failed")
@@ -208,17 +338,35 @@ def check_file(path_str):
         reason_str = "; ".join(reasons) if reasons else "unknown cause"
         return False, [
             f"{path_str}: FAILED",
-            f"  TCV = $0 — {reason_str}",
+            f"  Python TCV math: $0 — {reason_str}",
+            f"  (JS render gate reported {js_result.get('kpi_tcv', '$0')})",
         ]
 
-    # Success — print the cost summary
+    # ── Divergence check (JS < Python) ──────────────────────────────────── #
     summary_lines = [f"{path_str}: PASS"]
     year_parts = "  ".join(
         f"Year {y['year']}: {fmt(y['year_total'])}" for y in year_data
     )
-    summary_lines.append(f"  {year_parts}  TCV: {fmt(tcv)}")
+    summary_lines.append(f"  {year_parts}  Python TCV: {fmt(py_tcv)}")
+    summary_lines.append(f"  JS render TCV: {js_result.get('kpi_tcv', '$0')}")
+
+    if py_tcv > 0 and js_tcv > 0:
+        # Python TCV models warehouse compute + storage only. JS TCV adds
+        # serverless / AI / SPCS / OpenFlow / collaboration / data transfer.
+        # JS is therefore expected to run higher; the only divergence worth
+        # flagging is JS < Python (something that the Python math counted is
+        # missing from the JS rendered total) — this should never happen
+        # unless the renderer fails partway through.
+        if js_tcv < py_tcv * 0.95:
+            summary_lines.append(
+                f"  [warn] JS render TCV ({fmt(js_tcv)}) is lower than "
+                f"the Python warehouse-only TCV ({fmt(py_tcv)}) — the "
+                "renderer may be omitting workload cost. Verify the page "
+                "in a real browser."
+            )
+
     summary_lines.append(
-        f"  ({fmt(total_cr).replace('$','')} total warehouse credits, "
+        f"  ({fmt(total_cr).replace('$','')} warehouse credits, "
         f"cr=${cr:.2f}/credit)"
     )
     return True, summary_lines

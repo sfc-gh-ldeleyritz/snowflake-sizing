@@ -50,6 +50,25 @@ VALID_RAMP_CURVES = {"fastest", "fast", "linear", "slow", "slowest"}
 OPENFLOW_WH_FULL = {"X-Small", "Small", "Medium", "Large", "X-Large", "2X-Large", "3X-Large", "4X-Large"}
 OPENFLOW_WH_ABBREVS = {"XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"}
 
+# ai_cortex keys that must be present in every spec.
+# Mirror of TEMPLATE_REQUIRED_AI_KEYS in scripts/spec-validate.py and of
+# framework/sizing_spec_schema.json properties.ai_cortex.required.
+# populateAIPanel() in proposal-template.html dereferences these without
+# optional chaining; missing any one throws a TypeError at boot, the
+# DOMContentLoaded handler aborts, and the page silently renders as $0.
+TEMPLATE_REQUIRED_AI_KEYS = [
+    "cortex_complete", "cortex_agents", "snowflake_intelligence",
+    "cortex_code", "cortex_analyst", "cortex_search",
+    "document_ai", "ai_parse_document_layout", "ai_parse_document_ocr",
+    "cortex_fine_tuning", "cortex_functions", "embeddings",
+]
+
+# Sub-keys of cortex_functions iterated unconditionally by populateAIPanel.
+TEMPLATE_REQUIRED_CORTEX_FUNCTIONS = [
+    "ai_classify", "ai_sentiment", "ai_summarize",
+    "ai_translate", "ai_extract", "ai_transcribe",
+]
+
 
 # ---------------------------------------------------------------------------
 # File path filter
@@ -160,6 +179,34 @@ def validate(spec: dict, file_path: str) -> list:
     # 5. AI field names
     ai = spec.get("ai_cortex", {})
 
+    # 5a. Template-required AI keys (presence check).
+    # populateAIPanel() in proposal-template.html dereferences these without
+    # optional chaining; missing any one throws a TypeError at boot and the
+    # whole page silently renders as $0.
+    for key in TEMPLATE_REQUIRED_AI_KEYS:
+        if key not in ai:
+            errors.append(
+                f"ai_cortex.{key} is missing — required by populateAIPanel() "
+                "in the HTML template (it dereferences the key without "
+                "optional chaining; omission throws TypeError at boot and "
+                "the page silently renders as $0). Set 'enabled: false' if "
+                "the feature is not used. See framework/sizing_spec_schema.json."
+            )
+
+    # 5b. cortex_functions sub-keys must all be present.
+    if "cortex_functions" in ai:
+        cf_obj = ai.get("cortex_functions") or {}
+        if isinstance(cf_obj, dict):
+            for fn in TEMPLATE_REQUIRED_CORTEX_FUNCTIONS:
+                if fn not in cf_obj:
+                    errors.append(
+                        f"ai_cortex.cortex_functions.{fn} is missing — "
+                        "required by populateAIPanel() (the renderer iterates "
+                        "all 6 ai_* SQL functions and reads .enabled / "
+                        ".tokens_M_monthly without a presence guard). Set "
+                        "'enabled: false' if unused."
+                    )
+
     cc = ai.get("cortex_complete", {})
     if cc.get("enabled"):
         if "monthly_tokens_input" in cc:
@@ -267,7 +314,7 @@ def main():
             "ERRORS (must fix before the HTML will render correctly):\n"
             + "\n".join(f"  - {e}" for e in errors)
             + "\n\nFix all errors above, then re-issue the Write tool call."
-            "\nSchema reference: ${CORTEX_PLUGIN_ROOT}/framework/sizing_spec_schema.json"
+            "\nSchema reference: framework/sizing_spec_schema.json (relative to plugin root)"
         )
         print(json.dumps({"decision": "block", "reason": reason}))
 
