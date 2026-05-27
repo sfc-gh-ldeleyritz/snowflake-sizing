@@ -325,6 +325,7 @@ def main() -> int:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
+    pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(args.out).write_text(
         json.dumps(spec, indent=2) + "\n", encoding="utf-8"
     )

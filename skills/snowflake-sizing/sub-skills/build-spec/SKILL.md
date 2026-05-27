@@ -106,7 +106,12 @@ Example patch:
 
 ### What you don't need to do (handled by spec-prepare)
 
-- Don't write the 9 ai_cortex disabled placeholders - the skeleton has them.
+- Don't write the 12 ai_cortex disabled placeholders - the skeleton has
+  them (the 9 schema-required keys plus the 3 optional Document AI
+  siblings - `document_ai`, `ai_parse_document_layout`,
+  `ai_parse_document_ocr` - which the skeleton seeds disabled so the
+  template's `populateAIPanel()` and `calcAICost` paths never have to
+  dereference an undefined node).
 - Don't write the 27 serverless disabled placeholders - the skeleton has them.
 - Don't worry about legacy field names - spec-prepare auto-renames
   `storage_growth_pct` -> `annual_growth_pct`, `monthly_tokens_input` ->

@@ -1,7 +1,7 @@
 ---
 description: Generate an interactive Snowflake consumption estimate and customer-facing HTML proposal from a discovery context file.
 argument-hint: "<context-file> [--customer \"Name\"] [--years 3] [--edition Enterprise] [--region \"AWS US East (Northern Virginia)\"]"
-allowed-tools: [Read, Write, Bash, WebFetch, snowflake_sql_execute, mcp__glean_default__search, mcp__glean_default__read_document, mcp__glean_default__chat, mcp__glean_default__employee_search]
+allowed-tools: [Read, Write, Bash, WebFetch, snowflake_sql_execute, mcp__glean__search, mcp__glean__read_document, mcp__glean__chat, mcp__glean__employee_search]
 skill: snowflake-sizing
 ---
 

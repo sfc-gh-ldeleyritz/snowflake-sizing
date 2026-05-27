@@ -11,11 +11,16 @@ Document AI is deprecated for new sizing - prefer `ai_extract` (under
 tokens/month when document extraction is a primary use case).
 
 The three keys `document_ai`, `ai_parse_document_layout`, and
-`ai_parse_document_ocr` are now OPTIONAL. The HTML template uses optional
-chaining (`ai.document_ai?.enabled`) for the only on-render dereference, and
-the TCV math has always guarded the others with `&&`. Spec-prepare's
-skeleton omits them; supply them in the patch only when the customer
-actively uses Document AI:
+`ai_parse_document_ocr` are now OPTIONAL in the schema. The HTML
+template uses optional chaining (`ai.document_ai?.enabled`) for the only
+on-render dereference, and the TCV math has always guarded the others
+with `&&`, so a sizing without those keys renders correctly. The
+skeleton (`framework/sizing_spec_skeleton.json`) seeds all three with
+`enabled: false` placeholders anyway, so spec-prepare's deep-merge
+output always satisfies both the schema and the JS template - you do
+NOT need to add them to the patch unless the customer actively uses
+Document AI. When they DO use it, override the relevant keys in the
+patch:
 
 ```json
 "document_ai":               { "enabled": true, "compute_hours_monthly": 80 },
@@ -23,11 +28,13 @@ actively uses Document AI:
 "ai_parse_document_ocr":     { "enabled": true, "pages_per_month": 25000 }
 ```
 
-Required `ai_cortex` keys are now 9 (down from 12): `cortex_complete`,
+Required `ai_cortex` keys are 9 (per the schema): `cortex_complete`,
 `cortex_agents`, `snowflake_intelligence`, `cortex_code`, `cortex_analyst`,
 `cortex_search`, `cortex_fine_tuning`, `cortex_functions`, `embeddings`.
-See `framework/sizing_spec_schema.json` `properties.ai_cortex.required` for
-the canonical list (also enforced by `scripts/_schema_loader.py`).
+The skeleton also ships the 3 optional Document AI siblings as disabled
+placeholders, so the assembled spec has 12 `ai_cortex` keys total. See
+`framework/sizing_spec_schema.json` `properties.ai_cortex.required` for
+the canonical required list (also enforced by `scripts/_schema_loader.py`).
 
 ## Default model for cortex_complete
 

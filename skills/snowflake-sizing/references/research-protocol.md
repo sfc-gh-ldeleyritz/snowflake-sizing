@@ -6,7 +6,7 @@ This is the operational reference for Phase 2 of `SKILL.md`. Read it once at the
 
 ## 1. Glean MCP queries (B1, B2, B3)
 
-Tool: `mcp__glean_default__search` (also commonly named `mcp__glean__search` on some hosts — try the alias if the default is missing).
+Tool: `mcp__glean__search` (the host exposes the Glean MCP server registered as `glean`; the legacy `mcp__glean_default__search` alias is no longer used).
 
 | Call | `query` | `app` filter | `num_results` | Purpose |
 |------|---------|--------------|---------------|---------|
@@ -27,38 +27,70 @@ Connection: **SNOWHOUSE** via `snowflake_sql_execute`.
 ### C1 — Find calls
 
 ```sql
-SELECT CONVERSATION_KEY, CONVERSATION_ID, TITLE,
-       PLANNED_START_DATETIME::DATE AS call_date,
-       CALL_SPOTLIGHT_BRIEF, CALL_URL
-FROM GONG_SHARE.GONG_DATA_CLOUD.CALLS
-WHERE LOWER(TITLE) LIKE LOWER('%<customer_substring>%')
-ORDER BY PLANNED_START_DATETIME DESC
-LIMIT 3;
+SELECT c.CONVERSATION_KEY,
+       c.CONVERSATION_ID,
+       c.TITLE,
+       c.PLANNED_START_DATETIME::DATE AS call_date,
+       c.CALL_SPOTLIGHT_BRIEF,
+       c.CALL_URL,
+       EXISTS (
+           SELECT 1
+           FROM GONG_SHARE.GONG_DATA_CLOUD.CALL_TRANSCRIPTS sub
+           WHERE sub.CONVERSATION_KEY = c.CONVERSATION_KEY
+             AND sub.TRANSCRIPT IS NOT NULL
+       ) AS has_transcript
+FROM GONG_SHARE.GONG_DATA_CLOUD.CALLS c
+WHERE LOWER(c.TITLE) LIKE LOWER('%<customer_substring>%')
+  AND c.PLANNED_START_DATETIME <= CURRENT_TIMESTAMP()
+ORDER BY c.PLANNED_START_DATETIME DESC
+LIMIT 5;
 ```
 
-Use the customer name (or first word) as `<customer_substring>`.
+Use the customer name (or first word) as `<customer_substring>`. The
+`PLANNED_START_DATETIME <= CURRENT_TIMESTAMP()` clause filters out
+not-yet-happened scheduled calls (which have no transcript and waste a C2
+slot). Pick the top 2 calls **where `has_transcript = TRUE`** for C2; if
+fewer than 2 such calls exist, run C2 against whatever is available and
+record the rest with the CALL_SPOTLIGHT_BRIEF fallback noted below.
 
-### C2 — Load transcripts (top 2 calls from C1)
+### C2 — Load transcripts (top 2 calls from C1 with `has_transcript = TRUE`)
 
 ```sql
-SELECT p.NAME AS speaker, p.AFFILIATION,
-       t.value:topic::STRING AS topic,
-       t.INDEX AS turn_index,
-       t.value:sentences AS sentences
-FROM GONG_SHARE.GONG_DATA_CLOUD.CALL_TRANSCRIPTS ct
-JOIN LATERAL FLATTEN(input => ct.TRANSCRIPT) t ON TRUE
+WITH turns AS (
+    SELECT ct.CONVERSATION_KEY,
+           t.INDEX                          AS turn_index,
+           t.value:topic::STRING            AS topic,
+           t.value:speakerId::STRING        AS speaker_id,
+           t.value:sentences                AS sentences
+    FROM GONG_SHARE.GONG_DATA_CLOUD.CALL_TRANSCRIPTS ct,
+         LATERAL FLATTEN(input => ct.TRANSCRIPT) t
+    WHERE ct.CONVERSATION_KEY IN ('<key_1>', '<key_2>')
+      AND ct.TRANSCRIPT IS NOT NULL
+)
+SELECT p.NAME            AS speaker,
+       p.AFFILIATION,
+       turns.topic,
+       turns.turn_index,
+       turns.sentences
+FROM turns
 JOIN GONG_SHARE.GONG_DATA_CLOUD.CONVERSATION_PARTICIPANTS p
-    ON ct.CONVERSATION_KEY = p.CONVERSATION_KEY
-    AND t.value:speakerId::STRING = p.SPEAKER_ID::STRING
-WHERE ct.CONVERSATION_KEY IN ('<key_1>', '<key_2>')
-  AND ct.TRANSCRIPT IS NOT NULL
-ORDER BY ct.CONVERSATION_KEY, t.INDEX;
+    ON  p.CONVERSATION_KEY = turns.CONVERSATION_KEY
+    AND p.SPEAKER_ID::STRING = turns.speaker_id
+ORDER BY turns.CONVERSATION_KEY, turns.turn_index;
 ```
 
 Critical join rules:
 - Use `CONVERSATION_KEY` (hash). Do NOT use `CONVERSATION_ID` (numeric) for joins.
-- Use explicit `JOIN LATERAL FLATTEN(...) ON TRUE` — do NOT use the implicit comma-join form (`CALL_TRANSCRIPTS ct, LATERAL FLATTEN(...) t JOIN ...`) as it puts the `ct` alias out of scope in the ON clause and causes a Snowflake compilation error.
-- **NULL fallback**: If the above returns 0 rows for a given CONVERSATION_KEY (TRANSCRIPT IS NULL), retrieve that call's `CALL_SPOTLIGHT_BRIEF` from the C1 result set and record `[FALLBACK: CALL_SPOTLIGHT_BRIEF — TRANSCRIPT NULL]` in the evidence file for that call.
+- The `LATERAL FLATTEN` lives inside a CTE and uses the implicit
+  comma-join form (no `ON TRUE` predicate). Snowflake rejects
+  `JOIN LATERAL FLATTEN(...) ON TRUE` together with a downstream join
+  predicate (`Unsupported feature 'lateral table function called with
+  OUTER JOIN syntax or a join predicate (ON clause)'`); the CTE form
+  sidesteps that limitation cleanly.
+- **NULL fallback**: If C1 reports `has_transcript = FALSE` for a chosen
+  call, retrieve that call's `CALL_SPOTLIGHT_BRIEF` from the C1 result set
+  and record `[FALLBACK: CALL_SPOTLIGHT_BRIEF — TRANSCRIPT NULL]` in the
+  evidence file for that call.
 - Distinguish customer vs Snowflake speakers using `p.AFFILIATION` (`External` vs `Internal`).
 
 ---

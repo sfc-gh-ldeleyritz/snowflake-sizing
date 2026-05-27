@@ -117,6 +117,20 @@ def build_skeleton() -> dict:
     skeleton.setdefault("collaboration", {"accounts": []})
     skeleton.setdefault("replication", {"enabled": False})
 
+    # Document-AI placeholders. Schema marks these as OPTIONAL siblings of
+    # `ai_cortex.cortex_complete` etc., but the proposal-template JS uses
+    # short-circuit `&&` guards to read `compute_hours_monthly` /
+    # `pages_per_month` (calcAICost path), and the `populateAIPanel()` row
+    # for `document_ai` historically blew up before optional chaining was
+    # added. Baking neutral disabled placeholders into the skeleton
+    # eliminates the entire class of "agent forgot to include the doc-AI
+    # keys -> JS dereferences undefined -> page renders $0" failure mode
+    # without forcing the agent to remember a separate rule.
+    ai_cortex = skeleton.setdefault("ai_cortex", {})
+    ai_cortex.setdefault("document_ai", {"enabled": False, "compute_hours_monthly": 0})
+    ai_cortex.setdefault("ai_parse_document_layout", {"enabled": False, "pages_per_month": 0})
+    ai_cortex.setdefault("ai_parse_document_ocr", {"enabled": False, "pages_per_month": 0})
+
     # Inject a one-liner self-describing marker. This is preserved through
     # the spec-prepare merge so a stray skeleton file is identifiable in
     # logs - but we strip it before final write in spec-prepare, so it

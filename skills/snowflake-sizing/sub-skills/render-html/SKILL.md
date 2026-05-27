@@ -1,6 +1,6 @@
 ---
 name: snowflake-sizing-render-html
-description: Phase 5 + 6 of snowflake-sizing - substitute template tokens, write the HTML (the PreToolUse sizing-guard hook validates pre-write), print the final summary.
+description: Phase 5 + 6 of snowflake-sizing - run scripts/render-html.py to substitute the proposal template, write the HTML (the PreToolUse sizing-guard hook validates pre-write), print the final summary.
 ---
 
 # Render-HTML sub-skill (snowflake-sizing)
@@ -36,45 +36,58 @@ both Writes:
   check. Block on any failure - retry the HTML write after fixing the
   underlying SIZING_SPEC.
 
-### Step 1 - Generate the HTML
+### Step 1 - Run scripts/render-html.py
 
-1. Read `${CLAUDE_PLUGIN_ROOT}/assets/templates/proposal-template.html`
-2. Read `${CLAUDE_PLUGIN_ROOT}/assets/branding/_brand_fonts.css`
-3. Read the spec JSON written in Phase 3.
-4. Substitute every token below (NOW load `references/html-spec.md` if you
-   need detail on the DOM contract):
+Do NOT hand-roll the token substitution and do NOT use bash redirects /
+`python -c ...open(...).write()` heredocs to drop the HTML on disk -
+those code paths bypass the PreToolUse hook entirely. Use the plugin
+script, which performs the substitution AND invokes the same
+`hooks/sizing-guard.py` gate the real `Write` tool would trigger:
 
-| Token | Value |
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/render-html.py \
+  --spec sizings/<customer-slug>-<N>year-sizing-v<version>-<YYYY-MM-DD>.json \
+  --out  sizings/<customer-slug>-<N>year-sizing-v<version>-<YYYY-MM-DD>.html
+```
+
+The script reads
+`${CLAUDE_PLUGIN_ROOT}/assets/templates/proposal-template.html`,
+`${CLAUDE_PLUGIN_ROOT}/assets/branding/_brand_fonts.css`, and
+`${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json` (deep-stripping
+`utility_queries_reference` blocks before the JSON reaches the HTML),
+substitutes every token below, and writes the result atomically only
+after the sizing-guard hook returns PASS. If the hook blocks, the script
+exits non-zero with the hook's reason - fix the underlying SIZING_SPEC
+and re-run; do NOT try to write the HTML through `Write` to "skip" the
+script. Load `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/html-spec.md`
+on demand for the full DOM contract.
+
+| Token | Value (handled by render-html.py) |
 |---|---|
 | `__BRAND_FONTS_CSS__` | full contents of `_brand_fonts.css` |
-| `__PRICING_DATA__` | full contents of `assets/snowflake_pricing_master.json` |
-| `__SIZING_SPEC__` | the complete SIZING_SPEC JSON (read from the file) |
-| `__CUSTOMER__` | customer display name |
-| `__EDITION__` | Snowflake edition |
-| `__CLOUD__` | `AWS` / `Azure` / `GCP` |
-| `__REGION__` | deployment region |
-| `__YEARS__` | contract length as integer |
-| `__CREDIT_RATE__` | per-credit dollar rate |
-| `__DATE__` | today's date (YYYY-MM-DD) |
+| `__PRICING_DATA__` | `assets/snowflake_pricing_master.json` with `utility_queries_reference` blocks deep-stripped |
+| `__SIZING_SPEC__` | the complete SIZING_SPEC JSON |
+| `__CUSTOMER__` | `meta.customer` |
+| `__EDITION__` | `meta.edition` |
+| `__CLOUD__` | `meta.cloud` |
+| `__REGION__` | `meta.region` |
+| `__YEARS__` | `meta.contract_years` |
+| `__CREDIT_RATE__` | `meta.credit_rate` |
+| `__DATE__` | `meta.generated_date` (or today) |
 | `__PDF_VERSION__` | `meta.pdf_version` |
 
-5. Write the result to `sizings/<slug>-<N>year-sizing-v<version>-<date>.html`.
-   The PreToolUse hook will scan and either approve or block. If blocked,
-   the agent sees the specific failures (em-dash location, forbidden-token
-   line number, unsubstituted token, or JS render trace) and must fix the
-   underlying SIZING_SPEC and re-Write.
-
-Do NOT modify any other part of the template.
+The two `__SIZING_SPEC_BEGIN__` / `__SIZING_SPEC_END__` sentinels are
+deliberately preserved by the script - the in-page Save Version code
+uses them as splice markers.
 
 ### Step 2 - Confirm hook approval
 
-After the Write succeeds (no `decision: block` from the hook), the HTML
-is on disk and structurally validated. No additional manual gate scripts
-need to be run; `hooks/sizing-guard.py` already covered:
+The script prints `sizing-guard hook: PASS` on success. That single line
+covers all four checks the hook runs against the rendered HTML:
 
 - Em-dash scan
 - Content-hygiene scan (forbidden tokens / internal artefact filenames)
-- Substitution-completeness (no `__TOKEN__` left)
+- Substitution-completeness (no `__TOKEN__` left except the sentinels)
 - Node sidecar render check (DOM parses, kpi-tcv resolves to non-zero)
 
 The legacy standalone scripts (`scripts/emdash-check.py`,

@@ -16,7 +16,16 @@ sub-skills loaded on demand.
 
 Parse `$ARGUMENTS`:
 
-- `context_file` - required. Path to customer transcript, questionnaire, or notes.
+- `context_file` - required by default. Path to customer transcript,
+  questionnaire, or notes. **If the value passed in `$ARGUMENTS` does not
+  resolve to an existing file**, treat the entire `$ARGUMENTS` string as
+  inline scenario context: keep it in memory as `inline_scenario`, and pass
+  it to the research-coordinator in place of a file path. This unblocks
+  ad-hoc invocations like `/snowflake-sizing Marks and Spencer wants to
+  migrate 50TB...` without forcing the SE to first dump the prompt into a
+  file. The audit trail in `temp/<slug>-research-evidence.md` records
+  `Source: inline scenario (no context file)` so the provenance is
+  preserved.
 - `--customer "Name"` - customer name override. If omitted, extract from context.
 - `--years N` - contract length. Default: **3**.
 - `--edition X` - Standard / Enterprise / Business Critical / VPS. Default: **Enterprise**.

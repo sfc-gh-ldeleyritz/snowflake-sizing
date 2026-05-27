@@ -162,6 +162,18 @@
     },
     "embeddings": {
       "enabled": false
+    },
+    "document_ai": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "ai_parse_document_layout": {
+      "enabled": false,
+      "pages_per_month": 0
+    },
+    "ai_parse_document_ocr": {
+      "enabled": false,
+      "pages_per_month": 0
     }
   },
   "storage": {

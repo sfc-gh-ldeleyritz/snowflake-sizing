@@ -16,7 +16,7 @@ tools:
   - Write
   - Bash
   - Task
-  - mcp__glean_default__search
+  - mcp__glean__search
   - snowflake_sql_execute
 ---
 
@@ -30,7 +30,12 @@ and return a structured summary to the parent skill.
 ## Inputs you will receive in your prompt
 
 - `customer` - customer name (full and any short form)
-- `context_file` - path to the discovery / questionnaire / notes file
+- `context_file` - path to the discovery / questionnaire / notes file. If the
+  caller could not resolve `context_file` to an existing file path, the
+  parent skill instead passes `inline_scenario` containing the entire
+  `$ARGUMENTS` string as raw scenario text. Forward `inline_scenario` to
+  every specialist in place of `context_file`; the audit trail will record
+  which mode was used.
 - Flags: `--skip-glean`, `--skip-gong`, `--mode replication`, `--mode dr`
 - `slug` - lowercased customer slug used for filenames
 - `evidence_path` - the final concatenated path: `temp/<slug>-research-evidence.md`
@@ -63,7 +68,7 @@ instructions if either fails.
 
 ### Glean MCP
 
-Run a no-op `mcp__glean_default__search` with `query: "*"`, `num_results: 1`.
+Run a no-op `mcp__glean__search` with `query: "*"`, `num_results: 1`.
 On error (`tool not found`, `MCP not configured`):
 
 ```

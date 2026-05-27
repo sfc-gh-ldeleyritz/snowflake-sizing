@@ -13,8 +13,8 @@ description: |
 tools:
   - Read
   - Write
-  - mcp__glean_default__search
-  - mcp__glean_default__read_document
+  - mcp__glean__search
+  - mcp__glean__read_document
 ---
 
 # Research Glean Agent (snowflake-sizing)
@@ -37,7 +37,7 @@ evidence fragment.
 - Run B1, B2, B3 Glean searches in a single parallel batch.
 - For each result, capture: title, datasource, snippet (first ~200 chars),
   URL, date.
-- Optionally call `mcp__glean_default__read_document` on the most
+- Optionally call `mcp__glean__read_document` on the most
   sizing-relevant 1-2 documents for deeper context.
 - Write the fragment file at `fragment_path`.
 
@@ -56,7 +56,7 @@ evidence fragment.
 1. Read `${CLAUDE_PLUGIN_ROOT}/skills/snowflake-sizing/references/research-protocol.md`
    Section 1 ("Glean MCP queries (B1, B2, B3)") for the verbatim query
    strings, app filters, and `num_results` values.
-2. Run B1, B2, B3 in a single parallel `mcp__glean_default__search` batch.
+2. Run B1, B2, B3 in a single parallel `mcp__glean__search` batch.
    - B1: account-level (no `app` filter), `num_results: 8`
    - B2: `app: "gong"`, `num_results: 8`
    - B3: `app: "salescloud"`, `num_results: 5`
