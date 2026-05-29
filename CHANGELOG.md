@@ -1,5 +1,108 @@
 # snowflake-sizing changelog
 
+## [v2.4.0] — remove one-click Download PDF; native Print is the sole PDF path
+
+### Removed
+
+- **The one-click "Download PDF" button and its `html2pdf.js` pipeline.** The
+  `.pdf-btn` button, the `downloadPDF()` function, the html2pdf CDN `<script>`,
+  and the entire screen-mode `body.pdf-export` CSS block (the maintenance-pair
+  twin of `@media print`) are all deleted. Rasterizing the live DOM with
+  html2canvas was fragile across browser widths and duplicated a whole CSS
+  block; the native print dialog produces a cleaner, vector PDF with no extra
+  dependency.
+- **The headless PDF eval harness** that existed only to exercise that pipeline:
+  `scripts/pdf-export-eval.mjs`, `scripts/pdf-whitespace-check.py`,
+  `scripts/pdf-layout-judge.py`, `scripts/run-pdf-eval.sh`, plus the `package.json`
+  / `package-lock.json` / `node_modules/` they pulled in (and the matching
+  `.gitignore` lines). `scripts/render-all-fixtures.py` is retained.
+
+### Changed
+
+- **Native print-to-PDF is now the sole, primary export path.** The remaining
+  Print button is renamed **"Print / Save as PDF"** and promoted to the primary
+  navy style at top-right (the old Download PDF slot); **Save HTML** stays as the
+  secondary white button and shifts left to clear the wider label.
+- **`@media print` pagination hardened.** `.section` keeps its earlier fix of
+  *not* using `break-inside: avoid` (a section is frequently taller than one A4
+  page, so the constraint only produced a large dead gap before splitting anyway).
+  The small indivisible inner units that previously only carried these
+  protections inside `body.pdf-export` are now protected directly in `@media
+  print`: `break-inside: avoid` on `.kpi-tile`, `.chart-row`, `.chart-container`,
+  and `.year-table tr`, plus `break-after: avoid` on `.year-table thead`.
+- **Kept the on-screen side-by-side chart layout in print.** `@media print` no
+  longer collapses `.chart-row` to a single column; it inherits the base 2fr/1fr
+  grid (stacked bar + donut, same as on screen). Collapsing to one column left the
+  donut canvas at its stale on-screen size and overflowed it onto the Year-by-Year
+  table. `.chart-container` also gets `min-width: 0` (prevents a grid-track blowout
+  pushing the donut column off the page edge) and `overflow: hidden` (clips any
+  residual canvas overflow to its own cell rather than the table).
+
+## [v2.3.0] — editable per-workload sourcing notes
+
+### Added
+
+- **The per-workload "SOURCED:" line is now editable and deletable**, mirroring
+  the Stated Assumptions / Requires Confirmation lists. In `populateWorkloadCards()`
+  the static `.justification` div became an editable `noteBlock`: the source label
+  (`w.source`, e.g. `SOURCED` / `ASSUMPTION`) and the note text (`w.justification`)
+  are both `contenteditable` (the colon stays outside the editable label), and a
+  hover-revealed `✕` button (the shared `.item-delete-btn`) deletes the note. When a
+  note has been deleted the card shows a dashed **"+ Add sourcing note"** button
+  (the shared `.add-item-btn`) so it can be restored — matching the Add affordance
+  the other editable lists already have.
+- **`updateWorkloadNote()` / `removeWorkloadNote()` / `addWorkloadNote()` helpers.**
+  `updateWorkloadNote` writes `source`/`justification` straight to the spec on
+  input/blur with no `recalculate()` (the note is text-only and does not affect cost
+  math, and skipping the re-render keeps inline-edit focus). `removeWorkloadNote`
+  sets `justification = null` (the deleted state) and re-renders; `addWorkloadNote`
+  seeds `source: 'SOURCED'`, re-renders, and focuses the new field.
+
+### Changed
+
+- **CSS for the editable note.** Added hover/focus styling for the note's
+  `contenteditable` regions, a `.justification:hover .item-delete-btn` reveal rule,
+  and `.justification.note-empty` handling. The empty-note "+ Add sourcing note"
+  affordance is hidden in `@media print`, so a deleted note leaves no empty
+  bordered block in the printed/exported PDF.
+
+## [v2.2.1] — Expected scenario locked to Year-by-Year TCV
+
+### Fixed
+
+- **Expected scenario card no longer drifts from the Year-by-Year Breakdown.**
+  `updateScenarios()` computed the Expected TCV with a structurally different
+  model than `recalculate()`: it forced every workload through a single synthetic
+  go-live window (`default_go_live_month + shift`) instead of each workload's own
+  `dev_start`/`go_live`/`ramp_curve`, omitted the entire `otherCost` stack
+  (SPCS/OpenFlow/Oracle/transfer/collab/replication), and rounded the growth rate.
+  On the acme-financial fixture the Expected card showed **$496,090** against a
+  Year-by-Year headline of **$466,553**. The per-year calculation is now extracted
+  into a single `computeYearData(opts)` engine; `recalculate()` calls
+  `computeYearData(null)` and the Expected card reuses that same base case, so the
+  two values are identical by construction ($466,553 == $466,553).
+
+### Changed
+
+- **Expected scenario is now the locked base case.** Its growth control writes
+  straight to `meta.annual_growth_rate` (via new `updateExpectedGrowth()`) and
+  triggers a full `recalculate()`, keeping the KPI TCV, Year-by-Year table, and
+  Expected card aligned. The per-workload curve/go-live are shown as a descriptive
+  subtitle (no override control). Conservative and Aggressive remain editable
+  sensitivity bands (growth + curve), now computed over the **full** cost stack via
+  `computeYearData({growth, curveOverride, goLiveShift})`.
+- **`rampMultiplierForYear` / `defaultRampMultiplierForYear`** accept an optional
+  `growthOverride` argument, replacing the previous `meta.annual_growth_rate`
+  temp-swap hack in the scenario path. The `scenarioRampForYear` helper was removed.
+
+### Tests
+
+- **`scripts/html-render-check.mjs`** now parses the rendered `#scenarios` block
+  and emits `expected_scenario_tcv` alongside `kpi_tcv`.
+- **`tests/test_scenario_consistency.py`** (new) boots every `tests/fixtures/*.json`
+  through the Node render harness and asserts `expected_scenario_tcv == kpi_tcv`
+  (skips automatically when Node is unavailable). Full suite: 236 passed (+30).
+
 ## [v2.2.0] — one-click Download PDF
 
 ### Added

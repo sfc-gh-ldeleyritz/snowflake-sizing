@@ -131,10 +131,8 @@ Requires Confirmation:
   ...
 
 Open in browser: open sizings/<slug>-<N>year-sizing-v<version>-<date>.html
-Download PDF: click the "Download PDF" button (recommended) to download a clean
-  multi-page A4 PDF with no browser headers/footers, capturing your current edits.
-Print (fallback): click "Print" to open the native browser dialog
-  (Cmd-P; in the print dialog expand More Settings and uncheck Headers and footers).
+Save as PDF: click the "Print / Save as PDF" button, then choose Save as PDF as the
+  destination (expand More Settings and uncheck Headers and footers for a clean output).
 Save HTML: click "Save HTML" to download a self-contained HTML with the SE's
   current edits embedded; the version number auto-increments each save.
 ```

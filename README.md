@@ -81,7 +81,7 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 - **Per-feature tooltips** — `ⓘ` icon next to every togglable feature explains what it is and how it bills. Hidden in print mode.
 - **Editable assumptions** — Stated Assumptions and Requires Confirmation items are `contenteditable` in the browser. Add, delete, or reword inline; changes persist in `SIZING_SPEC` and are saved by Save Version.
 - **Scenario toggle** — checkbox above the Scenario Comparison grid to show/hide the Conservative and Aggressive cards.
-- **Download PDF** — floating button (primary) rasterizes the live, edited page with `html2pdf.js` and downloads a clean multi-page A4 PDF with no browser-injected headers or footers. A `body.pdf-export` class expands all tabs in flow and reflows Chart.js canvases, mirroring the `@media print` rules. A secondary **Print** button still opens the native dialog as a fallback.
+- **Print / Save as PDF** — floating button (primary) opens the native browser print dialog; choose "Save as PDF" as the destination for a clean multi-page A4 PDF. The `@media print` rules expand all tabs in flow, reflow Chart.js canvases, hide interactive chrome, and keep KPI tiles, charts, and table rows from splitting across page boundaries.
 
 ## Context File Format
 

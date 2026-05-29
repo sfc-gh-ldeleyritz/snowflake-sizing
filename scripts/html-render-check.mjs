@@ -264,6 +264,16 @@ if (!bootError) {
 const tcvEl = elementsById.get('kpi-tcv');
 const tcv = tcvEl ? tcvEl._textContent || '$0' : '$0';
 
+// Extract the Expected scenario card's TCV from the rendered #scenarios innerHTML.
+// Used by the scenario-consistency regression test to assert it equals kpi_tcv.
+let expectedScenarioTcv = null;
+const scenariosEl = elementsById.get('scenarios');
+if (scenariosEl && scenariosEl._innerHTML) {
+  const cardRe = /scenario-card\s+expected[\s\S]*?scenario-tcv">([^<]*)<\/div>/;
+  const cm = scenariosEl._innerHTML.match(cardRe);
+  if (cm) expectedScenarioTcv = cm[1].trim();
+}
+
 const error = bootError || handlerError;
 const stack = bootStack || handlerStack;
 
@@ -276,6 +286,7 @@ const ok = !error && !tcvIsZero;
 console.log(JSON.stringify({
   ok,
   kpi_tcv: tcv,
+  expected_scenario_tcv: expectedScenarioTcv,
   error,
   stack,
 }));
