@@ -133,8 +133,6 @@ Requires Confirmation:
 Open in browser: open sizings/<slug>-<N>year-sizing-v<version>-<date>.html
 Print / Save as PDF: click the "Print / Save as PDF" button in the proposal
   (Cmd-P; in the print dialog expand More Settings and uncheck Headers and footers).
-Save Version: click "Save Version" to download a self-contained HTML with the SE's
+Save HTML: click "Save HTML" to download a self-contained HTML with the SE's
   current edits embedded; the version number auto-increments each save.
-Export JSON: click "Export JSON" to download the current SIZING_SPEC as a portable
-  .json file (round-trip browser edits, or feed future export skills).
 ```

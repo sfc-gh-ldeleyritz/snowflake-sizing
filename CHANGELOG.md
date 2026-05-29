@@ -1,6 +1,81 @@
 # snowflake-sizing changelog
 
-## [v2.0.0] — Deterministic renderer, pytest suite, pricing validator
+## [v2.1.0] — ACV KPI, editable scenarios, Cortex token helper, Save HTML
+
+Three rounds of feedback addressed in this release: two items from internal review
+(`temp/feedback.md`) and three from a Gong demo session with Joel Brunger.
+
+### Added
+
+- **ACV KPI tile.** The fourth KPI tile is now "ACV (Avg / Year)" = TCV ÷ contract_years,
+  replacing the previous "Recommended Commit" tile which was a redundant duplicate of
+  Total TCV. The value updates live on every `recalculate()` call and in the
+  DOMContentLoaded pre-population from `COMPUTED_TOTALS`.
+
+- **Editable scenario parameters.** The Conservative, Expected, and Aggressive scenario
+  cards in the Scenario Comparison section previously showed Growth % and Curve as
+  disabled (read-only) inputs. Both fields are now editable selects/inputs wired to a new
+  `updateScenarioParam(key, field, value)` helper. Changes update the card's per-year
+  breakdown and TCV immediately via `updateScenarios()` without a full `recalculate()`.
+  Parameters persist in `SIZING_SPEC.scenarios` so they survive a Save HTML round-trip.
+  The Expected scenario seeds its `growth_pct` from `meta.annual_growth_rate` on first
+  load, fixing the propagation bug where changing "Annual growth %" in Global Settings
+  had no effect on the Expected scenario card.
+
+- **`SIZING_SPEC.scenarios` block.** New top-level key added to
+  `framework/sizing_spec_skeleton.json` with default Conservative / Expected / Aggressive
+  tuples. `normalizeSpec()` in the template seeds the block from defaults (Expected growth
+  seeded from `meta.annual_growth_rate`) when opening specs that predate this release.
+
+- **Cortex token estimation helper (Cortex Agents + Snowflake Intelligence).** The AI
+  panel now shows a helper row below each feature with six inputs:
+  `monthly_users × sessions_per_user_per_day × messages_per_session × avg_input_tokens_per_message`
+  (and `avg_output_tokens_per_message`) `× working_days_per_month`. Changing any field
+  calls the new `deriveAgentTokens(feat)` function, which recomputes
+  `monthly_input_tokens_M` / `monthly_output_tokens_M`, writes them back to SIZING_SPEC,
+  and syncs the direct token inputs. Mirrors the existing Cortex Code
+  `devs × queries/day × tokens/query` model. Helper field values persist in SIZING_SPEC
+  alongside the derived token counts.
+
+- **`skills/snowflake-sizing/references/ai-feature-defaults.md` — Cortex token
+  estimation section.** Documents the `users × sessions × messages × tokens` formula,
+  typical parameter ranges by usage profile (light / moderate / heavy), and an example
+  patch dict with all six helper fields alongside derived `monthly_input_tokens_M` /
+  `monthly_output_tokens_M`. Claude uses this guidance when building specs from research
+  evidence.
+
+### Changed
+
+- **"Save HTML" button replaces "Export JSON".** The "Export JSON" button (which
+  downloaded the SIZING_SPEC as a `.json` file) has been removed. The "Save Version"
+  button is renamed "Save HTML" to make its function unambiguous — it already auto-
+  increments `meta.version_number` and downloads a self-contained `.html` snapshot.
+  The `exportSpec()` function is removed. The render-html sub-skill Phase 6 terminal
+  summary updated accordingly.
+
+- **`framework/sizing_spec_schema.json` — helper fields added to `cortex_agents` and
+  `snowflake_intelligence`.** Eight new optional properties (`monthly_users`,
+  `sessions_per_user_per_day`, `messages_per_session`, `avg_input_tokens_per_message`,
+  `avg_output_tokens_per_message`, `working_days_per_month`, `model`,
+  `monthly_cache_write_tokens_M`, `monthly_cache_read_tokens_M`) added to both objects.
+  `additionalProperties: false` was blocking these fields from being saved in validated
+  specs.
+
+### Verified
+
+```bash
+# Full test suite passes unchanged
+python3 -m pytest tests/ -q
+# 196 passed in 0.49s
+
+# Render + hook pass
+python3 scripts/render-html.py \
+  --spec tests/fixtures/acme-financial-3year-sizing.json \
+  --out temp/output/joel-feedback.html
+# sizing-guard hook: PASS
+```
+
+
 
 This release rearchitects how sizing proposals are generated and introduces the plugin's first automated test suite. Previously, `scripts/render-html.py` was a 270-line flat script mixing spec validation, Python math, token substitution, and file I/O with no test coverage and no way to call any stage independently. All rendering logic has been extracted into a new `renderer/` Python package with a clean public API (`compile_spec(spec, pricing, template, fonts_css) → CompileResult`), structured after the pattern established by `apps/architecture-diagrams-app/backend/renderer/`. A 196-test pytest suite in `tests/` verifies the pipeline end-to-end — ramp math, warehouse credits, storage formulas, serverless billing, spec validation, token substitution, HTML structure, and pricing rate correctness — all running in under one second with no LLM calls, no Node.js, and no network access. A programmatic cross-check of all 10 fixture outputs against `assets/snowflake_pricing_master.json` uncovered 9 wrong pricing values across 4 files (wrong region lookups, made-up AI credit tiers, stale storage proxies); these are corrected and the validator is now wired into the renderer so future specs emit a `[pricing-check]` warning before HTML is written. Python-computed totals (`COMPUTED_TOTALS`) are now embedded as a first-class JS variable in every rendered HTML, giving the in-page JS authoritative Python-side values for initial KPI display and eliminating the JS/Python drift on first load.
 

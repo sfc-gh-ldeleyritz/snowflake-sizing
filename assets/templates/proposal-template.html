@@ -437,8 +437,7 @@ li:hover .item-delete-btn { display: inline; }
 </head>
 <body>
 <button class="print-btn" onclick="window.print()" title="Print or Save as PDF">Print / Save as PDF</button>
-<button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save Version</button>
-<button class="save-btn" onclick="exportSpec()" title="Download the SIZING_SPEC as a portable .json file for use with other export formats">Export JSON</button>
+<button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save HTML</button>
 <div class="container">
 
 <!-- 1. Header -->
@@ -492,7 +491,7 @@ li:hover .item-delete-btn { display: inline; }
     <div class="kpi-value" id="kpi-credits">0 cr</div>
   </div>
   <div class="kpi-tile">
-    <div class="kpi-label">Recommended Commit</div>
+    <div class="kpi-label">ACV (Avg / Year)</div>
     <div class="kpi-value" id="kpi-commit">$0</div>
   </div>
 </div>
@@ -879,6 +878,14 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
       if (w.ramp_curve      == null) w.ramp_curve      = m.default_ramp_curve;
     });
   }
+
+  // Scenario comparison defaults. Expected seeds its growth from the spec's configured
+  // annual_growth_rate so it stays in sync with the SE's base-case assumption.
+  if (!SIZING_SPEC.scenarios) SIZING_SPEC.scenarios = {
+    conservative: { growth_pct: 10,                                    curve: 'slow',   go_live_shift:  1 },
+    expected:     { growth_pct: Math.round((m.annual_growth_rate || 0.20) * 100), curve: m.default_ramp_curve || 'linear', go_live_shift:  0 },
+    aggressive:   { growth_pct: 35,                                    curve: 'fast',   go_live_shift: -1 },
+  };
 })();
 
 // ========== Calculation engine ==========
@@ -1340,7 +1347,7 @@ function updateKPIs(yearData) {
   document.getElementById('kpi-tcv').textContent     = '$' + fmt(tcv);
   document.getElementById('kpi-yr1').textContent     = '$' + fmt(yr1);
   document.getElementById('kpi-credits').textContent = fmt(totalCredits) + ' cr';
-  document.getElementById('kpi-commit').textContent  = '$' + fmt(tcv);
+  document.getElementById('kpi-commit').textContent  = '$' + fmt(tcv / (SIZING_SPEC.meta.contract_years || 1));
 }
 
 function updateYearTable(yearData) {
@@ -1450,6 +1457,26 @@ function updateAI(path, field, value) {
   let ref = SIZING_SPEC.ai_cortex;
   for (let i = 0; i < parts.length; i++) ref = ref[parts[i]];
   if (ref) { ref[field] = value; recalculate(); }
+}
+
+function deriveAgentTokens(feat) {
+  const f = SIZING_SPEC.ai_cortex[feat];
+  if (!f) return;
+  const u    = f.monthly_users               || 0;
+  const spd  = f.sessions_per_user_per_day   || 0;
+  const mps  = f.messages_per_session        || 0;
+  const ait  = f.avg_input_tokens_per_message  || 0;
+  const aot  = f.avg_output_tokens_per_message || 0;
+  const days = f.working_days_per_month      || 22;
+  const inM  = u * spd * mps * ait / 1_000_000 * days;
+  const outM = u * spd * mps * aot / 1_000_000 * days;
+  f.monthly_input_tokens_M  = Math.round(inM  * 100) / 100;
+  f.monthly_output_tokens_M = Math.round(outM * 100) / 100;
+  const inEl  = document.getElementById('ai-' + feat + '-in');
+  const outEl = document.getElementById('ai-' + feat + '-out');
+  if (inEl)  inEl.value  = f.monthly_input_tokens_M;
+  if (outEl) outEl.value = f.monthly_output_tokens_M;
+  recalculate();
 }
 
 function updateStorage(field, value) {
@@ -1598,13 +1625,15 @@ function updateScenarios() {
   const showLowHigh = document.getElementById('show-low-high')?.checked ?? true;
   const grid = document.getElementById('scenarios');
   if (grid) grid.classList.toggle('only-expected', !showLowHigh);
-  // Each scenario carries its own (curve, go_live shift, growth) tuple.
-  // The shift moves go_live earlier (negative) or later (positive) relative to per-workload setting.
-  const scenarios = [
-    showLowHigh && { name: 'Conservative', growth: 0.10, curve: 'slow',   shift: +1, cls: '' },
-    { name: 'Expected',     growth: 0.20, curve: 'linear', shift:  0, cls: 'expected' },
-    showLowHigh && { name: 'Aggressive',   growth: 0.35, curve: 'fast',   shift: -1, cls: '' },
+
+  // Read scenario parameters from SIZING_SPEC so SE edits survive Save HTML.
+  const sp = SIZING_SPEC.scenarios;
+  const scenarioDefs = [
+    showLowHigh && { key: 'conservative', name: 'Conservative', growth: sp.conservative.growth_pct / 100, curve: sp.conservative.curve, shift: sp.conservative.go_live_shift, cls: '' },
+    { key: 'expected',     name: 'Expected',     growth: sp.expected.growth_pct     / 100, curve: sp.expected.curve,     shift: sp.expected.go_live_shift,     cls: 'expected' },
+    showLowHigh && { key: 'aggressive',   name: 'Aggressive',   growth: sp.aggressive.growth_pct   / 100, curve: sp.aggressive.curve,   shift: sp.aggressive.go_live_shift,   cls: '' },
   ].filter(Boolean);
+
   const years = SIZING_SPEC.meta.contract_years;
   const cr    = SIZING_SPEC.meta.credit_rate;
   const aiCr  = SIZING_SPEC.meta.ai_credit_rate;
@@ -1627,7 +1656,10 @@ function updateScenarios() {
     return r;
   };
 
-  const html = scenarios.map(sc => {
+  const curveOpts = ['slowest','slow','linear','fast','fastest']
+    .map(c => `<option value="${c}" ${c==='{CURVE}'?'selected':''}>${c}</option>`);
+
+  const html = scenarioDefs.map(sc => {
     let yearRows = '';
     let tcv = 0;
     for (let y = 1; y <= years; y++) {
@@ -1641,6 +1673,8 @@ function updateScenarios() {
       yearRows += `<div class="scenario-row"><span>Year ${y}</span><span>$${fmt(total)}</span></div>`;
     }
     const goLiveLabel = Math.max(2, (m.default_go_live_month || 3) + sc.shift);
+    const curveSel = ['slowest','slow','linear','fast','fastest']
+      .map(c => `<option value="${c}" ${c===sc.curve?'selected':''}>${c}</option>`).join('');
     return `<div class="scenario-card ${sc.cls}">
       <div class="scenario-title">${sc.name}</div>
       <div style="font-size: 12px; color: var(--gray-600);">${(sc.growth*100).toFixed(0)}%/yr growth &middot; ${sc.curve} curve &middot; go-live month ${goLiveLabel}</div>
@@ -1648,12 +1682,22 @@ function updateScenarios() {
       ${yearRows}
       <div class="scenario-row total"><span>TCV</span><span>$${fmt(tcv)}</span></div>
       <div class="scenario-controls">
-        <label>Growth %<input type="number" value="${(sc.growth*100).toFixed(0)}" min="0" max="100" disabled></label>
-        <label>Curve<input type="text" value="${sc.curve}" disabled></label>
+        <label>Growth %
+          <input type="number" value="${(sc.growth*100).toFixed(0)}" min="0" max="200"
+                 oninput="updateScenarioParam('${sc.key}', 'growth_pct', +this.value)">
+        </label>
+        <label>Curve
+          <select onchange="updateScenarioParam('${sc.key}', 'curve', this.value)">${curveSel}</select>
+        </label>
       </div>
     </div>`;
   }).join('');
   document.getElementById('scenarios').innerHTML = html;
+}
+
+function updateScenarioParam(key, field, value) {
+  SIZING_SPEC.scenarios[key][field] = value;
+  updateScenarios();
 }
 
 // ========== Populators ==========
@@ -1795,36 +1839,65 @@ function populateAIPanel() {
     </div>
     <div class="ai-section">
       <h4>Cortex Agents / Snowflake Intelligence</h4>
-      <div class="ai-row">
-        <label><input type="checkbox" ${ai.cortex_agents.enabled ? 'checked' : ''}
-               onchange="updateAI('cortex_agents', 'enabled', this.checked)"> Cortex Agents${tt('cortex_agents')}</label>
-        <span></span>
-        <div class="input-with-unit">
-          <input type="number" min="0" placeholder="Input" value="${ai.cortex_agents.monthly_input_tokens_M}"
-                 oninput="updateAI('cortex_agents', 'monthly_input_tokens_M', +this.value)">
-          <span class="unit-chip">input M tok/mo</span>
+      ${['cortex_agents', 'snowflake_intelligence'].map(feat => {
+        const f = ai[feat];
+        const label = feat === 'cortex_agents' ? 'Cortex Agents' : 'Snowflake Intelligence';
+        const ttKey = feat === 'cortex_agents' ? 'cortex_agents' : 'snowflake_intelligence';
+        const u = f.monthly_users || 0;
+        const spd = f.sessions_per_user_per_day || 0;
+        const mps = f.messages_per_session || 0;
+        const ait = f.avg_input_tokens_per_message || 0;
+        const aot = f.avg_output_tokens_per_message || 0;
+        const days = f.working_days_per_month || 22;
+        return `<div class="ai-row">
+          <label><input type="checkbox" ${f.enabled ? 'checked' : ''}
+                 onchange="updateAI('${feat}', 'enabled', this.checked)"> ${label}${tt(ttKey)}</label>
+          <span></span>
+          <div class="input-with-unit">
+            <input type="number" min="0" placeholder="Input" id="ai-${feat}-in" value="${f.monthly_input_tokens_M}"
+                   oninput="updateAI('${feat}', 'monthly_input_tokens_M', +this.value)">
+            <span class="unit-chip">input M tok/mo</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" min="0" placeholder="Output" id="ai-${feat}-out" value="${f.monthly_output_tokens_M}"
+                   oninput="updateAI('${feat}', 'monthly_output_tokens_M', +this.value)">
+            <span class="unit-chip">output M tok/mo</span>
+          </div>
         </div>
-        <div class="input-with-unit">
-          <input type="number" min="0" placeholder="Output" value="${ai.cortex_agents.monthly_output_tokens_M}"
-                 oninput="updateAI('cortex_agents', 'monthly_output_tokens_M', +this.value)">
-          <span class="unit-chip">output M tok/mo</span>
-        </div>
-      </div>
-      <div class="ai-row">
-        <label><input type="checkbox" ${ai.snowflake_intelligence.enabled ? 'checked' : ''}
-               onchange="updateAI('snowflake_intelligence', 'enabled', this.checked)"> Snowflake Intelligence${tt('snowflake_intelligence')}</label>
-        <span></span>
-        <div class="input-with-unit">
-          <input type="number" min="0" placeholder="Input" value="${ai.snowflake_intelligence.monthly_input_tokens_M}"
-                 oninput="updateAI('snowflake_intelligence', 'monthly_input_tokens_M', +this.value)">
-          <span class="unit-chip">input M tok/mo</span>
-        </div>
-        <div class="input-with-unit">
-          <input type="number" min="0" placeholder="Output" value="${ai.snowflake_intelligence.monthly_output_tokens_M}"
-                 oninput="updateAI('snowflake_intelligence', 'monthly_output_tokens_M', +this.value)">
-          <span class="unit-chip">output M tok/mo</span>
-        </div>
-      </div>
+        <div class="ai-row" style="background:var(--gray-100);border-radius:4px;padding:6px 8px;margin-top:-4px;font-size:12px;gap:6px;">
+          <span style="color:var(--gray-600);white-space:nowrap;">Estimate:</span>
+          <div class="input-with-unit">
+            <input type="number" min="0" placeholder="0" value="${u||''}"
+                   oninput="updateAI('${feat}','monthly_users',+this.value);deriveAgentTokens('${feat}')">
+            <span class="unit-chip">users</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" min="0" step="0.5" placeholder="0" value="${spd||''}"
+                   oninput="updateAI('${feat}','sessions_per_user_per_day',+this.value);deriveAgentTokens('${feat}')">
+            <span class="unit-chip">sess/user/day</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" min="0" step="0.5" placeholder="0" value="${mps||''}"
+                   oninput="updateAI('${feat}','messages_per_session',+this.value);deriveAgentTokens('${feat}')">
+            <span class="unit-chip">msgs/sess</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" min="0" placeholder="0" value="${ait||''}"
+                   oninput="updateAI('${feat}','avg_input_tokens_per_message',+this.value);deriveAgentTokens('${feat}')">
+            <span class="unit-chip">in tok/msg</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" min="0" placeholder="0" value="${aot||''}"
+                   oninput="updateAI('${feat}','avg_output_tokens_per_message',+this.value);deriveAgentTokens('${feat}')">
+            <span class="unit-chip">out tok/msg</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" min="1" max="31" placeholder="22" value="${days}"
+                   oninput="updateAI('${feat}','working_days_per_month',+this.value);deriveAgentTokens('${feat}')">
+            <span class="unit-chip">days/mo</span>
+          </div>
+        </div>`;
+      }).join('')}
     </div>
     <div class="ai-section">
       <h4>Cortex Code (developer assist)</h4>
@@ -2604,7 +2677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const _el = (id) => document.getElementById(id);
     if (_el('kpi-tcv'))    _el('kpi-tcv').textContent    = '$' + Math.round(coreTcv).toLocaleString('en-US');
     if (_el('kpi-yr1'))    _el('kpi-yr1').textContent    = '$' + Math.round(coreYr1).toLocaleString('en-US');
-    if (_el('kpi-commit')) _el('kpi-commit').textContent = '$' + Math.round(coreTcv).toLocaleString('en-US');
+    if (_el('kpi-commit')) _el('kpi-commit').textContent = '$' + Math.round(coreTcv / (SIZING_SPEC.meta.contract_years || 1)).toLocaleString('en-US');
   }
   recalculate();
   // Surface the Python build-time TCV (from spec-prepare) alongside the JS
@@ -2678,28 +2751,6 @@ function saveSnapshot() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// ========== Export JSON (download portable SIZING_SPEC) ==========
-// Downloads the current SIZING_SPEC as a .json file. Use this to round-trip
-// browser edits back to disk, or to feed future export skills (pptx, xlsx, etc.).
-function exportSpec() {
-  const meta = SIZING_SPEC.meta || {};
-  const slug = (meta.customer || 'customer').toString().toLowerCase()
-    .replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
-  const years = meta.contract_years || 1;
-  const v = meta.version_number || 1;
-  const today = new Date().toISOString().slice(0, 10);
-  const filename = slug + '-' + years + 'year-sizing-v' + v + '-' + today + '.json';
-
-  const blob = new Blob([JSON.stringify(SIZING_SPEC, null, 2)], { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 </script>
 </body>
 </html>

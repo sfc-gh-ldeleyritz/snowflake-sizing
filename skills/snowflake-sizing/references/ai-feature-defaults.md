@@ -64,6 +64,48 @@ The legacy single-object shape
 is auto-normalized by the template (legacy values land on `cli`), but new specs
 MUST emit the three-surface form.
 
+## Cortex Agents / Snowflake Intelligence token estimation
+
+Direct `monthly_input_tokens_M` / `monthly_output_tokens_M` inputs are hard to
+estimate from scratch. Derive them from a usage model instead. The HTML proposal
+has a built-in helper row for both features — the AI should populate the same
+fields in the patch so spec-prepare embeds the right token volumes.
+
+**Formula** (per feature):
+```
+monthly_input_tokens_M  = users × sessions_per_user_per_day × messages_per_session
+                          × avg_input_tokens_per_message / 1_000_000 × working_days_per_month
+monthly_output_tokens_M = same, with avg_output_tokens_per_message
+```
+
+**Typical ranges:**
+
+| Parameter | Light usage | Moderate | Heavy |
+|---|---|---|---|
+| `monthly_users` | 10 - 50 | 100 - 500 | 1,000+ |
+| `sessions_per_user_per_day` | 1 - 2 | 2 - 5 | 10 - 20 |
+| `messages_per_session` | 2 - 5 | 5 - 10 | 10 - 20 |
+| `avg_input_tokens_per_message` | 500 - 1,500 | 1,500 - 3,000 | 3,000 - 8,000 |
+| `avg_output_tokens_per_message` | 200 - 500 | 500 - 1,000 | 1,000 - 2,000 |
+| `working_days_per_month` | 22 (default) | 22 | 22 - 30 |
+
+Include all six helper fields in the patch alongside the derived token counts.
+Example:
+```json
+"cortex_agents": {
+  "enabled": true,
+  "model": "claude-4-sonnet",
+  "monthly_users": 200,
+  "sessions_per_user_per_day": 3,
+  "messages_per_session": 6,
+  "avg_input_tokens_per_message": 2000,
+  "avg_output_tokens_per_message": 600,
+  "working_days_per_month": 22,
+  "monthly_input_tokens_M": 15.84,
+  "monthly_output_tokens_M": 4.75
+}
+```
+
 ## Enable-only-with-evidence rule
 
 Enable AI features only when the customer has explicitly mentioned them or
