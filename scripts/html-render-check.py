@@ -274,7 +274,8 @@ def check_file(path_str):
             f"  (JS render gate reported {js_result.get('kpi_tcv', '$0')})",
         ]
 
-    # ── Divergence check (JS < Python) ──────────────────────────────────── #
+    # ── Divergence check (JS vs Python) ─────────────────────────────────── #
+    passed = True
     summary_lines = [f"{path_str}: PASS"]
     year_parts = "  ".join(
         f"Year {y['year']}: {fmt(y['year_total'])}" for y in year_data
@@ -284,11 +285,16 @@ def check_file(path_str):
 
     if py_tcv > 0 and js_tcv > 0:
         # Python TCV models warehouse compute + storage only. JS TCV adds
-        # serverless / AI / SPCS / OpenFlow / collaboration / data transfer.
-        # JS is therefore expected to run higher; the only divergence worth
-        # flagging is JS < Python (something that the Python math counted is
-        # missing from the JS rendered total) — this should never happen
-        # unless the renderer fails partway through.
+        # serverless / AI / SPCS / OpenFlow / collaboration / data transfer /
+        # replication. JS is therefore expected to run somewhat higher.
+        #
+        #   JS < Python      → renderer omitting workload cost (warn).
+        #   Python < JS ≤ 3x → normal excluded-cost overhead (observed 1.1–1.8x).
+        #   3x < JS ≤ 10x    → suspiciously high (warn) — check a runaway input
+        #                      such as a _pct value entered as a fraction.
+        #   JS > 10x         → almost certainly a unit/convention bug (fail);
+        #                      M&S replication blew up to 131x this way.
+        ratio = js_tcv / py_tcv
         if js_tcv < py_tcv * 0.95:
             summary_lines.append(
                 f"  [warn] JS render TCV ({fmt(js_tcv)}) is lower than "
@@ -296,12 +302,30 @@ def check_file(path_str):
                 "renderer may be omitting workload cost. Verify the page "
                 "in a real browser."
             )
+        elif ratio > 10:
+            summary_lines[0] = f"{path_str}: FAILED"
+            summary_lines.append(
+                f"  JS render TCV ({fmt(js_tcv)}) is {ratio:.0f}x the "
+                f"Python core TCV ({fmt(py_tcv)}) — far beyond the "
+                "excluded-cost overhead the JS adds. This almost always "
+                "means a _pct or unit-convention bug (e.g. a percent entered "
+                "as a fraction inflating replication growth). Inspect the "
+                "replication / storage growth inputs."
+            )
+            passed = False
+        elif ratio > 3:
+            summary_lines.append(
+                f"  [warn] JS render TCV ({fmt(js_tcv)}) is {ratio:.1f}x the "
+                f"Python core TCV ({fmt(py_tcv)}) — higher than the usual "
+                "1.1–1.8x excluded-cost overhead. Sanity-check the "
+                "replication / storage growth inputs for a runaway value."
+            )
 
     summary_lines.append(
         f"  ({fmt(total_cr).replace('$','')} warehouse credits, "
         f"cr=${cr:.2f}/credit)"
     )
-    return True, summary_lines
+    return passed, summary_lines
 
 
 def main():

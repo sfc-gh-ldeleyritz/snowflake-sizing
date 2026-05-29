@@ -1208,8 +1208,8 @@ function calcReplicationForYear(year) {
              active_TB: 0, change_TB: 0, egress_rate: 0 };
   }
   const cr = SIZING_SPEC.meta.credit_rate;
-  const yoy = (rep.yoy_pct != null) ? rep.yoy_pct : 0.10;
-  const growth = (rep.storage_growth_pct != null) ? rep.storage_growth_pct : 0.15;
+  const yoy = ((rep.yoy_pct != null) ? rep.yoy_pct : 10) / 100;
+  const growth = ((rep.storage_growth_pct != null) ? rep.storage_growth_pct : 15) / 100;
   const credPerTB = (rep.compute_credits_per_TB != null) ? rep.compute_credits_per_TB : 4;
   const storageRate = (rep.replica_storage_per_tb_per_month != null) ? rep.replica_storage_per_tb_per_month : 23;
 
@@ -2450,8 +2450,8 @@ function enableReplication() {
     initial_TB: SIZING_SPEC.replication.initial_TB ?? 0,
     monthly_change_TB: SIZING_SPEC.replication.monthly_change_TB ?? 0,
     replication_frequency: SIZING_SPEC.replication.replication_frequency || 'ONE_HOUR',
-    storage_growth_pct: SIZING_SPEC.replication.storage_growth_pct ?? 0.15,
-    yoy_pct: SIZING_SPEC.replication.yoy_pct ?? 0.10,
+    storage_growth_pct: SIZING_SPEC.replication.storage_growth_pct ?? 15,
+    yoy_pct: SIZING_SPEC.replication.yoy_pct ?? 10,
     compute_credits_per_TB: SIZING_SPEC.replication.compute_credits_per_TB ?? 4,
     replica_storage_per_tb_per_month: SIZING_SPEC.replication.replica_storage_per_tb_per_month ?? 23,
   });
@@ -2536,12 +2536,12 @@ function renderReplicationPanel() {
                  onchange="updateReplication('replica_storage_per_tb_per_month', this.value)">
         </label>
         <label>Storage growth %/yr
-          <input type="number" min="0" max="100" step="1" value="${Math.round((rep.storage_growth_pct ?? 0.15) * 100)}"
-                 onchange="updateReplication('storage_growth_pct', +this.value / 100)">
+          <input type="number" min="0" max="100" step="1" value="${Math.round(rep.storage_growth_pct ?? 15)}"
+                 onchange="updateReplication('storage_growth_pct', +this.value)">
         </label>
         <label>YoY change %
-          <input type="number" min="0" max="100" step="1" value="${Math.round((rep.yoy_pct ?? 0.10) * 100)}"
-                 onchange="updateReplication('yoy_pct', +this.value / 100)">
+          <input type="number" min="0" max="100" step="1" value="${Math.round(rep.yoy_pct ?? 10)}"
+                 onchange="updateReplication('yoy_pct', +this.value)">
         </label>
       </div>
       <div class="justification">

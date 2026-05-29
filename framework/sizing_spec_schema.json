@@ -1314,11 +1314,15 @@
         },
         "storage_growth_pct": {
           "type": "number",
-          "minimum": 0
+          "description": "Whole-number annual percent, e.g. 25 = 25%.",
+          "minimum": 0,
+          "maximum": 100
         },
         "yoy_pct": {
           "type": "number",
-          "minimum": 0
+          "description": "Whole-number annual percent, e.g. 25 = 25%.",
+          "minimum": 0,
+          "maximum": 100
         },
         "compute_credits_per_TB": {
           "type": "number",
