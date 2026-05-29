@@ -5,6 +5,7 @@
 <title>__CUSTOMER__ - Snowflake Consumption Estimate</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <style>
 __BRAND_FONTS_CSS__
 :root {
@@ -182,8 +183,10 @@ body {
 .account-type-reader { background: #e6f4fb; color: var(--sf-navy); }
 .account-type-managed { background: #fef0e0; color: #b35900; }
 
-/* Print button (top-right floating) */
-.print-btn {
+/* Floating action buttons (top-right). Download PDF is primary (navy);
+   Print and Save HTML are secondary. All three are hidden in @media print
+   and in body.pdf-export so they never appear in exported output. */
+.pdf-btn {
   position: fixed;
   top: 16px;
   right: 16px;
@@ -198,12 +201,30 @@ body {
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
-.print-btn:hover { background: var(--sf-navy-deep); }
+.pdf-btn:hover { background: var(--sf-navy-deep); }
+.pdf-btn:disabled { opacity: 0.6; cursor: default; }
+
+.print-btn {
+  position: fixed;
+  top: 16px;
+  right: 150px;
+  z-index: 1000;
+  padding: 8px 14px;
+  background: white;
+  color: var(--sf-navy);
+  border: 1px solid var(--sf-navy);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+.print-btn:hover { background: var(--sf-navy); color: white; }
 
 .save-btn {
   position: fixed;
   top: 16px;
-  right: 178px;
+  right: 232px;
   z-index: 1000;
   padding: 8px 14px;
   background: white;
@@ -395,10 +416,10 @@ li:hover .item-delete-btn { display: inline; }
   .header { background: var(--sf-navy-deep) !important; padding: 20px; }
   .header h1 { font-size: 26px; }
   .header-subtitle { font-size: 14px; }
-  .kpi-grid { gap: 8px; }
+  .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .kpi-tile { box-shadow: none; padding: 14px; border: 1px solid var(--gray-200); }
   .kpi-value { font-size: 20px; }
-  .tab-nav, .print-btn, .save-btn, .print-help, .add-btn, .add-btn-group, .delete-btn,
+  .tab-nav, .pdf-btn, .print-btn, .save-btn, .print-help, .add-btn, .add-btn-group, .delete-btn,
   .scenario-toggle, .info-icon, #tt-tip, .item-delete-btn, .add-item-btn { display: none !important; }
   li[contenteditable], span[contenteditable] { box-shadow: none !important; background: none !important; cursor: default !important; }
   .tab-content { display: block !important; page-break-before: auto; margin-top: 12px; }
@@ -427,16 +448,98 @@ li:hover .item-delete-btn { display: inline; }
   .scenario-controls { display: none; }
   .footer { page-break-before: avoid; }
   h2, h3 { page-break-after: avoid; }
-  .card-label-edit { font-weight: 700; }
+  .card-label-edit { font-weight: 700; flex: 1 1 100%; min-width: 0; }
+  .workload-header { flex-wrap: wrap; }
+  .workload-calc { white-space: normal; word-break: break-word; max-width: 100%; }
   .account-type-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .chart-row { grid-template-columns: 1fr; gap: 12px; }
   .chart-container { height: 240px; }
 }
+
+/* Screen-mode equivalent of the @media print block above, toggled by
+   downloadPDF() / html2pdf.js. html2canvas does NOT honor @media print, so
+   these rules must be kept in sync with that block (maintenance pair).
+   INTENTIONAL DIVERGENCE: unlike @media print (which gives each tab its own
+   page for a handout), the PDF path flows tabs continuously (no forced
+   per-tab page break) to avoid mostly-empty pages, and relies on
+   break-inside: avoid on sections/cards/charts/KPI tiles so html2pdf's
+   slice-based pagination never cuts a chart or tile in half. */
+body.pdf-export { background: white; font-size: 10.5px; }
+/* Pin the export layout to A4 content width (794px @96dpi) so the on-screen
+   export state is deterministically narrow regardless of the actual (variable,
+   often wide) browser window. downloadPDF() additionally forces this same 794px
+   on the cloned <html>/<body>/.container via html2canvas `onclone`, plus
+   `width:794` + `windowWidth:window.innerWidth`, so the captured canvas fills
+   exactly 0..794 with no left inset or right clip. See the long comment in
+   downloadPDF() for why all three are required - a plain html2canvas capture in
+   a wide browser otherwise renders a too-narrow canvas (~719px) and clips the
+   right ~75px of every page. Child-overflow guards below keep wide children
+   inside the 794px box. */
+body.pdf-export .container { width: 794px; max-width: 794px; margin: 0; padding: 0; }
+body.pdf-export .section { box-shadow: none; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; padding: 16px; }
+body.pdf-export .header { background: var(--sf-navy-deep) !important; padding: 20px; }
+body.pdf-export .kpi-tile { box-shadow: none; padding: 14px; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; }
+/* minmax(0,1fr) lets the 4 tiles shrink below their content width (default
+   min-width:auto would force horizontal overflow -> clipped 4th tile). */
+body.pdf-export .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+body.pdf-export .kpi-value { font-size: 20px; }
+body.pdf-export .tab-nav,
+body.pdf-export .pdf-btn,
+body.pdf-export .print-btn,
+body.pdf-export .save-btn,
+body.pdf-export .print-help,
+body.pdf-export .add-btn,
+body.pdf-export .add-btn-group,
+body.pdf-export .delete-btn,
+body.pdf-export .scenario-toggle,
+body.pdf-export .info-icon,
+body.pdf-export #tt-tip,
+body.pdf-export .item-delete-btn,
+body.pdf-export .add-item-btn { display: none !important; }
+body.pdf-export li[contenteditable], body.pdf-export span[contenteditable] { box-shadow: none !important; background: none !important; cursor: default !important; }
+body.pdf-export .tab-content { display: block !important; page-break-before: auto; margin-top: 12px; }
+body.pdf-export .tab-content + .tab-content { page-break-before: auto; margin-top: 20px; padding-top: 4px; }
+body.pdf-export .tab-content::before {
+  content: attr(data-print-title);
+  display: block;
+  font-family: 'Texta', 'Lato', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--sf-navy-deep);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--sf-divider);
+}
+body.pdf-export .tab-content::before { page-break-after: avoid; break-after: avoid; }
+body.pdf-export input[type="range"] { display: none !important; }
+body.pdf-export input[type="number"],
+body.pdf-export input[type="text"],
+body.pdf-export select {
+  border: none; background: transparent; padding: 0;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  pointer-events: none; color: var(--gray-800);
+}
+body.pdf-export select { padding-right: 0; }
+body.pdf-export .workload-card, body.pdf-export .scenario-card { box-shadow: none; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; }
+/* The header is a non-wrapping flex row (title input + long monospace formula).
+   Allow it to wrap so the formula drops to its own line instead of running off
+   the right page edge; let the title take the full first line. */
+body.pdf-export .workload-header { flex-wrap: wrap; }
+body.pdf-export .card-label-edit { flex: 1 1 100%; min-width: 0; }
+body.pdf-export .workload-calc { white-space: normal; word-break: break-word; max-width: 100%; }
+body.pdf-export .scenario-controls { display: none; }
+body.pdf-export .chart-row { grid-template-columns: 1fr; gap: 12px; page-break-inside: avoid; break-inside: avoid; }
+body.pdf-export .chart-container { height: 240px; page-break-inside: avoid; break-inside: avoid; }
+/* Charts (responsive, maintainAspectRatio:false) fill the container; cap the
+   canvas so a stale/oversized backing-store width can't overflow the 794px
+   page. _reflowCharts() + the 250ms settle resize charts to the pinned width. */
+body.pdf-export canvas { max-width: 100% !important; }
 </style>
 <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,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JjXttiQc5rQlKem0Jn7ptCZ+5rQlKe22JBznsyY26LQosee0KejotSno6LUnb/KzJhTotShZ6LUp5ui1KfXotSjd6LQpWOm0KH7otSjA6LUowOm0KH7otCZY6LUo3ei1KfXotijm6LUoWfKzJhTysyYU6LUoWei1KebotSn16LUo3ei1KFnptCh+57Qowei1KMDptCh+6LUoWei1KN3otSn16LYp5ui1KFnysyYU6LUnb+i1KejotCno6LYoseezJjblsCMd5rQlKee1Jn/nsyZ/5rQlKe22JBznsyY26LYosei0KejntSjp6LUnb+mzKVHotSm05rMmUOa1KR/lsiQy6LUnqei1KLrquCMk6rgjJOi1KLrotSep5bIkMua1KR/msyZQ57UptOmzKVHfvyAI3bsiD+e3KCDptSmK6LUo3ui1KfjotSjq57ImNeu1JzTotSjq6LUp+Oi1KN7ntSmK57coIN27Ig/fvyAIAAAAAP+zGgrptiiu6bUp7ue0KejntSjj6LUo6uezKjbstyY157Uo6ui2KeLptSnn6bUp7um2KK7/sxoKAAAAAAAAAADouS4L6bQodOi1J5DnsiQ/6LQosei1Kefnsyo27LImNei1KefotCix57IkP+i1J5DptCh06LkuCwAAAAAAAAAAAAAAAP+2JAfMmTMF68QnDem1J6Lotini67IkMuq2JDHotSni6bUnouvEJw3MmTMF/7YkBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+ZMwXotidC57Qnd+q1KhjqtSoY57Qnd+i2J0L/mTMFAAAAAAAAAAAAAAAAAAAAAPAPAADAAwAAgAEAAIABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIABAACAAQAAwAMAAPAPAAA=">
 </head>
 <body>
-<button class="print-btn" onclick="window.print()" title="Print or Save as PDF">Print / Save as PDF</button>
+<button class="pdf-btn" onclick="downloadPDF()" title="Download a print-ready PDF of this proposal">Download PDF</button>
+<button class="print-btn" onclick="window.print()" title="Print using the browser dialog">Print</button>
 <button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save HTML</button>
 <div class="container">
 
@@ -2749,6 +2852,69 @@ function saveSnapshot() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ========== Download PDF (rasterize the live page via html2pdf.js) ==========
+// Bypasses the browser print dialog so there are no injected headers/footers,
+// and captures the SE's current on-screen edits. Adds body.pdf-export so every
+// hidden tab expands exactly like @media print, reflows the charts so they
+// rasterize at full container width, then assembles clean A4 pages. The class
+// is always removed in finally{} so the page returns to its interactive state.
+async function downloadPDF() {
+  const btn = document.querySelector('.pdf-btn');
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating PDF...'; }
+
+  document.body.classList.add('pdf-export');
+  window.scrollTo(0, 0);
+  _reflowCharts();
+  // Let layout and Chart.js settle at the new full width before capture.
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 250))));
+
+  const meta = SIZING_SPEC.meta || {};
+  const slug = (meta.customer || 'customer').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+  const years = meta.contract_years || 1;
+  const version = meta.version_number || 1;
+  const today = new Date().toISOString().slice(0, 10);
+  const filename = slug + '-' + years + 'year-sizing-v' + version + '-' + today + '.pdf';
+
+  try {
+    // A4 content width @96dpi. The capture is pinned to this so the PDF is
+    // identical regardless of the (variable, often wide) browser window.
+    const PDF_W = 794;
+    await html2pdf().set({
+      filename: filename,
+      margin: [12, 10, 12, 10],
+      image: { type: 'jpeg', quality: 0.98 },
+      // Wide-browser-safe capture. width:PDF_W forces the output canvas to the
+      // A4 content width; windowWidth:window.innerWidth keeps html2canvas laying
+      // the doc out at the REAL window width (so its origin math stays aligned -
+      // forcing windowWidth narrower shifts content off the left edge); and
+      // onclone pins <html>/<body>/.container to PDF_W in the cloned document so
+      // the captured content fills exactly 0..PDF_W with no left inset or right
+      // clip. Removing any one of these reintroduces the offset/clip on wide
+      // displays (verified with a headless wide-viewport PDF eval).
+      html2canvas: {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        width: PDF_W, windowWidth: window.innerWidth, scrollX: 0, scrollY: 0,
+        onclone: function (clonedDoc) {
+          var c = clonedDoc.querySelector('.container');
+          if (c) { c.style.width = PDF_W + 'px'; c.style.maxWidth = PDF_W + 'px'; c.style.margin = '0'; }
+          clonedDoc.body.style.width = PDF_W + 'px';
+          clonedDoc.body.style.margin = '0';
+          clonedDoc.documentElement.style.width = PDF_W + 'px';
+        }
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(document.querySelector('.container')).save();
+  } catch (e) {
+    alert('PDF generation failed: ' + (e && e.message ? e.message : e));
+  } finally {
+    document.body.classList.remove('pdf-export');
+    _reflowCharts();
+    if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+  }
 }
 
 </script>

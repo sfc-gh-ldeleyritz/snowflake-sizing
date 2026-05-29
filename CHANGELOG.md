@@ -1,5 +1,60 @@
 # snowflake-sizing changelog
 
+## [v2.2.0] — one-click Download PDF
+
+### Added
+
+- **Download PDF button.** A new floating primary button (`.pdf-btn`,
+  `downloadPDF()`) rasterizes the live, edited proposal with `html2pdf.js`
+  (loaded from the same jsDelivr CDN as Chart.js) and downloads a clean
+  multi-page A4 PDF. Unlike the old `window.print()` path, it bypasses the
+  browser print dialog entirely, so there are no browser-injected headers or
+  footers, and it captures the SE's current on-screen edits. The filename
+  reuses the slug/version/date convention from `saveSnapshot()` with a `.pdf`
+  extension.
+- **`body.pdf-export` CSS block.** Screen-mode equivalent of `@media print`
+  (html2canvas does not honor `@media print`). It expands all tabs in flow,
+  renders the `data-print-title` headers, applies page breaks, hides
+  interactive chrome, and reflows charts to a single column. The two blocks
+  are documented as a maintenance pair in `references/html-spec.md`.
+
+### Changed
+
+- **Print button is now a secondary fallback** labeled "Print" (was
+  "Print / Save as PDF"). The three floating buttons (Download PDF, Print,
+  Save HTML) were repositioned so they no longer overlap. `.pdf-btn` was
+  added to the `@media print` hide list.
+
+### Fixed
+
+- **Download PDF: content shifted off-page on wide displays.** On a real wide
+  browser (e.g. a 1440–1680px laptop) the PDF rendered with content pushed off
+  the left edge — the header title and first KPI tiles disappeared and the right
+  ~half of every page was blank. The cause was the `html2canvas: { windowWidth: 794, width: 794 }` capture override: forcing a narrow `windowWidth` re-maps
+  html2canvas's capture origin against the live wide-window coordinates. Simply
+  dropping the override is not enough either — in a wide browser html2canvas then
+  computes a too-narrow output canvas (~719px for the 794px `.container`) and
+  clips the right ~75px of every page. The fix in `downloadPDF()` requires all
+  three of: `width: 794` (pins the output canvas to A4 content width),
+  `windowWidth: window.innerWidth` (keeps layout at the real window width so
+  html2canvas's origin math stays aligned), and an `onclone` callback that pins
+  `<html>`/`<body>`/`.container` to 794px in the cloned document. Together these
+  make the captured content fill exactly `0..794` with no left inset or right
+  clip, deterministically across window widths. Verified at 1280/1440/1680px
+  across the acme-financial, enterprise-gcp-fullstack, and light-and-wonder
+  fixtures (~85 pages, zero clipping). `references/html-spec.md` documents the
+  approach and warns that PDF changes must be verified at ≥1440px.
+- **Download PDF: cropped charts and excessive whitespace.** The
+  `body.pdf-export` block forced a page break before every tab
+  (`page-break-before: always`), which made html2pdf emit ~15 mostly-empty
+  pages, and its `.chart-row` / `.chart-container` rules lacked
+  `break-inside: avoid`, so html2pdf's slice-based pagination cut charts in
+  half. Tabs now flow continuously in the PDF path, and `break-inside: avoid`
+  was added to charts and KPI tiles (sections/cards already had it) so whole
+  charts/tiles move to the next page instead of being sliced. The tab
+  `::before` heading also gets `page-break-after: avoid` to prevent orphaned
+  section titles. The native `@media print` per-tab pagination is unchanged.
+
 ## [v2.1.0] — ACV KPI, editable scenarios, Cortex token helper, Save HTML
 
 Three rounds of feedback addressed in this release: two items from internal review
@@ -11,7 +66,6 @@ Three rounds of feedback addressed in this release: two items from internal revi
   replacing the previous "Recommended Commit" tile which was a redundant duplicate of
   Total TCV. The value updates live on every `recalculate()` call and in the
   DOMContentLoaded pre-population from `COMPUTED_TOTALS`.
-
 - **Editable scenario parameters.** The Conservative, Expected, and Aggressive scenario
   cards in the Scenario Comparison section previously showed Growth % and Curve as
   disabled (read-only) inputs. Both fields are now editable selects/inputs wired to a new
@@ -21,12 +75,10 @@ Three rounds of feedback addressed in this release: two items from internal revi
   The Expected scenario seeds its `growth_pct` from `meta.annual_growth_rate` on first
   load, fixing the propagation bug where changing "Annual growth %" in Global Settings
   had no effect on the Expected scenario card.
-
 - **`SIZING_SPEC.scenarios` block.** New top-level key added to
   `framework/sizing_spec_skeleton.json` with default Conservative / Expected / Aggressive
   tuples. `normalizeSpec()` in the template seeds the block from defaults (Expected growth
   seeded from `meta.annual_growth_rate`) when opening specs that predate this release.
-
 - **Cortex token estimation helper (Cortex Agents + Snowflake Intelligence).** The AI
   panel now shows a helper row below each feature with six inputs:
   `monthly_users × sessions_per_user_per_day × messages_per_session × avg_input_tokens_per_message`
@@ -36,7 +88,6 @@ Three rounds of feedback addressed in this release: two items from internal revi
   and syncs the direct token inputs. Mirrors the existing Cortex Code
   `devs × queries/day × tokens/query` model. Helper field values persist in SIZING_SPEC
   alongside the derived token counts.
-
 - **`skills/snowflake-sizing/references/ai-feature-defaults.md` — Cortex token
   estimation section.** Documents the `users × sessions × messages × tokens` formula,
   typical parameter ranges by usage profile (light / moderate / heavy), and an example
@@ -52,7 +103,6 @@ Three rounds of feedback addressed in this release: two items from internal revi
   increments `meta.version_number` and downloads a self-contained `.html` snapshot.
   The `exportSpec()` function is removed. The render-html sub-skill Phase 6 terminal
   summary updated accordingly.
-
 - **`framework/sizing_spec_schema.json` — helper fields added to `cortex_agents` and
   `snowflake_intelligence`.** Eight new optional properties (`monthly_users`,
   `sessions_per_user_per_day`, `messages_per_session`, `avg_input_tokens_per_message`,
@@ -75,19 +125,18 @@ python3 scripts/render-html.py \
 # sizing-guard hook: PASS
 ```
 
-
-
 This release rearchitects how sizing proposals are generated and introduces the plugin's first automated test suite. Previously, `scripts/render-html.py` was a 270-line flat script mixing spec validation, Python math, token substitution, and file I/O with no test coverage and no way to call any stage independently. All rendering logic has been extracted into a new `renderer/` Python package with a clean public API (`compile_spec(spec, pricing, template, fonts_css) → CompileResult`), structured after the pattern established by `apps/architecture-diagrams-app/backend/renderer/`. A 196-test pytest suite in `tests/` verifies the pipeline end-to-end — ramp math, warehouse credits, storage formulas, serverless billing, spec validation, token substitution, HTML structure, and pricing rate correctness — all running in under one second with no LLM calls, no Node.js, and no network access. A programmatic cross-check of all 10 fixture outputs against `assets/snowflake_pricing_master.json` uncovered 9 wrong pricing values across 4 files (wrong region lookups, made-up AI credit tiers, stale storage proxies); these are corrected and the validator is now wired into the renderer so future specs emit a `[pricing-check]` warning before HTML is written. Python-computed totals (`COMPUTED_TOTALS`) are now embedded as a first-class JS variable in every rendered HTML, giving the in-page JS authoritative Python-side values for initial KPI display and eliminating the JS/Python drift on first load.
 
 ### Added
 
 - **`renderer/` package.** New Python package at `renderer/` implementing the deterministic JSON-spec → HTML pipeline. Public surface: `compile_spec(spec, pricing, template, fonts_css) → CompileResult`. The `CompileResult` dataclass carries `html: str`, `spec: dict` (normalised, with `computed_totals` injected), and `computed_totals: dict`.
+
   - **`renderer/compiler.py`** — single entry point. Runs the four pipeline stages in order: (1) strip `utility_queries_reference` from pricing, (2) validate spec via `_schema_loader.SCHEMA`, (3) compute core totals and inject as `spec["computed_totals"]`, (4) build token map and substitute. Raises `SpecValidationError` on schema/domain failures; raises `ValueError` on unresolved `__TOKEN__` patterns. Also calls `validate_pricing` (see below) and emits any mismatches to stderr as `[pricing-check]` warnings before rendering continues.
   - **`renderer/spec_invariants.py`** — `strip_internal_pricing_data(pricing)` (deep-copies and strips `utility_queries_reference`, enforcing memory rule c4962f74 structurally rather than via agent recall); `validate_spec(spec)` (checks required top-level keys, required meta fields, edition/cloud enum values, workload fields needed for cost calculation — intentionally lighter than `spec-prepare.py`'s validator to accommodate real-world specs with extra fields from different schema versions).
   - **`renderer/html_builder.py`** — `build_token_map(spec, pricing, fonts_css, computed_totals)` builds the full substitution dict including the new `__COMPUTED_TOTALS__` token; `substitute_tokens(template, tokens)` performs serial ordered replacement; `check_substitution_complete(html)` raises `ValueError` listing all non-sentinel `__TOKEN__` leftovers.
   - **`renderer/pricing_validator.py`** — `REGION_ALIASES` dict mapping known LLM-generated region-string variants to canonical pricing-table keys (e.g. `"US East1 (N. Virginia)"` → `"US East (Northern Virginia)"`); `lookup_credit_rate`, `lookup_storage_rate`, `lookup_ai_credit_rate` against `credit_pricing.data` and `storage.standard.data` in the pricing JSON; `validate_pricing(spec, pricing) → list[str]` checks `meta.credit_rate`, `meta.storage_rate_per_tb`, and `meta.ai_credit_rate` with 0.01 tolerance. Unresolved regions emit an `UNRESOLVED_REGION` warning and skip numeric checks.
-
 - **`tests/` pytest suite (196 tests, 0.55 s).** Zero LLM calls, zero Node.js, zero network.
+
   - `tests/conftest.py` — shared session-scoped fixtures: `plugin_root`, `skeleton`, `minimal_spec`, `real_pricing`, `minimal_pricing`, `template_text`, `fonts_css`, `acme_spec`.
   - `tests/test_compute_totals.py` — 24 unit tests for `framework/compute_totals.py`: ramp factor math, warehouse credits, storage growth formulas, serverless Snowpipe billing, `compute_core_totals` integration, known-TCV regression on `acme-financial`.
   - `tests/test_spec_validation.py` — 14 tests for `renderer/spec_invariants.py`: pricing data stripping (top-level, nested, list, idempotency), `validate_spec` happy-path and error paths (warehouses key, empty workloads, missing required keys, invalid edition/cloud enums).
@@ -96,39 +145,36 @@ This release rearchitects how sizing proposals are generated and introduces the 
   - `tests/test_golden_files.py` — 70 parametrised tests (7 assertions × 10 fixtures): renders without error, no unresolved tokens, `COMPUTED_TOTALS` embedded, `core_tcv` > 0, TCV value in HTML matches `CompileResult`, HTML is deterministic, customer name in HTML.
   - `tests/test_pricing_validation.py` — 53 tests for `renderer/pricing_validator.py`: `lookup_credit_rate` for known regions, alias resolution, unknown → `None`, edition case-insensitivity; `lookup_storage_rate` for 7 regions; `lookup_ai_credit_rate` global vs regional classification; `validate_pricing` clean spec, wrong credit/storage/AI rates, `UNRESOLVED_REGION` flagging, multiple simultaneous mismatches; parametrised fixture suite asserting all 10 `tests/fixtures/*.json` produce zero pricing warnings.
   - `pytest.ini` — `testpaths = tests`.
-
 - **`tests/fixtures/` — 10 canonical sizing JSON test fixtures.** Six copied from existing real customer sizings (`examples/` and `sizings/`) plus four new synthetic specs covering underrepresented parameter space:
+
   - `retail-ai-heavy-2year.json` — Azure Enterprise 2yr, heavy Cortex AI (Complete + Agents + Search + Analyst + Embeddings + sentiment/summarise functions), MCW BI, reader accounts. Tests: AI credit calculations, 2yr contract output length, Azure West US 2 rates.
   - `startup-gcp-minimal-1year.json` — GCP Standard 1yr, single M warehouse, Snowpipe Streaming, Cortex Complete (mistral-7b), fastest ramp. Tests: Standard edition, 1yr contract, GCP US Central1 rates, minimal serverless.
   - `enterprise-gcp-fullstack-3year.json` — GCP Enterprise 3yr, SPCS (CPU + GPU), OpenFlow (SAP ERP / Oracle WMS / Postgres), cross-continental replication, Cortex Complete + Snowflake Intelligence, 6 warehouses including 24/7 streaming ingest. Tests: full-featured spec with every optional block enabled.
   - `healthcare-bc-slowramp-3year.json` — AWS Business Critical 3yr, 90-day time travel (HIPAA maximum), slowest ramp (18-month migration), PrivateLink, hybrid tables, Trust Center + sensitive data classification + data quality monitoring, Cortex Complete for clinical document summarisation. Tests: BC edition, extreme storage overhead from long TT, late-loading ramp producing low Year 1 / high Year 2-3 pattern.
-
 - **`__COMPUTED_TOTALS__` token and JS pre-population.** `proposal-template.html` now carries `const COMPUTED_TOTALS = __COMPUTED_TOTALS__;` immediately after the `SIZING_SPEC` declaration. The `DOMContentLoaded` handler pre-populates `kpi-tcv`, `kpi-yr1`, and `kpi-commit` from `COMPUTED_TOTALS.core_year_total` before `recalculate()` runs, so the proposal shows Python-authoritative values immediately on load regardless of whether the JS engine completes.
 
 ### Changed
 
 - **`scripts/render-html.py` refactored to a thin CLI wrapper** (~100 lines, was 270). All pipeline logic — `_strip_utility_queries_reference`, `_build_token_map`, `_substitute`, `_check_substitution_complete`, `_fmt_credit_rate` — has moved into `renderer/`. The script now reads files, calls `renderer.compiler.compile_spec()`, runs the sizing-guard hook, and performs the atomic `tmp → rename` write. The printed summary (`core TCV: $X  (per-year [...])`) is unchanged. Exit codes unchanged.
-
 - **`framework/compute_totals.py` is now the canonical source of numbers embedded in HTML.** The compiler always calls `compute_core_totals` and injects the result into `spec["computed_totals"]` before token substitution, so every rendered HTML carries fresh Python-computed values in both `SIZING_SPEC.computed_totals` and the new `COMPUTED_TOTALS` JS variable. The existing `DOMContentLoaded` console.info comparison (Python vs JS TCV) remains and is now structurally guaranteed to run on every render.
 
 ### Fixed
 
 - **9 wrong pricing values across 4 fixture files**, all identified programmatically by running `validate_pricing` against the pricing JSON (effective May 12 2026):
 
-  | File | Field | Was | Correct | Root cause |
-  |---|---|---|---|---|
-  | `acme-financial-3year-sizing.json` | `storage_rate_per_tb` | $25.00 | **$24.00** | Assumption text falsely claimed "London not in pricing table"; AWS Europe (London) on-demand is $24.00 |
-  | `enterprise-gcp-fullstack-3year.json` | `credit_rate` | $3.00 | **$3.90** | Used GCP US base rate instead of GCP Europe West 4 Enterprise ($3.90) |
-  | `enterprise-gcp-fullstack-3year.json` | `storage_rate_per_tb` | $22.00 | **$20.00** | Made-up interpolation; GCP Europe West 4 on-demand is $20.00 |
-  | `enterprise-gcp-fullstack-3year.json` | `ai_credit_rate` | $2.50 | **$2.20** | Not a valid on-demand AI tier; EU regions get $2.20 regional rate |
-  | `healthcare-bc-slowramp-3year.json` | `credit_rate` | $5.50 | **$4.00** | Confused AWS AP Sydney/Seoul BC ($5.50) with AWS US East (N. Virginia) BC ($4.00) |
-  | `healthcare-bc-slowramp-3year.json` | `storage_rate_per_tb` | $25.00 | **$23.00** | Used AP Sydney storage rate; AWS US East (N. Virginia) on-demand is $23.00 |
-  | `healthcare-bc-slowramp-3year.json` | `ai_credit_rate` | $3.00 | **$2.00** | Arbitrary value; US base regions get the $2.00 global on-demand AI rate |
-  | `retail-ai-heavy-2year.json` | `credit_rate` | $3.50 | **$3.00** | Confused Azure Canada Central Enterprise ($3.50) with Azure West US 2 Enterprise ($3.00) |
-  | `retail-ai-heavy-2year.json` | `storage_rate_per_tb` | $24.00 | **$23.00** | Used UK South rate; Azure West US 2 on-demand is $23.00 |
+  | File                                    | Field                   | Was                      | Correct                                                                                                | Root cause |
+  | --------------------------------------- | ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------ | ---------- |
+  | `acme-financial-3year-sizing.json`    | `storage_rate_per_tb` | $25.00 |**$24.00** | Assumption text falsely claimed "London not in pricing table"; AWS Europe (London) on-demand is $24.00 |            |
+  | `enterprise-gcp-fullstack-3year.json` | `credit_rate`         | $3.00 |**$3.90**   | Used GCP US base rate instead of GCP Europe West 4 Enterprise ($3.90)                                  |            |
+  | `enterprise-gcp-fullstack-3year.json` | `storage_rate_per_tb` | $22.00 |**$20.00** | Made-up interpolation; GCP Europe West 4 on-demand is $20.00                                           |            |
+  | `enterprise-gcp-fullstack-3year.json` | `ai_credit_rate`      | $2.50 |**$2.20**   | Not a valid on-demand AI tier; EU regions get $2.20 regional rate                                      |            |
+  | `healthcare-bc-slowramp-3year.json`   | `credit_rate`         | $5.50 |**$4.00**   | Confused AWS AP Sydney/Seoul BC ($5.50) with AWS US East (N. Virginia) BC ($4.00)                      |            |
+  | `healthcare-bc-slowramp-3year.json`   | `storage_rate_per_tb` | $25.00 |**$23.00** | Used AP Sydney storage rate; AWS US East (N. Virginia) on-demand is $23.00                             |            |
+  | `healthcare-bc-slowramp-3year.json`   | `ai_credit_rate`      | $3.00 |**$2.00**   | Arbitrary value; US base regions get the $2.00 global on-demand AI rate                                |            |
+  | `retail-ai-heavy-2year.json`          | `credit_rate`         | $3.50 |**$3.00**   | Confused Azure Canada Central Enterprise ($3.50) with Azure West US 2 Enterprise ($3.00)               |            |
+  | `retail-ai-heavy-2year.json`          | `storage_rate_per_tb` | $24.00 |**$23.00** | Used UK South rate; Azure West US 2 on-demand is $23.00                                                |            |
 
   Corrected in both `tests/fixtures/` and (for `acme-financial`) `examples/`. Affected TCV deltas: healthcare-bc $1,317k → $982k (−$335k); enterprise-gcp $10,142k → $12,623k (+$2.5M from higher correct rate); retail-ai-heavy $1,113k → $980k (−$133k).
-
 - **`acme-financial` assumption text corrected.** The assumption *"Storage rate: $25/TB/month (proxy for AWS Europe London using EU Dublin rate; London not in pricing table)"* was factually wrong — AWS Europe (London) has been in the pricing table at $24.00/TB since at least v1.8. Assumption replaced with *"AWS Europe (London) on-demand storage rate per pricing table ($24.00/TB/month)."*
 
 ### Verified
@@ -556,7 +602,6 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 ## Unreleased
 
 - **Glean B1/B2/B3 now run in the main agent (Phase 1.7).** Glean MCP OAuth is session-bound and does not propagate to subagents, which caused the previous `research-glean-agent` to fail at runtime. The main `snowflake-sizing` skill now executes B1/B2/B3 inline in a new Phase 1.7 (between bootstrap and routing) and forwards the results in-memory to `research-coordinator` under `Pre-fetched Glean Results:`. The coordinator transforms the blob into the Glean section of the evidence file using the template in `references/research-protocol.md` Section 1. **Removed `agents/research-glean-agent.md`** (no remaining callers). The coordinator's preflight is reduced to SNOWHOUSE Gong only - the Glean preflight is implicit since the parent agent already proved Glean availability by running the queries successfully. Mirrors the pattern established in `plugins/se-comments/skills/se-comments-batch/SKILL.md` Step 1.5.
-
 - **Snowflake branding applied to HTML output.** The generated sizing estimate now uses the official Snowflake wordmark (`logo-white.svg`), brand fonts Texta (titles) + Lato (body) + Source Code Pro (monospace) inlined as base64 data URIs, and the canonical colour palette (`#29B5E8`, `#249EDC`, `#11567F`, `#003545`, `#76D0F1`) extracted from snowflake.com. All charts use a monochromatic blue scale. Footer includes the Snowflake mark and "Snowflake Confidential" line. Brand assets are bundled in `assets/branding/`; the `build-snippets.sh` script regenerates the inlinable font CSS on demand.
 - **Offline-capable documents.** Fonts and logo are fully inlined — the HTML renders correctly with Wi-Fi disabled (only Chart.js still requires `cdn.jsdelivr.net`).
 - **Template-based HTML generation.** Phase 5 now reads `skills/snowflake-sizing/references/_template.html` and substitutes 11 tokens (`__BRAND_FONTS_CSS__`, `__SIZING_SPEC__`, `__PRICING_DATA__`, `__CUSTOMER__`, etc.) instead of generating HTML from scratch. This ensures consistent branding across all runs and reduces LLM output size.
