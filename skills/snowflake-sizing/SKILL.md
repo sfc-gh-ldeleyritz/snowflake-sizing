@@ -34,17 +34,26 @@ Parse `$ARGUMENTS`:
 - `--mode replication` or `--mode dr` - activate the replication research block (D1/D2/D3).
 - `--pptx` - after render-html completes, also run the render-pptx sub-skill to generate a Snowflake-branded PPTX from the same sizing JSON.
 
-Read pricing data using the plugin-relative path:
+Derive the three pricing rates with the live-calculator helper. It fetches the
+public Snowflake pricing calculator (falling back to the committed seed, then the
+static master, when offline) and resolves region aliases automatically:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/derive-rates.py \
+  --cloud <AWS|Azure|GCP> --region "<region>" --edition <Standard|Enterprise|Business Critical|VPS> --json
 ```
 
-Derive from pricing data:
+It returns `credit_rate`, `ai_credit_rate`, `storage_rate_per_tb`, and the
+editions available in that region. Add `--offline` to skip the network. The
+rates come from the live calculator block (`pricing["calc"]`):
 
-- `credit_rate` - from `credit_pricing.data` matching cloud + region + edition
-- `ai_credit_rate` - from `ai_credit_pricing.on_demand.global` ($2.00 default)
-- `storage_rate_per_tb` - from `storage.standard` for the region (`row["on_demand"]`)
+- `credit_rate` - Credit On Demand for cloud + region + edition
+- `ai_credit_rate` - AI Credit tier (global $2.00 / regional $2.20), classified by region
+- `storage_rate_per_tb` - Capacity Storage for the region
+
+The static `${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json` remains
+the offline fallback and the source for sections the calculator does not cover
+(serverless, OpenFlow, Postgres, replication, ramp curves).
 
 ### Region name resolution (MANDATORY before pricing lookup)
 

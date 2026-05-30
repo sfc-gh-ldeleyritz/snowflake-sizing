@@ -319,6 +319,20 @@
           "go_live_month": {
             "type": "integer",
             "minimum": 1
+          },
+          "gen": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "Standard-warehouse generation: 1 = Gen1 (default), 2 = Gen2 (per-cloud rates). Ignored for snowpark warehouses."
+          },
+          "warehouse_type": {
+            "type": "string",
+            "enum": ["standard", "snowpark"],
+            "description": "Warehouse type: 'standard' (default) or 'snowpark' (Snowpark-Optimized)."
+          },
+          "memory_config": {
+            "type": "string",
+            "description": "Snowpark-Optimized memory configuration (e.g. MEMORY_1X, MEMORY_1X_x86, MEMORY_16X). Only used when warehouse_type='snowpark'."
           }
         }
       }

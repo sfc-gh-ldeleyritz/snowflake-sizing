@@ -7,7 +7,9 @@ Thin CLI wrapper around renderer.compiler.compile_spec(). All pipeline logic
 Usage:
     python3 scripts/render-html.py --spec sizings/<slug>.json \
                                     --out  sizings/<slug>.html
-    # Optional overrides; sane defaults are derived from the plugin layout.
+    # Pricing defaults to a live calculator fetch (cache → committed seed →
+    # static master fallback). Use --offline to skip the network, or --pricing
+    # PATH to pin an explicit pricing JSON (deterministic; tests / reproductions).
     python3 scripts/render-html.py --spec ... --out ... \
         --template assets/templates/proposal-template.html \
         --pricing  assets/snowflake_pricing_master.json \
@@ -30,14 +32,15 @@ import sys
 _THIS_DIR = pathlib.Path(__file__).resolve().parent
 _PLUGIN_ROOT = _THIS_DIR.parent
 _DEFAULT_TEMPLATE = _PLUGIN_ROOT / "assets" / "templates" / "proposal-template.html"
-_DEFAULT_PRICING = _PLUGIN_ROOT / "assets" / "snowflake_pricing_master.json"
 _DEFAULT_FONTS = _PLUGIN_ROOT / "assets" / "branding" / "_brand_fonts.css"
 _HOOK_PATH = _PLUGIN_ROOT / "hooks" / "sizing-guard.py"
 
-# Ensure renderer/ is importable.
+# Ensure renderer/ and framework/ are importable.
 sys.path.insert(0, str(_PLUGIN_ROOT))
+sys.path.insert(0, str(_PLUGIN_ROOT / "framework"))
 from renderer import compile_spec  # noqa: E402
 from renderer.spec_invariants import SpecValidationError  # noqa: E402
+from live_pricing import load_pricing  # noqa: E402
 
 
 def _run_sizing_guard(out_path: pathlib.Path, html: str) -> tuple[bool, str]:
@@ -80,28 +83,45 @@ def main() -> int:
     parser.add_argument("--spec", required=True, help="Path to sizing spec JSON.")
     parser.add_argument("--out", required=True, help="Path to write the rendered HTML.")
     parser.add_argument("--template", default=str(_DEFAULT_TEMPLATE))
-    parser.add_argument("--pricing", default=str(_DEFAULT_PRICING))
+    parser.add_argument(
+        "--pricing", default=None,
+        help="Explicit pricing JSON to use verbatim (deterministic; for tests / "
+             "reproducing a past sizing). Default: live calculator fetch with "
+             "cache → committed seed → static master fallback.",
+    )
+    parser.add_argument(
+        "--offline", action="store_true",
+        help="Skip the live calculator fetch; use the cache, then the committed "
+             "seed, then the static master.",
+    )
     parser.add_argument("--brand-fonts", default=str(_DEFAULT_FONTS))
     args = parser.parse_args()
 
     spec_path = pathlib.Path(args.spec)
     out_path = pathlib.Path(args.out)
     template_path = pathlib.Path(args.template)
-    pricing_path = pathlib.Path(args.pricing)
     fonts_path = pathlib.Path(args.brand_fonts)
 
     for p, label in [
         (spec_path, "spec"), (template_path, "template"),
-        (pricing_path, "pricing"), (fonts_path, "brand fonts"),
+        (fonts_path, "brand fonts"),
     ]:
         if not p.is_file():
             sys.stderr.write(f"render-html: {label} not found at {p}\n")
             return 2
 
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
-    pricing = json.loads(pricing_path.read_text(encoding="utf-8"))
     template = template_path.read_text(encoding="utf-8")
     fonts_css = fonts_path.read_text(encoding="utf-8")
+
+    if args.pricing is not None:
+        pricing_path = pathlib.Path(args.pricing)
+        if not pricing_path.is_file():
+            sys.stderr.write(f"render-html: pricing not found at {pricing_path}\n")
+            return 2
+        pricing = json.loads(pricing_path.read_text(encoding="utf-8"))
+    else:
+        pricing = load_pricing(prefer_live=not args.offline, offline=args.offline)
 
     try:
         result = compile_spec(spec, pricing, template, fonts_css)

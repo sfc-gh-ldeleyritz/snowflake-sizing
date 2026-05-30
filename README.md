@@ -55,10 +55,10 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 | Tab | What you can edit |
 |---|---|
 | **Global Settings** | Cloud / Region / Edition, contract years, annual growth %, default ramp curve, dev-start / go-live months, Platform Credit discount override |
-| **Warehouses** | Size, hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards; edit / delete the per-warehouse sourcing note (the `SOURCED:` line) inline |
+| **Warehouses** | Size (XS–6XL), warehouse type (Standard Gen1 / Gen2 / Snowpark-Optimized with memory config), hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards; edit / delete the per-warehouse sourcing note (the `SOURCED:` line) inline |
 | **Serverless** | Toggle and size each serverless feature (Snowpipe, Search Optimization, Materialized Views, Dynamic Tables, etc.) |
 | **AI / Cortex** | Cortex Complete, Cortex Agents, Snowflake Intelligence, Cortex Code (CLI / Snowsight / Desktop surfaces), Cortex Analyst, Cortex Search, Document AI, AI Functions |
-| **SPCS** | Instance type, generation, node count, hours/month; add / delete instances |
+| **SPCS** | Instance type, generation (gen2 families sourced live: HIGHMEM_X64 / CPU_X64 / GPU), node count, hours/month; add / delete instances |
 | **OpenFlow** | Deployment (SPCS / BYOC), source connections, vCPU, hours/month; add / delete connectors |
 | **Storage** | Raw TB, compression ratio, annual growth %, Time Travel days, churn rate %; per-year breakdown table refreshes live |
 | **Collaboration** | Reader and Managed accounts with warehouse size, hours/day, days/month; add / delete accounts |
@@ -96,9 +96,50 @@ The more detail the better. Missing information will be flagged as assumptions o
 
 ## Pricing Data
 
-Bundled in `assets/snowflake_pricing_master.json` — based on the Snowflake Service Consumption Table effective **2026-05-12**.
+Rates are sourced **live** from the public Snowflake pricing calculator at render
+time, with a deterministic offline fallback chain so a fresh clone always works:
 
-To update: edit `assets/snowflake_pricing_master.json` and update `metadata.effective_date`.
+1. **Live fetch** — `framework/live_pricing.py` scrapes the calculator page for its
+   version-specific JSON endpoints (`pricing` + `regions`), fetches them, and
+   attaches them natively under a `calc` namespace in the pricing dict. A
+   successful fetch refreshes the runtime cache.
+2. **Cache** — `assets/live_pricing_cache.json` (git-ignored), the last successful fetch.
+3. **Committed seed** — `assets/live_pricing_seed.json`, a checked-in native snapshot
+   so offline / fresh-clone renders are correct and deterministic.
+4. **Static master** — `assets/snowflake_pricing_master.json` supplies the sections
+   the calculator does not cover (serverless, OpenFlow, Postgres, replication, ramp
+   curves, reference values) and remains the final fallback.
+
+The live block fixes the historical 5XL/6XL = 1-credit bug and adds Gen2 (per-cloud),
+Snowpark-Optimized (memory configurations), and the SPCS compute pools (HIGHMEM_X64 /
+CPU_X64 / GPU). Cortex Complete / Analyst LLM token rates stay in the static master
+(the calculator does not publish them).
+
+**Reading rates** is centralised in `framework/calc_access.py` (Python) and the
+`PricingData` adapter in the template (JS) — a single native-shape accessor layer
+shared by the cost math and the in-page recalculation.
+
+```bash
+# Default render fetches live (falls back to cache -> seed -> master):
+python3 scripts/render-html.py --spec sizings/<slug>.json --out sizings/<slug>.html
+
+# Force offline (no network), or pin an explicit pricing JSON for reproducibility:
+python3 scripts/render-html.py --spec ... --out ... --offline
+python3 scripts/render-html.py --spec ... --out ... --pricing assets/snowflake_pricing_master.json
+
+# Derive credit / AI-credit / storage rates for a region (Phase 1 helper):
+python3 scripts/derive-rates.py --cloud AWS --region "London" --edition Enterprise
+
+# Refresh the runtime cache or re-commit the offline seed:
+python3 framework/live_pricing.py --refresh
+python3 framework/live_pricing.py --write-seed     # update assets/live_pricing_seed.json
+
+# Structural + range sanity checks (live, --offline, or a specific file):
+python3 scripts/verify-pricing-json.py [--offline] [--pricing <file>]
+```
+
+To update the static sections, edit `assets/snowflake_pricing_master.json` and its
+`metadata.effective_date`; to refresh the live snapshot, re-run `--write-seed`.
 
 ## Branding
 

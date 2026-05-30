@@ -81,11 +81,11 @@ def add_year_by_year_chart(
         values = computed_totals.get(key, [0] * years)
         chart_data.add_series(label, [round(v, 2) for v in values])
 
-    # Default geometry if not specified.
-    l = left   if left   is not None else Inches(0.5)
-    t = top    if top    is not None else Inches(1.4)
-    w = width  if width  is not None else Inches(8.5)
-    h = height if height is not None else Inches(4.8)
+    # Default geometry if not specified (10.0" x 5.625" slide content area).
+    l = left   if left   is not None else Inches(0.4)
+    t = top    if top    is not None else Inches(0.7)
+    w = width  if width  is not None else Inches(9.2)
+    h = height if height is not None else Inches(4.3)
 
     chart_frame = slide.shapes.add_chart(
         XL_CHART_TYPE.COLUMN_STACKED, l, t, w, h, chart_data

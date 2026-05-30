@@ -43,8 +43,15 @@ import json
 import pathlib
 from typing import Optional
 
+import calc_access  # native-shape rate accessors (framework/)
+
 # ── JS-replica constants (must match proposal-template.html) ──────────────── #
 
+# Gen-1 standard fallback table. Authoritative rates now come from the live
+# calculator via calc_access.warehouse_credits(); this dict is the offline
+# fallback used only when the merged pricing has no `calc` block (e.g. bare
+# unit-test fixtures). Note it stops at 4XL: the calc accessor is what fixes
+# the historical 5XL/6XL = 1-credit bug.
 WH_CREDITS = {
     "XS": 1, "S": 2, "M": 4, "L": 8, "XL": 16,
     "2XL": 32, "3XL": 64, "4XL": 128,
@@ -111,8 +118,29 @@ def default_ramp_multiplier_for_year(meta: dict, year: int) -> float:
     return ramp_multiplier_for_year(dev, go, curve, year)
 
 
-def wh_monthly_credits(w: dict) -> float:
-    rate = WH_CREDITS.get(w.get("size", "XS"), 1)
+def wh_credits_per_hour(w: dict, pricing: Optional[dict] = None, cloud: Optional[str] = None) -> float:
+    """Credits/hour for a workload's warehouse.
+
+    Uses the live calculator (via calc_access) when ``pricing`` carries a ``calc``
+    block (honouring gen 1/2, warehouse_type standard/snowpark and memory_config)
+    and falls back to the static WH_CREDITS table otherwise.
+    """
+    size = w.get("size", "XS")
+    if pricing is not None and calc_access.has_calc(pricing):
+        rate = calc_access.warehouse_credits(
+            pricing, size,
+            gen=int(w.get("gen", 1) or 1),
+            warehouse_type=(w.get("warehouse_type") or "standard"),
+            memory_config=w.get("memory_config"),
+            cloud=cloud,
+        )
+        if rate is not None:
+            return rate
+    return WH_CREDITS.get(size, 1)
+
+
+def wh_monthly_credits(w: dict, pricing: Optional[dict] = None, cloud: Optional[str] = None) -> float:
+    rate = wh_credits_per_hour(w, pricing, cloud)
     cmin = w.get("clusters_min", 1) or 0
     cmax = w.get("clusters_max", 1) or 0
     avg_clusters = (cmin + cmax) / 2.0
@@ -315,7 +343,7 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
 
     for y in range(1, years + 1):
         wh_credits = sum(
-            wh_monthly_credits(w) * 12 * ramp_multiplier_for_year(
+            wh_monthly_credits(w, pricing, meta.get("cloud")) * 12 * ramp_multiplier_for_year(
                 int(w.get("dev_start_month", meta.get("default_dev_start_month", 2)) or 2),
                 int(w.get("go_live_month", meta.get("default_go_live_month", 11)) or 11),
                 w.get("ramp_curve", meta.get("default_ramp_curve", "linear")) or "linear",

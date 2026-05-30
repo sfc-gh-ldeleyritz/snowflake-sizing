@@ -10,7 +10,8 @@ The function:
      spec['computed_totals'] which may be stale from an HTML edit.
   3. Sanitizes em-dashes (U+2014) and en-dashes (U+2013) in all string fields
      to ' - ' (mirrors sizing-guard hygiene).
-  4. Builds a 13.333" x 7.5" widescreen Presentation with 7 slides.
+  4. Builds a 10.0" x 5.625" Presentation with 7 slides (or 8 when
+     spec["confirm_required"] is non-empty).
   5. Returns raw PPTX bytes (and writes to out_path if provided).
 
 Slide order:
@@ -20,7 +21,8 @@ Slide order:
   4. Year-by-year costs (native chart)
   5. Serverless / AI breakdown
   6. Assumptions
-  7. Closer / thank-you
+  7. Confirm-required items (only when spec["confirm_required"] is non-empty)
+  8. Closer / thank-you
 """
 from __future__ import annotations
 
@@ -30,7 +32,6 @@ import pathlib
 import sys
 
 from pptx import Presentation
-from pptx.util import Emu
 
 # Ensure framework/ is importable when called from arbitrary CWDs.
 _THIS_DIR = pathlib.Path(__file__).resolve().parent
@@ -52,6 +53,7 @@ from .slides import (  # noqa: E402
     build_year_chart_slide,
     build_serverless_ai_slide,
     build_assumptions_slide,
+    build_confirm_required_slide,
     build_closer_slide,
 )
 
@@ -85,6 +87,23 @@ def _sanitize_dashes(obj):
     return obj
 
 
+# ── Template helpers ─────────────────────────────────────────────────────── #
+
+def _remove_all_slides(prs) -> None:
+    """Remove all pre-existing slides and their OPC package parts from *prs*.
+
+    Uses Part.drop_rel() to remove both the relationship entry and the actual
+    slide XML file from the package, preventing duplicate-name ZIP warnings.
+    Slide masters, layouts, and theme data are preserved.
+    """
+    from pptx.oxml.ns import qn
+    sldIdLst = prs.slides._sldIdLst
+    for sId in list(sldIdLst):
+        rId = sId.get(qn('r:id'))
+        prs.part.drop_rel(rId)
+        sldIdLst.remove(sId)
+
+
 # ── PPTX builder ─────────────────────────────────────────────────────────── #
 
 def build(
@@ -113,10 +132,18 @@ def build(
     # 3. Sanitize em/en-dashes throughout.
     spec = _sanitize_dashes(spec)
 
-    # 4. Create presentation with widescreen dimensions.
-    prs = Presentation()
-    prs.slide_width  = brand.SLIDE_W   # 13.333"
-    prs.slide_height = brand.SLIDE_H   # 7.5"
+    # 4. Create presentation.  Load from the Snowflake template when available
+    #    so that slide dimensions (10"×5.625") come from the template XML.
+    #    If the template file is absent, fall back to a blank Presentation with
+    #    manually-set dimensions.
+    if brand.TEMPLATE_PATH.is_file():
+        prs = Presentation(str(brand.TEMPLATE_PATH))
+        _remove_all_slides(prs)
+        # Template already encodes slide_width=10" and slide_height=5.625".
+    else:
+        prs = Presentation()
+        prs.slide_width  = brand.SLIDE_W
+        prs.slide_height = brand.SLIDE_H
 
     # 5. Build slides.
     build_title_slide(prs, spec, computed_totals)
@@ -125,6 +152,8 @@ def build(
     build_year_chart_slide(prs, spec, computed_totals)
     build_serverless_ai_slide(prs, spec, computed_totals)
     build_assumptions_slide(prs, spec, computed_totals)
+    if spec.get("confirm_required"):
+        build_confirm_required_slide(prs, spec, computed_totals)
     build_closer_slide(prs, spec, computed_totals)
 
     # 6. Serialise to bytes.

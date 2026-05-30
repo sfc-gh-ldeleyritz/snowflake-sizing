@@ -1,5 +1,73 @@
 # snowflake-sizing changelog
 
+## [v2.6.0] — live pricing from the Snowflake calculator
+
+### Added
+
+- **Live pricing fetch.** New `framework/live_pricing.py` fetches the public
+  Snowflake pricing calculator at render time. It scrapes the calculator page for
+  its version-specific JSON endpoints (`pricing` + `regions`), fetches and parses
+  them, and attaches them natively under a `calc` namespace via `merge_pricing()`.
+  Endpoint discovery falls back to pinned URLs; the whole fetch falls back through
+  a runtime cache (`assets/live_pricing_cache.json`, git-ignored) and a committed
+  offline seed (`assets/live_pricing_seed.json`) to the static master, so a fresh
+  clone always renders deterministically offline. CLI: `--refresh`,
+  `--write-seed`, `--print-endpoints`, `--offline`.
+- **Native-shape accessor layer.** `framework/calc_access.py` (Python) and a
+  matching `PricingData` adapter inside `assets/templates/proposal-template.html`
+  (JS) are the single source for reading rates from the `calc` block:
+  `credit_rate`, `storage_rate`, `ai_credit_rate(s)`, `warehouse_credits`
+  (gen1/gen2/snowpark + memory config), `spcs_families`/`spcs_credit`,
+  `ai_token_rate`/`ai_models`, `calc_regions`, `region_product_families`.
+- **Warehouse feature parity.** Workload cards gain a **Warehouse Type** selector
+  (Standard Gen1 / Standard Gen2 / Snowpark-Optimized) with a memory-config picker
+  for Snowpark, and the size dropdown now offers **5XL/6XL** for Gen1. Schema adds
+  optional `gen`, `warehouse_type`, `memory_config` to each workload.
+- **SPCS gen2 from live calculator.** The SPCS tab's gen2 families now come from
+  the live SPCS compute pools (HIGHMEM_X64 / CPU_X64 / GPU) with their credit rates,
+  replacing the static `spcs.spcs_gen2` table (legacy per-cloud lookup retained as a
+  fallback). SPCS is JS-only, so there is no Python/JS drift risk.
+- **`scripts/derive-rates.py`.** Phase 1 helper that resolves credit / AI-credit /
+  storage rates (and available editions) for a cloud-region-edition from the live
+  calculator, replacing hand-reading of the pricing JSON.
+- **Region/edition availability check.** `validate_pricing()` now warns when a
+  spec's edition is not offered in its region per the live `regions.json`
+  `product_families`.
+- **Tests.** New `tests/test_live_pricing.py` (fetch parsing, merge, accessors,
+  offline fallback — network-free) plus calc-path coverage added to
+  `test_compute_totals.py`, `test_pricing_validation.py`, and
+  `test_schema_conformance.py`. Suite is now 302 passing.
+
+### Changed
+
+- **The 5XL/6XL = 1-credit bug is fixed.** `compute_totals.py` and the template JS
+  now derive warehouse credits/hour through the accessor layer
+  (`warehouse_credits()` / `whRate()`), so 5XL bills 256 cr/hr and 6XL 512 cr/hr
+  (previously both silently fell through to 1). The static `WH_CREDITS` table is
+  retained only as an offline fallback. Gen1 XS–4XL values are unchanged, so
+  existing sizings are unaffected.
+- **`pricing_validator.py`** lookups (`lookup_credit_rate`, `lookup_storage_rate`,
+  `lookup_ai_credit_rate`) read the live `calc` block when present, falling back to
+  the flattened tables — verified rate-for-rate identical to the static master for
+  every bundled fixture.
+- **`scripts/render-html.py`** defaults to a live fetch; `--offline` skips the
+  network and `--pricing PATH` pins an explicit pricing JSON for deterministic
+  tests / reproductions.
+- **`render-all-fixtures-html.py`** renders fixtures `--offline` by default (against
+  the committed seed) for deterministic, network-free smoke tests; `--live` opts in.
+- **`scripts/verify-pricing-json.py`** rewritten from ~1000 lines of pinned exact
+  values to structural + range sanity checks over the merged pricing (price types
+  present, credit ∈ [1,10], storage ∈ [15,60], AI credit ∈ [1.5,2.5], Gen1 credits
+  double per size step, Gen2/Snowpark/SPCS present and positive).
+- **`SKILL.md`** Phase 1 now derives rates via `scripts/derive-rates.py`.
+
+### Notes
+
+- Cortex Complete / Cortex Analyst LLM **token** rates are not published by the
+  calculator and remain sourced from the static `ai_features` tables (which are
+  more complete than the calculator's model lists), keeping the Python first-load
+  KPIs and the in-page JS recalculation in lockstep.
+
 ## [v2.5.0] — native PPTX export (Snowflake-branded deck)
 
 ### Added

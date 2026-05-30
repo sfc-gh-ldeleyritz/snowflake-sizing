@@ -15,3 +15,6 @@ sizings/
 .pytest_cache/
 __pycache__
 pytest.ini
+
+# Runtime live-pricing cache (refreshed on each successful fetch; seed is committed)
+assets/live_pricing_cache.json

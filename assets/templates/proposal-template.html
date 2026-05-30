@@ -698,6 +698,88 @@ const SF_CHART_PALETTE = ['#11567F', '#1B7BAE', '#29B5E8', '#76D0F1', '#A0BBCC']
 
 const WH_CREDITS = { XS:1, S:2, M:4, L:8, XL:16, '2XL':32, '3XL':64, '4XL':128 };
 
+/* ===== PricingData: native-shape adapter over PRICING_DATA.calc =====
+   Mirrors framework/calc_access.py. Single source for rate lookups against the
+   live calculator block. All methods tolerate a missing calc block (return
+   null / [] so callers can fall back to the static PRICING_DATA sections). */
+const PricingData = (function () {
+  const calc = (PRICING_DATA && PRICING_DATA.calc) || {};
+  const CLOUD_ALIASES = { aws:'AWS', amazon:'AWS', 'amazon web services':'AWS',
+    azure:'Azure', 'microsoft azure':'Azure', 'ms azure':'Azure',
+    gcp:'GCP', google:'GCP', 'google cloud':'GCP', 'google cloud platform':'GCP' };
+  const EDITION_ALIASES = { standard:'Standard', enterprise:'Enterprise',
+    'business critical':'Business Critical', business_critical:'Business Critical',
+    'business-critical':'Business Critical', vps:'VPS', 'virtual private snowflake':'VPS' };
+  const SIZE_ALIASES = { 'x-small':'XS', xsmall:'XS', xs:'XS', small:'S', s:'S',
+    medium:'M', m:'M', large:'L', l:'L', 'x-large':'XL', xlarge:'XL', xl:'XL',
+    '2x-large':'2XL', '2xlarge':'2XL', '2xl':'2XL', '3x-large':'3XL', '3xlarge':'3XL', '3xl':'3XL',
+    '4x-large':'4XL', '4xlarge':'4XL', '4xl':'4XL', '5x-large':'5XL', '5xlarge':'5XL', '5xl':'5XL',
+    '6x-large':'6XL', '6xlarge':'6XL', '6xl':'6XL' };
+  const num = (v) => (v == null ? null : Number(v));
+  function normCloud(c){ if(!c) return null; const k=String(c).trim().toLowerCase(); return CLOUD_ALIASES[k] || String(c).trim(); }
+  function normEdition(e){ if(!e) return null; const k=String(e).trim().toLowerCase(); return EDITION_ALIASES[k] || String(e).trim(); }
+  function normSize(s){ if(!s) return null; const k=String(s).trim().toLowerCase(); return SIZE_ALIASES[k] || String(s).trim().toUpperCase(); }
+  function sizeOf(label){ const head=String(label||'').split(' - ')[0].split(' ')[0]; return normSize(head) || head.toUpperCase(); }
+  function priceType(name){ for(const pt of (calc.pricing||[])){ if(pt.priceType===name) return pt.data; } return null; }
+  function regionMatch(want, have){ if(want==null||have==null) return false; return String(want).trim().toLowerCase()===String(have).trim().toLowerCase(); }
+  function cloudRegionRows(data, cloud, region){ const cn=normCloud(cloud);
+    for(const c of (data||[])){ if(c.cloud!==cn && c.cloud!==cloud && c.cloud!=='All') continue;
+      for(const r of (c.data||[])){ if(regionMatch(region,r.region) || r.region==='All') return r.data||[]; } }
+    return []; }
+
+  function creditRate(cloud, region, edition){ const rows=cloudRegionRows(priceType('Credit On Demand'),cloud,region); const ed=normEdition(edition);
+    for(const row of rows){ if(row.productFamily2===ed) return num(row.listPrice); } return null; }
+  function storageRate(cloud, region){ const rows=cloudRegionRows(priceType('Storage'),cloud,region);
+    for(const row of rows){ if(row.productFamily2==='Capacity Storage') return num(row.listPrice); }
+    return rows.length ? num(rows[0].listPrice) : null; }
+  function aiCreditRates(){ const out={regional:null, global:null};
+    for(const c of (priceType('AI Credit')||[])){ for(const r of (c.data||[])){ for(const fam of (r.data||[])){
+      const nm=String(fam.productFamily2||'').trim().toLowerCase(); const rows=fam.data||[];
+      if((nm in out) && rows.length) out[nm]=num(rows[0].listPrice); } } } return out; }
+  function aiCreditRate(tier){ return aiCreditRates()[String(tier||'regional').trim().toLowerCase()]; }
+
+  function computeType(t){ for(const c of (priceType('computeTypes')||[])){ if(c.type===t) return c.data; } return null; }
+  function flatWh(data, size){ const want=normSize(size); for(const w of (data||[])){ if(sizeOf(w.warehouse)===want) return num(w.creditsPerHour); } return null; }
+  function warehouseCredits(size, opts){ opts=opts||{};
+    const wtype=String(opts.warehouseType||opts.type||'standard').toLowerCase(); const gen=Number(opts.gen||1);
+    if(wtype==='snowpark'||wtype==='snowpark_optimized'||wtype==='snowpark-optimized'){
+      const data=computeType('SNOWPARK')||[]; const want=normSize(size); const mem=opts.memoryConfig||'MEMORY_1X';
+      for(const w of data){ if(sizeOf(w.warehouse)!==want) continue; const q={}; (w.additionalQualifiers||[]).forEach(x=>{q[x.label]=x.value;});
+        if((q.memoryConfiguration||'MEMORY_1X')===mem) return num(w.creditsPerHour); } return null; }
+    if(gen===2){ const data=computeType('STANDARD_GEN_2')||[]; const cn=normCloud(opts.cloud)||'AWS';
+      let col=data.find(x=>x.cloud===cn); if(!col && data.length) col=data[0]; return flatWh(col?col.data:[], size); }
+    return flatWh(computeType('STANDARD_GEN_1'), size); }
+
+  function spcsData(){ for(const c of (priceType('computeTypes')||[])){ if(c.type==='SPCS') return c.data||[]; } return []; }
+  function spcsFamilies(){ const out=[]; for(const grp of spcsData()){ for(const fam of (grp.data||[])){ const label=fam.instanceFamily||'';
+    out.push({ instanceType:grp.instanceType, family:label.split(' - ')[0].trim(), label:label, creditsPerHour:fam.creditsPerHour }); } } return out; }
+  function spcsCredit(family){ if(!family) return null; const want=String(family).trim().toLowerCase();
+    for(const f of spcsFamilies()){ if(f.family.toLowerCase()===want) return num(f.creditsPerHour); } return null; }
+  function snowparkMemoryConfigs(){ const data=computeType('SNOWPARK')||[]; const seen=[];
+    for(const w of data){ for(const q of (w.additionalQualifiers||[])){ if(q.label==='memoryConfiguration' && seen.indexOf(q.value)<0) seen.push(q.value); } }
+    return seen.length ? seen : ['MEMORY_1X']; }
+
+  function aiTokenRate(pt, fn, model, subtype){ if(model===undefined) model=null;
+    for(const st of (priceType(pt)||[])){ if(subtype!=null && st.subTypeName!==subtype) continue;
+      for(const f of (st.data||[])){ if(f.functionName!==fn) continue;
+        for(const m of (f.data||[])){ if((m.modelName||null)===model) return num(m.creditConversionRate); } } } return null; }
+  function aiModels(pt, fn, subtype){ const seen=new Set();
+    for(const st of (priceType(pt)||[])){ if(subtype!=null && st.subTypeName!==subtype) continue;
+      for(const f of (st.data||[])){ if(fn!=null && f.functionName!==fn) continue;
+        for(const m of (f.data||[])){ if(m.modelName) seen.add(m.modelName); } } } return Array.from(seen).sort(); }
+
+  function regions(cloud){ const cn=normCloud(cloud); const out=[];
+    for(const c of (calc.regions||[])){ if(cn && c.cloud!==cn) continue;
+      for(const cont of (c.data||[])){ for(const r of (cont.data||[])){ if(r.region) out.push(r.region); } } } return out; }
+  function regionProductFamilies(cloud, region){ const cn=normCloud(cloud);
+    for(const c of (calc.regions||[])){ if(c.cloud!==cn) continue;
+      for(const cont of (c.data||[])){ for(const r of (cont.data||[])){ if(regionMatch(region,r.region)) return (r.data||{}).product_families||null; } } } return null; }
+
+  return { hasCalc: !!(calc && calc.pricing), normCloud, normEdition, normSize, sizeOf, priceType,
+    creditRate, storageRate, aiCreditRates, aiCreditRate, warehouseCredits, computeType,
+    spcsFamilies, spcsCredit, snowparkMemoryConfigs, aiTokenRate, aiModels, regions, regionProductFamilies };
+})();
+
 // ========== Per-feature tooltips ==========
 // Hover or focus an .info-icon[data-tt="key"] to display these strings.
 const FEATURE_TOOLTIPS = {
@@ -933,8 +1015,20 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
 })();
 
 // ========== Calculation engine ==========
+// Warehouse credits/hour via the live calculator (PricingData), honouring gen
+// (1/2), warehouse_type and memory_config, with the static WH_CREDITS table as
+// an offline fallback. Single source shared by every warehouse cost display,
+// and the fix for the historical 5XL/6XL = 1-credit bug.
+function whRate(size, w) {
+  w = w || {};
+  const r = PricingData.warehouseCredits(size, {
+    gen: w.gen, warehouseType: w.warehouse_type, memoryConfig: w.memory_config,
+    cloud: (SIZING_SPEC.meta || {}).cloud,
+  });
+  return (r == null) ? (WH_CREDITS[size] || 1) : r;
+}
 function whMonthlyCredits(w) {
-  const rate = WH_CREDITS[w.size] || 1;
+  const rate = whRate(w.size, w);
   const avgClusters = (w.clusters_min + w.clusters_max) / 2;
   return rate * w.hours_per_day * w.days_per_month * avgClusters;
 }
@@ -1128,9 +1222,14 @@ function calcSPCSCost() {
   const SPCS_GEN1 = { XS_MEM: 1.5, S_MEM: 3, M_MEM: 6, L_MEM: 12, XS_HIPU: 1.5, S_HIPU: 3, M_HIPU: 6 };
   return SIZING_SPEC.spcs.instances.reduce((sum, inst) => {
     if (inst.generation === 'gen2') {
-      const gen2Data = PRICING_DATA.spcs.spcs_gen2.data.find(r => r.family === inst.instance_type);
-      const cloud = SIZING_SPEC.meta.cloud.toLowerCase();
-      const rate = gen2Data ? (gen2Data[cloud] || 0) : 0;
+      // Live calculator SPCS rate (cloud-agnostic credits/hour); fall back to
+      // the legacy per-cloud spcs_gen2 table for any pre-calc instance type.
+      let rate = PricingData.spcsCredit(inst.instance_type);
+      if (rate == null) {
+        const gen2Data = (PRICING_DATA.spcs && PRICING_DATA.spcs.spcs_gen2 && PRICING_DATA.spcs.spcs_gen2.data || []).find(r => r.family === inst.instance_type);
+        const cloud = (SIZING_SPEC.meta.cloud || '').toLowerCase();
+        rate = gen2Data ? (gen2Data[cloud] || 0) : 0;
+      }
       return sum + rate * (inst.hours_monthly || 0) * (inst.count || 0);
     } else {
       const rate = SPCS_GEN1[inst.instance_type] || 0;
@@ -1159,7 +1258,7 @@ function calcCollabCost() {
   if (!c || !Array.isArray(c.accounts)) return 0;
   return c.accounts.reduce((sum, a) => {
     if (a.enabled === false) return sum;
-    const rate = WH_CREDITS[a.warehouse_size] || 1;
+    const rate = whRate(a.warehouse_size, a);
     return sum + rate * (a.hours_per_day || 0) * (a.days_per_month || 0);
   }, 0);
 }
@@ -1524,6 +1623,29 @@ function updateWorkload(id, field, value) {
   }
 }
 
+// Warehouse generation / type. Maps the single Type select to gen + warehouse_type
+// (+ a default memory_config for Snowpark), repopulating so the size list and the
+// memory-config selector reflect the new type, then recalculates.
+function updateWorkloadType(id, value) {
+  const w = SIZING_SPEC.workloads.find(x => x.id === id);
+  if (!w) return;
+  if (value === 'snowpark') {
+    w.warehouse_type = 'snowpark';
+    w.gen = 1;
+    if (!w.memory_config) w.memory_config = (PricingData.snowparkMemoryConfigs()[0] || 'MEMORY_1X');
+  } else {
+    w.warehouse_type = 'standard';
+    w.gen = (value === 'standard-2') ? 2 : 1;
+  }
+  // Gen2 / Snowpark cap at 4XL: clamp an out-of-range size down.
+  if ((w.warehouse_type === 'snowpark' || w.gen === 2) && (w.size === '5XL' || w.size === '6XL')) {
+    w.size = '4XL';
+  }
+  populateWorkloadCards();
+  updateWorkloadCalcs();
+  recalculate();
+}
+
 function updateServerless(key, field, value) {
   if (SIZING_SPEC.serverless[key]) {
     SIZING_SPEC.serverless[key][field] = value;
@@ -1573,17 +1695,22 @@ function updateStorage(field, value) {
 function updateGlobal(field, value) {
   SIZING_SPEC.meta[field] = value;
   if (field === 'edition' || field === 'cloud' || field === 'region') {
-    // Re-derive list rate from the pricing JSON; effective rate is set by applyDiscount() below.
-    const row = PRICING_DATA.credit_pricing.data.find(r => r.cloud === SIZING_SPEC.meta.cloud && r.region === SIZING_SPEC.meta.region);
-    if (row) {
-      const ed = SIZING_SPEC.meta.edition.toLowerCase().replace(' ', '_');
-      const newRate = row[ed];
-      if (newRate) SIZING_SPEC.meta.list_credit_rate = newRate;
+    const meta = SIZING_SPEC.meta;
+    // Re-derive list rate from the live calculator (falls back to the flattened table).
+    let newRate = PricingData.creditRate(meta.cloud, meta.region, meta.edition);
+    if (newRate == null) {
+      const row = PRICING_DATA.credit_pricing.data.find(r => r.cloud === meta.cloud && r.region === meta.region);
+      if (row) { const ed = meta.edition.toLowerCase().replace(' ', '_'); newRate = row[ed]; }
     }
+    if (newRate) meta.list_credit_rate = newRate;
     // Re-derive storage rate for the new cloud/region (edition doesn't affect storage pricing).
-    const storageRow = (PRICING_DATA.storage?.standard?.data || [])
-      .find(r => r.cloud === SIZING_SPEC.meta.cloud && r.region === SIZING_SPEC.meta.region);
-    if (storageRow?.on_demand != null) SIZING_SPEC.meta.storage_rate_per_tb = storageRow.on_demand;
+    let stRate = PricingData.storageRate(meta.cloud, meta.region);
+    if (stRate == null) {
+      const storageRow = (PRICING_DATA.storage?.standard?.data || [])
+        .find(r => r.cloud === meta.cloud && r.region === meta.region);
+      if (storageRow?.on_demand != null) stRate = storageRow.on_demand;
+    }
+    if (stRate != null) meta.storage_rate_per_tb = stRate;
     populateGlobalSettings();
   }
   if (field === 'contract_years') {
@@ -1678,7 +1805,7 @@ function updateWorkloadCalcs() {
     if (calcEl) {
       const monthly = whMonthlyCredits(w);
       const annual = monthly * 12;
-      const rate = WH_CREDITS[w.size];
+      const rate = whRate(w.size, w);
       const avg = (w.clusters_min + w.clusters_max) / 2;
       calcEl.textContent = `${rate} cr/hr x ${w.hours_per_day} hrs x ${w.days_per_month} days x ${avg} clusters = ${fmt(monthly)} cr/mo -> ${fmt(annual)} cr/yr`;
     }
@@ -1791,9 +1918,23 @@ function updateExpectedGrowth(value) {
 
 // ========== Populators ==========
 function populateWorkloadCards() {
-  const sizes = ['XS','S','M','L','XL','2XL','3XL','4XL'];
   const html = SIZING_SPEC.workloads.map(w => {
-    const sizeOpts = sizes.map(s => `<option value="${s}" ${s===w.size?'selected':''}>${s} - ${WH_CREDITS[s]} cr/hr</option>`).join('');
+    const isSnowpark = w.warehouse_type === 'snowpark';
+    // Gen2 and Snowpark-Optimized top out at 4XL; Gen1 standard goes to 6XL.
+    const sizes = (isSnowpark || w.gen === 2)
+      ? ['XS','S','M','L','XL','2XL','3XL','4XL']
+      : ['XS','S','M','L','XL','2XL','3XL','4XL','5XL','6XL'];
+    const sizeOpts = sizes.map(s => `<option value="${s}" ${s===w.size?'selected':''}>${s} - ${whRate(s, w)} cr/hr</option>`).join('');
+    const typeVal = isSnowpark ? 'snowpark' : ('standard-' + (w.gen || 1));
+    const typeOpts = [['standard-1','Standard (Gen1)'],['standard-2','Standard (Gen2)'],['snowpark','Snowpark-Optimized']]
+      .map(([v,l]) => `<option value="${v}" ${v===typeVal?'selected':''}>${l}</option>`).join('');
+    const memBlock = isSnowpark
+      ? `<label>Memory Config
+          <select id="mem-${w.id}" onchange="updateWorkload('${w.id}', 'memory_config', this.value)">${
+            PricingData.snowparkMemoryConfigs().map(mc => `<option value="${mc}" ${mc===(w.memory_config||'MEMORY_1X')?'selected':''}>${mc}</option>`).join('')
+          }</select>
+        </label>`
+      : '';
     // Per-workload sourcing note: editable + deletable, mirroring the Assumptions/Confirm lists.
     // A null justification means the note was deleted; show a re-add affordance instead.
     const noteBlock = (w.justification != null)
@@ -1819,6 +1960,10 @@ function populateWorkloadCards() {
         <label>Warehouse Size
           <select id="size-${w.id}" onchange="updateWorkload('${w.id}', 'size', this.value)">${sizeOpts}</select>
         </label>
+        <label>Warehouse Type
+          <select id="wtype-${w.id}" onchange="updateWorkloadType('${w.id}', this.value)">${typeOpts}</select>
+        </label>
+        ${memBlock}
         <label>Hours/Day: <span id="hrs-val-${w.id}">${w.hours_per_day}</span>
           <input type="range" id="hrs-${w.id}" min="0" max="24" step="0.5" value="${w.hours_per_day}"
                  oninput="updateWorkload('${w.id}', 'hours_per_day', +this.value)">
@@ -2129,12 +2274,15 @@ function populateSPCSPanel() {
       '<p style="color: var(--gray-600); font-style: italic;">No SPCS instances configured. Click + Add SPCS Instance to create one.</p>';
     return;
   }
-  const gen2Families = (PRICING_DATA.spcs && PRICING_DATA.spcs.spcs_gen2 && PRICING_DATA.spcs.spcs_gen2.data || []).map(r => r.family);
+  // gen2 families now come from the live calculator SPCS compute pools
+  // (HIGHMEM_X64 / CPU_X64 / GPU); gen1 keeps the legacy memory/HIPU pools.
+  const gen2Families = PricingData.spcsFamilies();
   const gen1Types = ['XS_MEM', 'S_MEM', 'M_MEM', 'L_MEM', 'XS_HIPU', 'S_HIPU', 'M_HIPU'];
   const html = sp.instances.map(inst => {
     const isGen2 = inst.generation === 'gen2';
-    const typeOpts = (isGen2 ? gen2Families : gen1Types)
-      .map(t => `<option value="${t}" ${t===inst.instance_type?'selected':''}>${t}</option>`).join('');
+    const typeOpts = isGen2
+      ? gen2Families.map(f => `<option value="${f.family}" ${f.family===inst.instance_type?'selected':''}>${f.family} - ${f.creditsPerHour} cr/hr</option>`).join('')
+      : gen1Types.map(t => `<option value="${t}" ${t===inst.instance_type?'selected':''}>${t}</option>`).join('');
     return `<div class="workload-card" data-id="${inst.id}">
       <div class="workload-header">
         <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
@@ -2173,7 +2321,7 @@ function addSPCSInstance() {
     id: nextId('sp'),
     label: 'New instance',
     generation: 'gen2',
-    instance_type: 'GEN_X64_G2_4',
+    instance_type: (PricingData.spcsFamilies()[0] || {}).family || 'CPU_X64_M',
     count: 1,
     hours_monthly: 730,
   });
@@ -2195,7 +2343,7 @@ function updateSPCSInstance(id, field, value) {
   inst[field] = value;
   if (field === 'generation') {
     // Re-render so the instance-type select shows the right options.
-    inst.instance_type = (value === 'gen2') ? 'GEN_X64_G2_4' : 'XS_MEM';
+    inst.instance_type = (value === 'gen2') ? ((PricingData.spcsFamilies()[0] || {}).family || 'CPU_X64_M') : 'XS_MEM';
     populateSPCSPanel();
   }
   recalculate();
