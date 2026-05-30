@@ -55,7 +55,7 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 | Tab | What you can edit |
 |---|---|
 | **Global Settings** | Cloud / Region / Edition, contract years, annual growth %, default ramp curve, dev-start / go-live months, Platform Credit discount override |
-| **Warehouses** | Size, hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards |
+| **Warehouses** | Size, hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards; edit / delete the per-warehouse sourcing note (the `SOURCED:` line) inline |
 | **Serverless** | Toggle and size each serverless feature (Snowpipe, Search Optimization, Materialized Views, Dynamic Tables, etc.) |
 | **AI / Cortex** | Cortex Complete, Cortex Agents, Snowflake Intelligence, Cortex Code (CLI / Snowsight / Desktop surfaces), Cortex Analyst, Cortex Search, Document AI, AI Functions |
 | **SPCS** | Instance type, generation, node count, hours/month; add / delete instances |
@@ -70,7 +70,7 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 - **Year-by-Year Breakdown** — per-workload credit and dollar totals for each contract year
 - **Stacked bar chart** — annual spend by workload group
 - **Donut chart** — credit share by workload group
-- **Scenario Comparison** — Conservative (10% growth / slow ramp), Expected (20% / linear), Aggressive (35% / fast) side-by-side
+- **Scenario Comparison** — **Expected** is the locked base case: it reuses the exact Year-by-Year computation (full cost stack, per-workload ramp), so its TCV always matches the headline KPI and the Year-by-Year Breakdown. **Conservative** (slower ramp / lower growth) and **Aggressive** (faster ramp / higher growth) are editable sensitivity bands computed over the same full stack. Editing the Expected card's growth % updates the base-case `annual_growth_rate` directly.
 
 ### Additional features
 
@@ -80,6 +80,7 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 - **Export JSON** — downloads the current `SIZING_SPEC` as a portable `.json` file (same name convention as Save Version). Use this to round-trip browser edits back to disk, or to feed future export skills for PPTX/DOCX/XLSX generation.
 - **Per-feature tooltips** — `ⓘ` icon next to every togglable feature explains what it is and how it bills. Hidden in print mode.
 - **Editable assumptions** — Stated Assumptions and Requires Confirmation items are `contenteditable` in the browser. Add, delete, or reword inline; changes persist in `SIZING_SPEC` and are saved by Save Version.
+- **Editable sourcing notes** — the `SOURCED:` / `ASSUMPTION:` line under each warehouse card is `contenteditable` too. Edit the source label and note text inline, delete the note with the `✕` button, or re-add it with **+ Add sourcing note**. Changes persist in `SIZING_SPEC` and are saved by Save Version; the empty-note affordance is hidden in print / PDF output.
 - **Scenario toggle** — checkbox above the Scenario Comparison grid to show/hide the Conservative and Aggressive cards.
 - **Print / Save as PDF** — floating button (primary) opens the native browser print dialog; choose "Save as PDF" as the destination for a clean multi-page A4 PDF. The `@media print` rules expand all tabs in flow, reflow Chart.js canvases, hide interactive chrome, and keep KPI tiles, charts, and table rows from splitting across page boundaries.
 

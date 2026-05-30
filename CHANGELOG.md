@@ -1,5 +1,22 @@
 # snowflake-sizing changelog
 
+## [v2.5.0] — native PPTX export (Snowflake-branded deck)
+
+### Added
+
+- **Native PowerPoint export.** A new `renderer/pptx/` package generates a Snowflake-branded `.pptx` deck directly from a sizing spec JSON, with no LibreOffice/Office dependency. `brand.py` holds the canonical Snowflake brand constants (palette, fonts), `charts.py` builds native python-pptx charts straight from the `computed_totals` arrays (editable in PowerPoint, not rasterized images), `slides.py` assembles the individual slides, and `build_pptx.py` is the public entry point.
+- **Authoritative numbers, recomputed.** `build_pptx.py` re-runs `compute_core_totals()` against the spec rather than trusting any pre-baked figures, so the deck always reflects the canonical cost math.
+- **`scripts/render-pptx.py` CLI.** Loads the spec JSON, builds the deck, and performs a sanity check that the output begins with the `PK` ZIP magic bytes (a valid `.pptx` is a ZIP container).
+- **`scripts/pptx-qa-export.sh`.** A QA helper that renders the bundled fixtures to PPTX for visual inspection.
+- **`render-pptx` sub-skill.** New `skills/snowflake-sizing/sub-skills/render-pptx/` wiring so the deck can be produced as part of the sizing workflow.
+- **"Export for PPTX" button** in `assets/templates/proposal-template.html` and a matching `--pptx` flag on the `snowflake-sizing` command.
+- **Unit tests.** `tests/test_pptx.py` covers the generator engine; the full suite is now 248 passing.
+
+### Changed
+
+- **`hooks/sizing-guard.py`** updated to allow the new pptx source/script paths.
+- **`skills/snowflake-sizing/SKILL.md` and `commands/snowflake-sizing.md`** updated to document and wire the render-pptx sub-skill and the `--pptx` flag.
+
 ## [v2.4.0] — remove one-click Download PDF; native Print is the sole PDF path
 
 ### Removed
