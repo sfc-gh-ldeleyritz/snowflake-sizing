@@ -31,29 +31,56 @@ from .charts import add_year_by_year_chart
 
 # ── Slide layout helpers ──────────────────────────────────────────────────── #
 
+def _get_layout(prs: Presentation, name: str):
+    """Return the first slide layout matching *name*, or None if not found."""
+    for master in prs.slide_masters:
+        for layout in master.slide_layouts:
+            if layout.name == name:
+                return layout
+    return None
+
+
 def _blank_slide(prs: Presentation):
     """Add a blank slide using the cleanest available layout.
 
-    Searches all slide masters from last to first for a layout with no shapes
-    (no decorative chrome).  Falls back to an index-based search when every
-    layout has at least one shape.
+    Tries the named 'One Column Layout' from the base template first, then
+    searches all masters for a layout with no shapes, then falls back to
+    an index-based search.
     """
-    # Prefer a layout that is completely empty (no shapes → no inherited chrome).
+    layout = _get_layout(prs, "One Column Layout")
+    if layout:
+        return prs.slides.add_slide(layout)
+    # Fallback: layout with no shapes (no inherited chrome).
     for master in reversed(list(prs.slide_masters)):
-        for layout in master.slide_layouts:
-            if not list(layout.shapes):
-                return prs.slides.add_slide(layout)
-    # Fallback: any layout with no content placeholders (layout index 6 = Blank
-    # in the python-pptx built-in theme).
+        for lo in master.slide_layouts:
+            if not list(lo.shapes):
+                return prs.slides.add_slide(lo)
+    # Last resort: index-based blank layout.
     layouts = prs.slide_layouts
     for idx in (6, 5, 11, 0):
         try:
-            layout = layouts[idx]
-            if not layout.placeholders:
-                return prs.slides.add_slide(layout)
+            lo = layouts[idx]
+            if not lo.placeholders:
+                return prs.slides.add_slide(lo)
         except IndexError:
             pass
     return prs.slides.add_slide(layouts[-1])
+
+
+def _cover_slide(prs: Presentation):
+    """Add a cover slide using the '1_Data Cloud_1_1_2' layout (blue bg)."""
+    layout = _get_layout(prs, "1_Data Cloud_1_1_2")
+    if layout:
+        return prs.slides.add_slide(layout)
+    return _blank_slide(prs)
+
+
+def _closer_slide_blank(prs: Presentation):
+    """Add a closer slide using the 'Thank You_1' layout (blue bg + bottom chrome)."""
+    layout = _get_layout(prs, "Thank You_1")
+    if layout:
+        return prs.slides.add_slide(layout)
+    return _blank_slide(prs)
 
 
 def _set_slide_bg(slide, color: RGBColor) -> None:
@@ -121,9 +148,8 @@ def _add_accent_bar(slide) -> None:
     )
 
 
-def _chrome(slide, bg_color: RGBColor = None) -> None:
-    """Apply standard chrome: background, accent bar, logo."""
-    _set_slide_bg(slide, bg_color or brand.WHITE)
+def _chrome(slide) -> None:
+    """Apply content-slide chrome: accent bar and logo. Background set by layout."""
     _add_accent_bar(slide)
     _add_logo(slide)
 
@@ -159,11 +185,11 @@ def _fmt_dollar(value: float, abbreviated: bool = False) -> str:
 # ── Slide 1: Title ────────────────────────────────────────────────────────── #
 
 def build_title_slide(prs: Presentation, spec: dict, computed_totals: dict):
-    """Slide 1: Snowflake-branded cover.  Blue background, white text."""
-    slide = _blank_slide(prs)
-    _set_slide_bg(slide, brand.BLUE)
+    """Slide 1: Snowflake-branded cover.  Blue background from layout, white text."""
+    slide = _cover_slide(prs)
+    # Layout provides the blue background and the Snowflake freeform mark.
+    # Add accent bar at the bottom to cover the layout copyright text.
     _add_accent_bar(slide)
-    _add_logo(slide)
 
     meta = spec.get("meta", {}) or {}
     customer = meta.get("customer") or "Customer"
@@ -722,11 +748,11 @@ def build_confirm_required_slide(prs: Presentation, spec: dict, computed_totals:
 # ── Slide 7 or 8: Closer ─────────────────────────────────────────────────── #
 
 def build_closer_slide(prs: Presentation, spec: dict, computed_totals: dict):
-    """Final slide: Thank-you / next-steps closer.  Blue background."""
-    slide = _blank_slide(prs)
-    _set_slide_bg(slide, brand.BLUE)
-    _add_accent_bar(slide)
-    _add_logo(slide)
+    """Final slide: Thank-you / next-steps closer.  Blue background from layout."""
+    slide = _closer_slide_blank(prs)
+    # Layout provides blue background and the full Snowflake bottom chrome
+    # (GROUP shape: 10"x1.5" blue bar with white wordmark at bottom edge).
+    # Do NOT add accent bar or logo — layout GROUP already provides both.
 
     meta = spec.get("meta", {}) or {}
     customer = meta.get("customer") or "Customer"

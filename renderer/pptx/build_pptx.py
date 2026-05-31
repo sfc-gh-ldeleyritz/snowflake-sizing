@@ -132,14 +132,16 @@ def build(
     # 3. Sanitize em/en-dashes throughout.
     spec = _sanitize_dashes(spec)
 
-    # 4. Create presentation.  Load from the Snowflake template when available
-    #    so that slide dimensions (10"×5.625") come from the template XML.
-    #    If the template file is absent, fall back to a blank Presentation with
-    #    manually-set dimensions.
-    if brand.TEMPLATE_PATH.is_file():
-        prs = Presentation(str(brand.TEMPLATE_PATH))
-        _remove_all_slides(prs)
-        # Template already encodes slide_width=10" and slide_height=5.625".
+    # 4. Create presentation.  Prefer the committed sizing base template
+    #    (7-slide skeleton with named layouts) so layout-aware slide builders
+    #    can use the correct Snowflake cover/content/closer layouts.  Falls
+    #    back to the full Snowflake master template, then to a blank Presentation
+    #    with manually-set dimensions.
+    for tpath in (brand.BASE_TEMPLATE_PATH, brand.TEMPLATE_PATH):
+        if tpath.is_file():
+            prs = Presentation(str(tpath))
+            _remove_all_slides(prs)
+            break
     else:
         prs = Presentation()
         prs.slide_width  = brand.SLIDE_W

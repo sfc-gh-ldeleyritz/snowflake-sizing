@@ -1,5 +1,43 @@
 # snowflake-sizing changelog
 
+## [v2.6.1] — pricing data refresh (Service Consumption Table, May 29, 2026)
+
+Refreshes `assets/snowflake_pricing_master.json` against the latest Snowflake
+Service Consumption Table (Effective May 29, 2026). Gap analysis in
+`temp/gap-report.md`. Data-only; no code changes.
+
+### Added
+
+- **claude-opus-4-8** across all four AI rate tables: Cortex AI Functions 6(a)
+  (3.00 / 15.00, preview), SI/Agents/Analyst 6(d) (3.25 / 16.26 / 4.07 / 0.33),
+  Cortex Code 6(e) (2.75 / 13.75 / 3.44 / 0.28), and REST API w/ caching 6(b)
+  (AWS Regional 5.50 / 27.50 / 6.88 / 0.55 and AWS Global 5.00 / 25.00 / 6.25 / 0.50).
+- **New 6(a) models:** gemini-3.5-flash (0.90 / 5.40), qwen3-32b (0.09 / 0.36),
+  qwen3-next-80b-a3b (0.09 / 0.72), qwen3-vl-235b-a22b (0.32 / 1.60) — all preview.
+- **openai-gpt-5-mini Azure Global** (0.25 / 2.00) added to REST API 6(b).
+- **Table 6(g) "Other":** twelvelabs-pegasus-1-2 and twelvelabs-marengo-embed-3-0
+  (multi-unit video/audio/image/text pricing).
+- **AWS Asia Pacific (New Zealand)** region added across all 9 per-region tables
+  (credit pricing 2a; storage standard/hybrid/SPCS-block/archive/Postgres/requests
+  3a–3g; data transfer 4a and Outbound PrivateLink 4e), bringing region coverage to 56.
+
+### Changed
+
+- **Snowpark-Optimized MEMORY_16X** gains the **6XL = 768** column (Table 1c).
+- **metadata:** effective_date 2026-05-12 → 2026-05-29, regions_covered 55 → 56,
+  version 2.3 → 2.4, last_updated → 2026-05-31.
+
+### Notes
+
+- The legacy **claude-4-sonnet** row was removed from Tables 6(d)/6(e) in the
+  May 29 SCT but is intentionally **retained (flagged legacy)** here to preserve
+  backward selectability for existing sizings; it remains in 6(a) legacy and 6(b).
+- The live-pricing **seed is unchanged**: `live_pricing.load_pricing()` reads
+  `ai_features` (and all static sections) from the master and only attaches the
+  `calc` block from the live/cache/seed source, so the AI additions take effect
+  at render time directly from the master.
+- Validated: `verify-pricing-json.py --offline` (0 warnings); full suite 315 passed.
+
 ## [v2.6.0] — live pricing from the Snowflake calculator
 
 ### Added
@@ -36,7 +74,11 @@
 - **Tests.** New `tests/test_live_pricing.py` (fetch parsing, merge, accessors,
   offline fallback — network-free) plus calc-path coverage added to
   `test_compute_totals.py`, `test_pricing_validation.py`, and
-  `test_schema_conformance.py`. Suite is now 302 passing.
+  `test_schema_conformance.py`. A new `tests/fixtures/feature-coverage-warehouses-3year.json`
+  exercises 6XL, Gen2, Snowpark-Optimized (memory configs), and live SPCS families
+  (GPU / HIGHMEM); `test_golden_files.py` now renders fixtures against the
+  offline-merged (calc) pricing — matching `render-html.py` — so those features are
+  validated through the full render pipeline. Suite is now 315 passing.
 
 ### Changed
 

@@ -76,6 +76,11 @@ _LOGO_FALLBACK = _SIZING_PLUGIN / "assets" / "icons" / "graphic_snowflake_logo_b
 # slide dimensions; falls back to Presentation() if the file is absent).
 TEMPLATE_PATH = _PPTX_PLUGIN / "assets" / "templates" / "SNOWFLAKE TEMPLATE JANUARY 2026.pptx"
 
+# Pre-built 7-slide base template with named layouts (cover, content, closer).
+# Generated once by scripts/create-sizing-template.py and committed to the repo.
+# build_pptx.py prefers this over TEMPLATE_PATH for faster, layout-aware builds.
+BASE_TEMPLATE_PATH = _SIZING_PLUGIN / "assets" / "templates" / "sizing-base-template.pptx"
+
 
 def logo_path() -> pathlib.Path | None:
     """Return path to the Snowflake logo PNG, or None if not found."""
