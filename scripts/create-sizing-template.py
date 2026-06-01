@@ -1,9 +1,11 @@
 """create-sizing-template.py - Generate sizing-base-template.pptx with baked donors.
 
 Loads the Snowflake master PPTX template and produces a base presentation that
-contains SIX fully-designed "donor" slides (cloned verbatim from the master),
-keeping all slide masters, layouts, and themes intact, then BAKES default sizing
-scaffolding into each so the raw template already reads as a sizing proposal:
+contains SEVEN fully-designed "donor" slides, keeping all slide masters, layouts,
+and themes intact, then BAKES default sizing scaffolding into each so the raw
+template already reads as a sizing proposal.  SIX donors are cloned verbatim from
+the master; understanding_costs is hand-authored and preserved verbatim from the
+committed base template (it does not exist in the master):
 
     [0] title                (master idx 0)  - customer-first blue cover
     [1] agenda               (master idx 1)  - section list
@@ -11,6 +13,9 @@ scaffolding into each so the raw template already reads as a sizing proposal:
     [3] table_styled         (master idx 18) - blue-header styled table
     [4] content              (master idx 7)  - one-column title + body
     [5] thank_you            (master idx 22) - blue closer w/ wordmark
+    [6] understanding_costs  (committed base, One Column Layout) - hand-authored
+        cost-explanation slide (Compute / Storage / Data-Transfer cards), preserved
+        across re-bakes
 
 The bake order matches renderer.pptx.clone.BAKED_DONOR_ORDER exactly, so at
 render time build_pptx.py finds each donor by its slide index (not by sample
@@ -23,6 +28,9 @@ the wording here does not break the renderer.
 
 Donor indices use the master's SlideIdList ordering (the canonical deck order),
 NOT the alphabetical slide-part ordering.  See snowflake-pptx TemplateMappings.
+The lone exception is understanding_costs: it is hand-authored, lives only in the
+committed base template (not the master), and is cloned from there so re-baking
+preserves it byte-for-byte.
 
 Usage:
     cd plugins/snowflake-sizing
@@ -57,6 +65,8 @@ OUT_PATH = _PLUGIN_ROOT / "assets" / "templates" / "sizing-base-template.pptx"
 
 # Donor kind -> master SlideIdList index.  Iterated in BAKED_DONOR_ORDER so the
 # output slide order stays in lock-step with the renderer's index-based lookup.
+# understanding_costs is intentionally absent: it is hand-authored and cloned from
+# the committed base template (see main()), not from the master.
 SRC_INDEX: dict[str, int] = {
     "title": 0,
     "agenda": 1,
@@ -150,6 +160,14 @@ def _bake_thank_you(slide) -> None:
     pass
 
 
+def _bake_understanding_costs(slide) -> None:
+    # No-op.  The donor is the hand-authored "Understanding Your Snowflake Costs"
+    # content slide (One Column Layout, with the Compute / Storage / Data-Transfer
+    # cost cards) cloned verbatim from the committed base template; it is complete
+    # and self-contained, so nothing is swapped.  Kept in _BAKERS for symmetry.
+    pass
+
+
 _BAKERS = {
     "title": _bake_title,
     "agenda": _bake_agenda,
@@ -157,6 +175,7 @@ _BAKERS = {
     "table_styled": _bake_table_styled,
     "content": _bake_content,
     "thank_you": _bake_thank_you,
+    "understanding_costs": _bake_understanding_costs,
 }
 
 
@@ -173,14 +192,45 @@ def main() -> None:
     src = Presentation(str(SOURCE_TEMPLATE))
     dst = Presentation(str(SOURCE_TEMPLATE))
 
+    # understanding_costs is hand-authored and exists ONLY in the committed base
+    # template (not the master), so it is sourced from there and preserved verbatim.
+    uc_idx = BAKED_DONOR_ORDER.index("understanding_costs")
+    if not OUT_PATH.is_file():
+        print(
+            "ERROR: committed base template not found:\n"
+            f"  {OUT_PATH}\n\n"
+            "understanding_costs is a hand-authored slide that lives only in the "
+            "committed base template; it cannot be regenerated from the master. "
+            "Restore the committed assets/templates/sizing-base-template.pptx "
+            "(e.g. `git checkout`) before re-baking.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    existing = Presentation(str(OUT_PATH))
+    if len(list(existing.slides)) < len(BAKED_DONOR_ORDER):
+        print(
+            f"ERROR: committed base template has {len(list(existing.slides))} slides "
+            f"but {len(BAKED_DONOR_ORDER)} donors are expected:\n  {OUT_PATH}\n\n"
+            "The hand-authored understanding_costs donor cannot be recovered from "
+            "the master. Restore a complete committed base template before re-baking.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     print(f"  Slide masters:   {len(dst.slide_masters)}")
     removed = delete_slides(dst, lambda _s: True)
     print(f"  Stripped {removed} designed slides (masters/layouts/themes kept)")
 
     print(f"\nBaking {len(BAKED_DONOR_ORDER)} donor slides (in render lookup order):")
     for kind in BAKED_DONOR_ORDER:
-        idx = SRC_INDEX[kind]
-        slide = clone_slide_crossfile(src, idx, dst)
+        if kind == "understanding_costs":
+            # Clone the hand-authored slide from the committed base template.
+            slide = clone_slide_crossfile(existing, uc_idx, dst)
+            src_label = f"base[{uc_idx}]"
+        else:
+            idx = SRC_INDEX[kind]
+            slide = clone_slide_crossfile(src, idx, dst)
+            src_label = f"master[{idx}]"
         _BAKERS[kind](slide)
         if kind in _FOOTER_KINDS:
             inject.add_footer(slide, "Confidential")
@@ -188,7 +238,7 @@ def main() -> None:
         title = inject.find_title_placeholder(slide)
         title_txt = title.text_frame.text.replace("\n", " / ")[:32] if title is not None else ""
         print(
-            f"  + [{kind:>20}] master_idx={idx:<2} layout={slide.slide_layout.name!r:<26} "
+            f"  + [{kind:>20}] src={src_label:<10} layout={slide.slide_layout.name!r:<26} "
             f"table={str(has_tbl):<5} title={title_txt!r}"
         )
 

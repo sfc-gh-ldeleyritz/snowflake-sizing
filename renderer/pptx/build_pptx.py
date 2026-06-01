@@ -10,21 +10,24 @@ The function:
      spec['computed_totals'] which may be stale from an HTML edit.
   3. Sanitizes em-dashes (U+2014) and en-dashes (U+2013) in all string fields
      to ' - ' (mirrors sizing-guard hygiene).
-  4. Builds a 10.0" x 5.625" Presentation with 8 slides (6 if both the safe
-     harbor and agenda are disabled) by duplicating pre-baked designer "donor"
-     slides and injecting content into them (clone.py + inject.py).  Donors are
-     located by bake-order index (clone.donors_by_order), not by sample text.
+  4. Builds a 10.0" x 5.625" Presentation with up to 10 slides by duplicating
+     pre-baked designer "donor" slides and injecting content into them
+     (clone.py + inject.py).  Donors are located by bake-order index
+     (clone.donors_by_order), not by sample text.  Three slides are toggleable
+     via meta flags (default ON), so the count ranges from 7 to 10.
   5. Returns raw PPTX bytes (and writes to out_path if provided).
 
-Slide order:
+Slide order (meta toggle in brackets; all toggles default true):
   1.  Title
-  2.  Safe Harbor              (skip with meta.include_safe_harbor = false)
-  3.  Agenda                   (skip with meta.include_agenda = false)
-  4.  Cost detail by year (styled table)
-  5.  Year-by-year costs (native chart)
-  6.  Workloads detail table
-  7.  Serverless / AI by year (styled table)
-  8.  Closer / thank-you       (assumptions, open items + next steps in notes)
+  2.  Safe Harbor                        [include_safe_harbor]
+  3.  Agenda                             [include_agenda]
+  4.  Understanding Your Snowflake Costs
+  5.  Cost detail by year (styled table)
+  6.  Year-by-year costs (native chart; per-year ACV totals in the subtitle)
+  7.  Cost mix doughnut (native chart)   [include_workload_donut]
+  8.  Workloads detail table
+  9.  Serverless / AI by year (styled table)
+  10. Closer / thank-you                 (assumptions, open items + next steps in notes)
 """
 from __future__ import annotations
 
@@ -52,8 +55,10 @@ from .slides import (  # noqa: E402
     build_title_slide,
     build_safe_harbor_slide,
     build_agenda_slide,
+    build_understanding_costs_slide,
     build_cost_detail_slide,
     build_year_chart_slide,
+    build_workload_donut_slide,
     build_workloads_slide,
     build_serverless_ai_slide,
     build_closer_slide,
@@ -94,7 +99,7 @@ def _sanitize_dashes(obj):
 def _load_base_presentation():
     """Open the committed base template containing the baked donor slides.
 
-    Requires the sizing base (6 designer donors baked in BAKED_DONOR_ORDER by
+    Requires the sizing base (7 designer donors baked in BAKED_DONOR_ORDER by
     scripts/create-sizing-template.py); the donors are located by slide index, so
     the full master template is no longer a valid fallback.  Raises if the base is
     unavailable, since the clone-based builders require donor slides.
@@ -145,15 +150,22 @@ def build(
     meta = spec.get("meta", {}) or {}
     include_safe_harbor = meta.get("include_safe_harbor", True)
     include_agenda = meta.get("include_agenda", True)
+    include_workload_donut = meta.get("include_workload_donut", True)
 
-    # 6. Build slides in order by duplicating donors + injecting content.
+    # 6. Build slides in order by duplicating donors + injecting content.  The
+    #    donut builder also takes *pricing* (it re-derives credits via the live
+    #    calculator); content + table_styled donors are reused across several
+    #    slides (each builder duplicates its donor, never consumes it).
     build_title_slide(prs, donors["title"], spec, computed_totals)
     if include_safe_harbor:
         build_safe_harbor_slide(prs, donors["safe_harbor"], spec, computed_totals)
     if include_agenda:
         build_agenda_slide(prs, donors["agenda"], spec, computed_totals)
+    build_understanding_costs_slide(prs, donors["understanding_costs"], spec, computed_totals)
     build_cost_detail_slide(prs, donors["table_styled"], spec, computed_totals)
     build_year_chart_slide(prs, donors["content"], spec, computed_totals)
+    if include_workload_donut:
+        build_workload_donut_slide(prs, donors["content"], spec, pricing, computed_totals)
     build_workloads_slide(prs, donors["table_styled"], spec, computed_totals)
     build_serverless_ai_slide(prs, donors["table_styled"], spec, computed_totals)
     build_closer_slide(prs, donors["thank_you"], spec, computed_totals)

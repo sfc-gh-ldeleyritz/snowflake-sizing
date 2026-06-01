@@ -62,17 +62,71 @@ The script:
 1. Reads the spec JSON from `--spec`.
 2. Re-runs `compute_core_totals()` on the loaded spec for authoritative numbers.
 3. Calls `renderer/pptx/build_pptx.build(spec, pricing)` to generate the PPTX
-   bytes (7 slides: Title, Exec Summary/TCV, Workloads Detail, Year-by-Year
-   Costs, Serverless/AI Breakdown, Assumptions, Closer).
+   bytes (up to **10 slides**, all toggles on - see the deck map below).
 4. Writes the result to `--out`.
+
+### Deck map (up to 10 slides)
+
+Six slides are mandatory; four are toggleable via `meta` flags (all default
+`true`), so the count ranges from 6 (everything off) to 10 (everything on):
+
+| # | Slide | Donor | Toggle (`meta.*`, default true) |
+|---|-------|-------|---------------------------------|
+| 1 | Title | title | - |
+| 2 | Safe Harbor | safe_harbor | `include_safe_harbor` |
+| 3 | Agenda | agenda | `include_agenda` |
+| 4 | Cost Detail by Year (table) | table_styled | - |
+| 5 | Year-by-Year Costs (stacked-column chart; per-year ACV totals in subtitle) | content | - |
+| 6 | Cost Mix doughnut (chart) | content | `include_workload_donut` |
+| 7 | Warehouse Workloads (table) | table_styled | - |
+| 8 | Serverless & AI / Cortex (table) | table_styled | - |
+| 9 | Scenario Comparison (table) | table_styled | `include_scenarios` |
+| 10 | Closer / Thank-you | thank_you | - |
+
+Key assumptions, open items to confirm, and next steps live in the **closer's
+speaker notes**, not on their own slides.
+
+**Year-by-Year slide (slide 5):** the subtitle lists each year's ACV (annual
+contract value = `core_year_total[y]`) in dollars; exact dollars for terms up to
+3 years, abbreviated beyond that so the line stays on one line and does not wrap
+into the chart.
+
+**Doughnut (slide 6):** primary mode plots each workload's Year-1 warehouse
+credits ("Compute Mix by Workload"); with fewer than two workloads it falls
+back to the Compute/Serverless/AI/Storage cost mix ("Cost Mix by Category").
+
+**Scenario engine (slide 9) - consistency invariant:** the Conservative /
+Expected / Aggressive rows re-run the SAME `compute_core_totals()` engine on a
+deep-copied spec. Levers are a go-live month shift plus a RELATIVE ramp-curve
+step along `fastest < fast < linear < slow < slowest`. Both push credits the
+same direction, so TCV is always monotone **Conservative <= Expected <=
+Aggressive**. The Expected row applies no change and reuses the authoritative
+`computed_totals`, so its TCV equals the deck headline exactly. (Never force an
+absolute curve like `slow`: it is faster than a `slowest` baseline and would
+flip Conservative above Expected.) Override the defaults with an optional
+`spec.scenarios` list of `{label, go_live_delta, curve_steps}`.
 
 If the script exits non-zero, inspect stderr for the error, fix the underlying
 spec if needed, and re-run. Do NOT write the PPTX manually.
 
-**Live export path.** The HTML proposal has an "Export for PPTX" button next to
-"Save HTML". Clicking it syncs the SE's in-browser edits back into `SIZING_SPEC`
-and downloads a `<slug>-...-v<n>-<date>.json` file. Pass that downloaded JSON
-as `--spec` to pick up browser-side edits without re-running the full pipeline.
+**Live export path (one-click bridge).** The HTML proposal has an "Export JSON
+for PPTX" button next to "Save HTML". To make that button produce a real `.pptx`
+in one click, start the local render bridge first:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/serve-pptx.py
+```
+
+With the bridge running, clicking the button POSTs the in-browser `SIZING_SPEC`
+to `http://127.0.0.1:8765/render-pptx`, which runs the same `build_pptx.build()`
+path as this CLI - authoritative `computed_totals` are recomputed server-side and
+internal pricing is stripped - and the browser downloads
+`<slug>-...-v<n>-<date>.pptx` directly. No server-side file is written.
+
+If the bridge is **not** running, the button silently falls back to downloading
+the `<slug>-...-v<n>-<date>.json` spec (the legacy behavior); pass that JSON as
+`--spec` to `render-pptx.py` to pick up browser-side edits without re-running the
+full pipeline. Emailed/standalone proposals always use this JSON fallback.
 
 ### Step 2 - Confirm output
 
@@ -114,13 +168,19 @@ export backend - no alternative path is attempted.
 Delegate to a visual-QA subagent (Task tool, foreground) with the slide image
 paths returned in Step 1. The subagent reads each PNG and reports:
 
-- Slide count matches expected (7 slides).
+- Slide count matches expected (10 with every toggle on; subtract one per
+  disabled toggle, down to a 6-slide floor).
 - Title slide: customer name present, Snowflake branding visible, no truncated text.
-- Exec summary/TCV slide: TCV figure matches `computed_totals.core_tcv` from the spec.
+- Cost Detail slide: per-year category figures match `computed_totals`; Total row bold.
+- Year-by-year slide: chart series match `computed_totals.core_year_total`; the
+  subtitle lists each year's ACV total in dollars and does not wrap into the chart.
+- Cost Mix doughnut: slices render with a legend; title reads "Compute Mix by
+  Workload" (multi-workload) or "Cost Mix by Category" (single-workload fallback).
 - Workloads slide: all workloads from `spec.workloads` appear; no row overflow.
-- Year-by-year slide: chart series match `computed_totals.core_year_total` array.
 - Serverless/AI slide: figures consistent with spec values.
-- Assumptions slide: no em-dashes (U+2014 / U+2013), no unsubstituted tokens.
+- Scenario Comparison: three rows, TCV monotone Conservative <= Expected <=
+  Aggressive, the Expected row bold and its TCV equal to the deck headline.
+- No em-dashes (U+2014 / U+2013) and no unsubstituted tokens on any slide.
 - Any layout issue: text overflow, white boxes, missing chart, blank slide.
 
 The subagent returns a structured report:
@@ -171,7 +231,8 @@ Generated:
   Core TCV (Python-authoritative): $<XXX,XXX>
 
 Open in PowerPoint: open sizings/<slug>-<N>year-sizing-v<version>-<date>.pptx
-Export for PPTX:    click the "Export for PPTX" button in the HTML proposal to
-  download an updated JSON; pass it as --spec to render-pptx.py to pick up
-  any browser-side edits.
+One-click export:   run scripts/serve-pptx.py, then click "Export JSON for PPTX"
+  in the HTML proposal to download a .pptx directly (totals recomputed
+  server-side). If the bridge is down, the button downloads JSON instead; pass
+  it as --spec to render-pptx.py to pick up browser-side edits.
 ```

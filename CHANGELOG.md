@@ -1,5 +1,166 @@
 # snowflake-sizing changelog
 
+## [v2.10.1] — Hand-authored "Understanding Your Snowflake Costs" slide preserved across re-bakes
+
+The **Understanding Your Snowflake Costs** donor is now a hand-authored *One
+Column Layout* content slide — a title, a "Pricing & sizing basis" subtitle, a
+"Confidential" textbox, and Compute / Storage / Data-Transfer cost cards —
+replacing the old Quote-Violet section divider that was cloned from the master
+and text-swapped. Because this slide exists only in the committed base template
+(not in the Snowflake master), the bake script now clones it from the committed
+template and preserves it verbatim instead of regenerating (and clobbering) it.
+No schema change; render output is unchanged for callers since the renderer
+already duplicated the committed donor verbatim.
+
+### Changed
+
+- **`scripts/create-sizing-template.py` — understanding_costs sourced from the
+  committed base template.** `main()` now loads the existing
+  `sizing-base-template.pptx` and clones the `understanding_costs` donor from it
+  (at its `BAKED_DONOR_ORDER` index) instead of from master idx 3, so a re-bake
+  preserves the hand-authored cost-card slide byte-for-byte. A guard exits with a
+  clear error if the committed template is missing or has fewer slides than the
+  expected donor count (the slide cannot be recovered from the master). The
+  per-donor log line now reports an honest source (`src=base[6]` vs
+  `src=master[N]`), `_bake_understanding_costs` is now a no-op (the slide is
+  complete and self-contained), and the `"understanding_costs": 3` entry was
+  removed from `SRC_INDEX`. Module docstring updated accordingly.
+- **`renderer/pptx/slides.py` — corrected stale comments.**
+  `build_understanding_costs_slide` and its section header now describe the donor
+  as the hand-authored One Column Layout content slide committed in the base
+  template (duplicated verbatim), not a master-sourced section divider. Behavior
+  unchanged.
+
+## [v2.10.0] — One-click PPTX export via a local render bridge
+
+The proposal HTML's **"Export JSON for PPTX"** button can now generate a real
+`.pptx` in one click. A new stdlib-only bridge server, `scripts/serve-pptx.py`,
+accepts the in-browser `SIZING_SPEC` over loopback HTTP, runs the same
+`renderer/pptx/build_pptx.build()` path as the CLI, and streams the deck back
+for the browser to download. When the bridge is **not** running the button
+silently falls back to its previous behavior (downloading the spec JSON), so
+emailed and standalone proposals are unaffected. No new dependencies; no schema
+or template-rebake change.
+
+### Added
+
+- **`scripts/serve-pptx.py` — local PPTX render bridge.** A `ThreadingHTTPServer`
+  (stdlib `http.server`) bound to `127.0.0.1:8765`, exposing `GET /health` and
+  `POST /render-pptx`. The POST handler parses the request body as a
+  `SIZING_SPEC`, calls `build(spec, pricing)` with **no** `out_path` (returns
+  bytes only — nothing is written to disk), and replies with the deck as
+  `application/vnd.openxmlformats-officedocument.presentationml.presentation`.
+  Pricing is loaded once at startup from `assets/snowflake_pricing_master.json`
+  (overridable via `--pricing`); because `build()` deep-copies before stripping,
+  the in-memory pricing dict is reused safely across requests. Flags: `--port`
+  (default 8765), `--host` (default `127.0.0.1`), `--open <html>`, `--no-open`.
+  Malformed JSON returns `400`; a build exception returns `500` with the
+  traceback text so the SE can fix the spec. Every response sets
+  `Access-Control-Allow-Origin: *` (plus an `OPTIONS` preflight handler) so a
+  `file://` proposal (`Origin: null`) can read the binary response; the button
+  posts a safelisted `text/plain` content-type to avoid a preflight on the hot
+  path.
+
+### Changed
+
+- **`assets/templates/proposal-template.html` — button wired to the bridge.**
+  `exportForPptx()` is now `async`: it POSTs the current `SIZING_SPEC` to the
+  bridge and, on success, downloads `<slug>-...-v<n>-<date>.pptx`. A shared
+  `triggerDownload()` helper performs the blob download. On a network error or
+  30s `AbortController` timeout it silently falls back to the JSON download via
+  `downloadSpecJson()`; on an HTTP error from a running bridge it surfaces the
+  server message via `alert()` and still drops the JSON as a safety net. The
+  button **label is unchanged** ("Export JSON for PPTX"); only its tooltip is
+  updated to explain the bridge-vs-JSON behavior. Authoritative `computed_totals`
+  and internal-pricing stripping happen server-side inside `build()`, so a
+  browser-edited (possibly stale) `computed_totals` block cannot affect the deck.
+- **`render-pptx` sub-skill SKILL.md** documents the one-click bridge: start
+  `scripts/serve-pptx.py`, click the button for a direct `.pptx`, with the JSON
+  fallback when the service is down.
+
+## [v2.9.1] — Vertical floating-button stack in the proposal HTML
+
+Cosmetic refinement to `assets/templates/proposal-template.html`: the three
+floating action buttons that v2.4.0 / v2.5.0 laid out as a horizontal top-right
+row (each individually `position: fixed` at a hand-tuned `right` offset) now
+stack **vertically** in a single flex container. No schema, script, or behavior
+change — the `onclick` handlers (`exportForPptx()`, `saveSnapshot()`,
+`window.print()`) and tooltips are untouched.
+
+### Changed
+
+- **Floating buttons are now a vertical flex stack.** A new `.fab-stack`
+  container (`position: fixed; top/right: 16px; z-index: 1000; flex-direction:
+  column; gap: 8px; align-items: stretch`) owns the positioning; the per-button
+  rules (`.print-btn` / `.save-btn` / `.pptx-btn`) drop their individual
+  `position/top/right/z-index` and keep only colors, borders, and shadows, with
+  the shared `padding`/`border-radius`/`font` lifted onto `.fab-stack button`.
+  `align-items: stretch` makes all three equal width, retiring the brittle
+  16 / 185 / 355px `right` offsets that previously kept the row from overlapping.
+  DOM order top-to-bottom is **Export JSON for PPTX → Save HTML → Print / Save
+  PDF**.
+- **Two buttons renamed.** "Export for PPTX" → **"Export JSON for PPTX"** (makes
+  it explicit that the button downloads the sizing spec as JSON, not a deck);
+  the v2.4.0 **"Print / Save as PDF"** label is shortened to **"Print / Save
+  PDF"**. **Save HTML** is unchanged.
+- **`@media print` hide rule** now lists `.fab-stack` in place of the three
+  individual `.print-btn, .save-btn, .pptx-btn` classes, so the whole stack
+  stays hidden in printed / exported PDF output.
+
+## [v2.9.0] — PPTX cost-mix doughnut, scenario comparison, and per-year ACV totals
+
+Adds two toggleable slides to the native PPTX deck and surfaces per-year ACV
+(annual contract value) on the year-by-year slide. Everything renders on the
+existing v2.8.0 donors (`content`, `table_styled`) — **no template rebake, no
+schema change**. The deck is now **up to 10 slides** (6 with all toggles off);
+both new slides default ON via a `meta` flag.
+
+### Added
+
+- **Cost Mix doughnut (slide 6, `build_workload_donut_slide`)** — a native
+  `DOUGHNUT` chart in `charts.py:add_workload_donut`. Primary mode plots each
+  workload's Year-1 warehouse credits ("Compute Mix by Workload"); with fewer than
+  two workloads it falls back to the Compute/Serverless/AI/Storage cost mix ("Cost
+  Mix by Category"). Slices are colored per data point via a new `_color_points()`
+  helper. Toggle: `meta.include_workload_donut`.
+- **Scenario Comparison (slide 9, `build_scenario_slide`)** — a Conservative /
+  Expected / Aggressive TCV table that re-runs the SAME `compute_core_totals()`
+  engine on a deep-copied spec. Levers are a go-live month shift plus a RELATIVE
+  ramp-curve step along `fastest < fast < linear < slow < slowest`, so TCV is
+  always monotone **Conservative <= Expected <= Aggressive**. The Expected row reuses
+  the authoritative `computed_totals`, so its TCV equals the deck headline exactly;
+  it is bolded via the new `fill_table(bold_row_index=...)` keyword. Optional
+  `spec.scenarios` (`{label, go_live_delta, curve_steps}`) overrides the defaults.
+  Toggle: `meta.include_scenarios`.
+- **Per-year ACV totals on the Year-by-Year slide** — `build_year_chart_slide`
+  now sets the subtitle to each year's ACV (= `core_year_total[y]`) in dollars
+  via `_acv_subtitle`, exact for terms up to 3 years and abbreviated beyond that
+  so the line stays on one line and does not wrap into the chart.
+- **`inject.fill_table(..., bold_row_index=...)`** — bolds a single highlighted
+  row (reuses `_bold_row`), mirroring `bold_last_row`.
+- **`tests/test_pptx.py`** — content + toggle tests for the doughnut and scenario
+  slides, a per-year-ACV assertion, a `_shift_curve` unit suite, a
+  scenario-monotonicity regression on the `healthcare-bc-slowramp`
+  (`slowest`-baseline) fixture, and a `set_body_paragraphs` font-size unit test.
+
+### Fixed
+
+- **`inject.set_body_paragraphs(font_size=Pt(...))`** rendered text at the EMU
+  value (e.g. `Pt(14)` -> 2032pt, whose giant bullet glyphs filled the slide as a
+  blue "mosaic"). pptx `Length` subclasses `int`, so the `isinstance(font_size,
+  int)` branch caught Pt/Emu/Inches and read their EMU integer as centipoints; the
+  check now tests `Length` first and converts via `font_size.pt * 100`.
+
+### Changed
+
+- **`build_pptx.py`** threads `pricing` into the donut + scenario builders, reads
+  the two new `meta` toggles (default true), wires the builders in deck order, and
+  updates the slide-order docstring (up to 10 slides). `slides.py` module docstring
+  and `_AGENDA_SECTIONS` updated to match.
+- **`render-pptx/SKILL.md`** documents the 10-slide deck map, the toggles, the
+  doughnut modes, the per-year ACV subtitle, and the scenario-engine consistency
+  invariant; the visual-QA checklist and expected slide count are refreshed.
+
 ## [v2.8.0] — PPTX deck styling & layout refinements
 
 Polishes the native PPTX deck after design review: de-blues the styled tables to

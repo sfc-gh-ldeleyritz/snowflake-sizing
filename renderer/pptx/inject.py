@@ -56,7 +56,7 @@ from lxml import etree
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.oxml.ns import qn
-from pptx.util import Inches, Pt
+from pptx.util import Inches, Length, Pt
 
 # Donor styled-table geometry (slide18.xml / table_styled).
 _DONOR_ROW_H = 476640          # EMU per row in the donor table (~0.52")
@@ -352,7 +352,13 @@ def set_body_paragraphs(shape, lines: list[str], font_size=None, tight: bool = F
 
     sz_val = None
     if font_size is not None:
-        sz_val = int(font_size) if isinstance(font_size, int) else int(font_size.pt * 100)
+        # pptx Length objects (Pt/Emu/Inches) subclass int, so check Length FIRST:
+        # int(Pt(16)) is the EMU value (203200), not centipoints.  A plain int is
+        # treated as centipoints (sz units), e.g. 1600 == 16pt.
+        if isinstance(font_size, Length):
+            sz_val = int(font_size.pt * 100)
+        else:
+            sz_val = int(font_size)
 
     new_paras = []
     for line in lines:
@@ -622,6 +628,7 @@ def fill_table(
     max_table_cy: int = _MAX_TABLE_CY,
     top_emu: int | None = None,
     bold_last_row: bool = False,
+    bold_row_index: int | None = None,
     data_row_fill: str | None = None,
 ):
     """Fill the slide's styled a:tbl with *headers* + *rows*, growing/shrinking it.
@@ -635,6 +642,9 @@ def fill_table(
         top_emu:    optional new table top (a:off y) - lets callers drop the table
                     below an injected subtitle.
         bold_last_row: bold every run in the final row (emphasizes a Total row).
+        bold_row_index: optional absolute tr index (header is 0) whose runs are
+                    bolded - emphasizes a single highlighted row (e.g. the
+                    recommended "Expected" scenario).
         data_row_fill: optional hex RGB (e.g. "FFFFFF") applied as the fill of
                     every data row (all rows after the header), leaving the
                     header's donor fill intact - de-blues the styled donor's
@@ -666,6 +676,9 @@ def fill_table(
 
     if bold_last_row and trs:
         _bold_row(trs[-1])
+
+    if bold_row_index is not None and trs and 0 <= bold_row_index < len(trs):
+        _bold_row(trs[bold_row_index])
 
     if data_row_fill and trs:
         for tr in trs[(1 if headers else 0):]:

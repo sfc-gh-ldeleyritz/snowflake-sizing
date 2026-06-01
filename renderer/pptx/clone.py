@@ -67,6 +67,7 @@ BAKED_DONOR_ORDER: list[str] = [
     "table_styled",
     "content",
     "thank_you",
+    "understanding_costs",
 ]
 
 

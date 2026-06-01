@@ -18,15 +18,18 @@ Builder contract:
 Injection targets shapes by placeholder ROLE + POSITION, never by donor sample
 text, so it survives the default scaffolding baked into the donors.
 
-Deck order (8 slides; safe-harbor and agenda are toggleable):
-    1.  Title                 (donor: title)
-    2.  Safe Harbor           (donor: safe_harbor)      [meta.include_safe_harbor]
-    3.  Agenda                (donor: agenda)            [meta.include_agenda]
-    4.  Cost detail by year   (donor: table_styled)
-    5.  Year-by-year chart    (donor: content + native chart)
-    6.  Warehouse workloads   (donor: table_styled)
-    7.  Serverless & AI       (donor: table_styled)
-    8.  Closer / thank-you    (donor: thank_you)
+Deck order (up to 10 slides; safe-harbor, agenda, and the cost-mix doughnut are
+toggleable - all default ON):
+    1.  Title                        (donor: title)
+    2.  Safe Harbor                  (donor: safe_harbor)      [meta.include_safe_harbor]
+    3.  Agenda                       (donor: agenda)            [meta.include_agenda]
+    4.  Understanding Your Snowflake Costs (donor: understanding_costs)
+    5.  Cost detail by year          (donor: table_styled)
+    6.  Year-by-year chart           (donor: content + native chart; per-year ACV totals)
+    7.  Cost mix doughnut            (donor: content + native chart) [include_workload_donut]
+    8.  Warehouse workloads          (donor: table_styled)
+    9.  Serverless & AI              (donor: table_styled)
+    10. Closer / thank-you           (donor: thank_you)
 
 Key assumptions, open items to confirm, and next steps are no longer their own
 slides; build_closer_slide folds them into the thank-you slide's speaker notes.
@@ -38,7 +41,7 @@ import datetime
 from pptx.util import Inches
 
 from . import clone, inject
-from .charts import add_year_by_year_chart
+from .charts import add_workload_donut, add_year_by_year_chart
 
 
 # ── Formatting helpers ─────────────────────────────────────────────────────── #
@@ -110,7 +113,7 @@ def build_safe_harbor_slide(prs, donor, spec, computed_totals):
 
 _AGENDA_SECTIONS = [
     "Cost Detail by Year",
-    "Year-by-Year Costs",
+    "Year-by-Year Costs & Cost Mix",
     "Warehouse Workloads",
     "Serverless & AI / Cortex",
 ]
@@ -126,13 +129,24 @@ def build_agenda_slide(prs, donor, spec, computed_totals):
     return slide
 
 
-# ── Slide 4: Cost detail by year (styled table) ────────────────────────────── #
+# ── Slide: Understanding Your Snowflake Costs (hand-authored content slide) ──── #
+
+def build_understanding_costs_slide(prs, donor, spec, computed_totals):
+    # The donor is the hand-authored "Understanding Your Snowflake Costs" content
+    # slide (One Column Layout, with the Compute / Storage / Data-Transfer cost
+    # cards) committed in the base template; duplicate it into the deck verbatim.
+    return clone.duplicate_slide_inpackage(prs, donor)
+
+
+# ── Slide 5: Cost detail by year (styled table) ────────────────────────────── #
 
 _COST_ROWS = [
     ("Compute", "compute_cost_per_year"),
     ("Serverless", "serverless_cost_per_year"),
     ("AI / Cortex", "ai_cost_per_year"),
     ("Storage", "storage_cost_per_year"),
+    ("Snowflake Services Delivery", None),
+    ("Educational Services", None),
     ("Total", "core_year_total"),
 ]
 
@@ -147,9 +161,12 @@ def build_cost_detail_slide(prs, donor, spec, computed_totals):
     headers = ["Category"] + [f"Year {y}" for y in range(1, years + 1)]
     rows = []
     for label, key in _COST_ROWS:
-        values = computed_totals.get(key, []) or []
-        rows.append([label] + [_fmt_dollar(values[y] if y < len(values) else 0)
-                               for y in range(years)])
+        if key is None:
+            rows.append([label] + [""] * years)
+        else:
+            values = computed_totals.get(key, []) or []
+            rows.append([label] + [_fmt_dollar(values[y] if y < len(values) else 0)
+                                   for y in range(years)])
     ratios = [1.6] + [1.0] * years
     inject.fill_table(slide, headers, rows, col_ratios=ratios, bold_last_row=True,
                       data_row_fill=_DATA_ROW_FILL)
@@ -158,12 +175,24 @@ def build_cost_detail_slide(prs, donor, spec, computed_totals):
 
 # ── Slide 5: Year-by-year chart (content donor + native chart) ─────────────── #
 
+def _acv_subtitle(computed_totals: dict) -> str:
+    """One-line per-year ACV (annual contract value = core_year_total) summary.
+
+    Uses exact dollars for short terms and abbreviates (>3 years) so the line
+    stays on one line and never wraps into the chart below the subtitle."""
+    yt = computed_totals.get("core_year_total", []) or []
+    if not yt:
+        return "ACV by year: n/a"
+    abbreviated = len(yt) > 3
+    parts = [f"Y{i + 1} {_fmt_dollar(v, abbreviated)}" for i, v in enumerate(yt)]
+    return "ACV by year:  " + "   |   ".join(parts)
+
+
 def build_year_chart_slide(prs, donor, spec, computed_totals):
     slide = clone.duplicate_slide_inpackage(prs, donor)
-    core_tcv = computed_totals.get("core_tcv", 0) or 0
 
     inject.set_title(slide, "Year-by-Year Cost Breakdown")
-    inject.set_subtitle(slide, f"Core TCV: {_fmt_dollar(core_tcv)}")
+    inject.set_subtitle(slide, _acv_subtitle(computed_totals))
 
     # Clear the donor body text so it doesn't show behind the chart.
     bodies = inject.body_placeholders(slide)
@@ -178,7 +207,40 @@ def build_year_chart_slide(prs, donor, spec, computed_totals):
     return slide
 
 
-# ── Slide 6: Warehouse workloads (styled table) ────────────────────────────── #
+# ── Slide 6: Cost mix doughnut (content donor + native chart) ──────────────── #
+
+def build_workload_donut_slide(prs, donor, spec, pricing, computed_totals):
+    """Doughnut of the cost mix.
+
+    Unlike the other builders this also takes *pricing*, because the primary
+    "workload" mode derives each slice from a workload's warehouse credits via
+    the live calculator.  add_workload_donut returns the chart plus a *mode*
+    ("workload" or "category") so the title stays accurate - workload mode is
+    compute-only, category mode spans all core cost categories.
+    """
+    slide = clone.duplicate_slide_inpackage(prs, donor)
+
+    # Clear the donor body text so it doesn't show behind the chart.
+    bodies = inject.body_placeholders(slide)
+    if bodies:
+        inject.set_body_paragraphs(bodies[0], [""])
+
+    chart, mode = add_workload_donut(
+        slide, spec, pricing, computed_totals,
+        left=Inches(1.7), top=Inches(1.4),
+        width=Inches(6.6), height=Inches(3.45),
+    )
+
+    if mode == "workload":
+        inject.set_title(slide, "Compute Mix by Workload")
+        inject.set_subtitle(slide, "Year-1 warehouse credits by workload")
+    else:
+        inject.set_title(slide, "Cost Mix by Category")
+        inject.set_subtitle(slide, "Share of core spend across the contract term")
+    return slide
+
+
+# ── Slide 7: Warehouse workloads (styled table) ────────────────────────────── #
 
 _WORKLOAD_HEADERS = [
     "Workload", "Size", "Hrs/Day", "Days/Mo", "Min Cl", "Max Cl", "Ramp", "Dev", "Go-Live",
@@ -219,7 +281,7 @@ def build_workloads_slide(prs, donor, spec, computed_totals):
     return slide
 
 
-# ── Slide 7: Serverless & AI / Cortex (styled table, by year) ──────────────── #
+# ── Slide 8: Serverless & AI / Cortex (styled table, by year) ──────────────── #
 
 _SERVERLESS_AI_ROWS = [
     ("Serverless", "serverless_cost_per_year"),
@@ -251,7 +313,7 @@ def build_serverless_ai_slide(prs, donor, spec, computed_totals):
     return slide
 
 
-# ── Slide 8: Closer / thank-you (thank_you donor) ──────────────────────────── #
+# ── Slide 10: Closer / thank-you (thank_you donor) ─────────────────────────── #
 
 _NEXT_STEPS = [
     "Review assumptions and confirm open items",
