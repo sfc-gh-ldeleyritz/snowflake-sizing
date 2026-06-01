@@ -94,7 +94,7 @@ def _sanitize_dashes(obj):
 def _load_base_presentation():
     """Open the committed base template containing the baked donor slides.
 
-    Requires the sizing base (8 designer donors baked in BAKED_DONOR_ORDER by
+    Requires the sizing base (6 designer donors baked in BAKED_DONOR_ORDER by
     scripts/create-sizing-template.py); the donors are located by slide index, so
     the full master template is no longer a valid fallback.  Raises if the base is
     unavailable, since the clone-based builders require donor slides.

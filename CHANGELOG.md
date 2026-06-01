@@ -1,5 +1,62 @@
 # snowflake-sizing changelog
 
+## [v2.8.0] — PPTX deck styling & layout refinements
+
+Polishes the native PPTX deck after design review: de-blues the styled tables to
+white data rows, reorders the content slides to lead with costs, and drops the
+redundant Executive Summary slide. The deck is now **8 slides** (6 with both the
+safe-harbor and agenda toggles off), down from 9.
+
+### Added
+
+- **`inject.fill_table(..., data_row_fill=...)`** — a new keyword that recolors
+  every data row (all rows after the header) via a new `_set_cell_fill()` helper,
+  which rewrites each cell's existing `a:solidFill` in place (schema-order-safe)
+  and leaves the header fill and the cells' light-gray bottom borders (the row
+  gridlines) untouched. The three styled-table builders pass `"FFFFFF"`.
+- **`tests/test_pptx.py`** — `test_data_rows_white` (header stays `11577F`, first
+  data row is `FFFFFF`) and `test_no_exec_summary_slide`.
+
+### Changed
+
+- **Styled tables now read white.** The slide-19 donor ships all-blue rows
+  (`29B5E8`); the cost-detail, warehouse-workloads, and serverless tables now
+  render white (`FFFFFF`) data rows under the navy (`11577F`) header, with the
+  donor's light-gray (`C8C8C8`) horizontal gridlines preserved and bold **Total**
+  rows on the cost-detail and serverless tables.
+- **Content slides reordered** to Cost Detail by Year → Year-by-Year chart →
+  Warehouse Workloads → Serverless & AI / Cortex — updated in the `build_pptx.py`
+  build order and the `slides.py` builder defs + section comments, with the agenda
+  list and both module docstrings updated to match.
+- **`scripts/create-sizing-template.py`** bakes the white data row into the
+  committed `assets/templates/sizing-base-template.pptx` (`_bake_table_styled`),
+  so the template's standalone styled table matches the rendered decks, and its
+  baked agenda scaffolding matches the new section order. Template regenerated.
+
+### Removed
+
+- **Executive Summary slide** (`build_exec_summary_slide` plus its build call and
+  import); the agenda no longer lists it.
+- **Two now-unused donor slides** dropped from the base template, taking it from
+  **8 → 6 donors** (`title`, `agenda`, `safe_harbor`, `table_styled`, `content`,
+  `thank_you`): `four_column_numbers` (the former Executive Summary donor) and
+  `two_column` (long unused — the serverless slide uses `table_styled`). Because
+  donors are resolved by bake-order index, this was a lock-step change across the
+  reader (`clone.BAKED_DONOR_ORDER`) and writer (`create-sizing-template.py`:
+  `SRC_INDEX`, `_FOOTER_KINDS`, `_BAKERS`, and the `_bake_four_column` /
+  `_bake_two_column` helpers + their sample-text constants), then a template regen.
+
+### Notes
+
+- The PPTX renderer is donor/clone-based: `build_pptx.py` duplicates pre-baked
+  designer "donor" slides and injects content via `inject.py`, then deletes the
+  donors — so these are content/layout refinements on that pipeline, not a new
+  renderer.
+- Slide-count test baseline dropped 7 → 6 (default deck 9 → 8).
+- Validated: `scripts/render-pptx.py` on the acme fixture (8 slides, correct
+  order, white rows + navy headers + bold totals, no Executive Summary, zero
+  `29B5E8` data cells); LibreOffice PDF eyeball; full suite **351 passed**.
+
 ## [v2.7.0] — pricing freshness automation & per-sizing pinning
 
 Keeps pricing as fresh as possible for every service with a cache fallback, and

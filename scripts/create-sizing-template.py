@@ -1,18 +1,16 @@
 """create-sizing-template.py - Generate sizing-base-template.pptx with baked donors.
 
 Loads the Snowflake master PPTX template and produces a base presentation that
-contains EIGHT fully-designed "donor" slides (cloned verbatim from the master),
+contains SIX fully-designed "donor" slides (cloned verbatim from the master),
 keeping all slide masters, layouts, and themes intact, then BAKES default sizing
 scaffolding into each so the raw template already reads as a sizing proposal:
 
     [0] title                (master idx 0)  - customer-first blue cover
     [1] agenda               (master idx 1)  - section list
     [2] safe_harbor          (master idx 2)  - Snowflake legal disclaimer (verbatim)
-    [3] four_column_numbers  (master idx 11) - exec-summary big-number columns
-    [4] table_styled         (master idx 18) - blue-header styled table
-    [5] content              (master idx 7)  - one-column title + body
-    [6] two_column           (master idx 20) - two paragraph-body columns
-    [7] thank_you            (master idx 22) - blue closer w/ wordmark
+    [3] table_styled         (master idx 18) - blue-header styled table
+    [4] content              (master idx 7)  - one-column title + body
+    [5] thank_you            (master idx 22) - blue closer w/ wordmark
 
 The bake order matches renderer.pptx.clone.BAKED_DONOR_ORDER exactly, so at
 render time build_pptx.py finds each donor by its slide index (not by sample
@@ -63,20 +61,17 @@ SRC_INDEX: dict[str, int] = {
     "title": 0,
     "agenda": 1,
     "safe_harbor": 2,
-    "four_column_numbers": 11,
     "table_styled": 18,
     "content": 7,
-    "two_column": 20,
     "thank_you": 22,
 }
 
 # Default scaffolding text baked into the donors (placeholder tokens the renderer
 # overwrites).  Square-bracket tokens read as "fill me in" on the raw template.
 _AGENDA_ITEMS = [
-    "Executive Summary",
-    "Warehouse Workloads",
-    "Year-by-Year Costs",
     "Cost Detail by Year",
+    "Year-by-Year Costs",
+    "Warehouse Workloads",
     "Serverless & AI / Cortex",
 ]
 _WORKLOAD_HEADERS = [
@@ -84,34 +79,16 @@ _WORKLOAD_HEADERS = [
 ]
 _WORKLOAD_RATIOS = [2.5, 0.8, 0.85, 0.85, 0.75, 0.75, 1.05, 0.7, 0.8]
 _WORKLOAD_SAMPLE = ["Analytics", "M", "8", "22", "1", "1", "linear", "M1", "M3"]
-_EXEC_NUMBERS = ["$0.0M", "3 Yr", "$0.0M", "$0.00"]
-_EXEC_CAPTIONS = ["Core TCV", "Contract Term", "Avg Annual Core", "Per-Credit Rate"]
 _CONTENT_BODY = [
     "Pricing reflects current Snowflake list rates.",
     "Credit consumption estimated from workload sizing inputs.",
     "Storage assumes compression and the stated annual growth.",
     "Figures are planning estimates, not a commercial quote.",
 ]
-_SERVERLESS_LEFT = [
-    "Serverless Features",
-    "- Snowpipe / Snowpipe Streaming",
-    "- Materialized Views",
-    "- Search Optimization",
-    "",
-    "Total (all years): $0",
-]
-_SERVERLESS_RIGHT = [
-    "AI / Cortex Features",
-    "- Cortex Analyst",
-    "- Cortex Search",
-    "- Cortex Complete",
-    "",
-    "Total (all years): $0",
-]
 
 # Donor kinds that carry a Confidential footer (content slides; the cover, safe
 # harbor (own copyright) and closer are excluded).
-_FOOTER_KINDS = {"agenda", "four_column_numbers", "table_styled", "content", "two_column"}
+_FOOTER_KINDS = {"agenda", "table_styled", "content"}
 
 
 # ── Bake helpers ────────────────────────────────────────────────────────────── #
@@ -152,16 +129,6 @@ def _bake_safe_harbor(slide) -> None:
     pass
 
 
-def _bake_four_column(slide) -> None:
-    inject.set_title(slide, "Executive Summary")
-    inject.set_subtitle(slide, "[Edition]  |  [Cloud]  |  [Region]")
-    for sh, val in zip(inject.number_shapes(slide), _EXEC_NUMBERS):
-        inject.set_runs_font_size(sh, 2800, word_wrap=False)
-        inject.set_shape_text(sh, val)
-    for cap, label in zip(inject.caption_shapes(slide), _EXEC_CAPTIONS):
-        inject.replace_caption(cap, label)
-
-
 def _bake_table_styled(slide) -> None:
     inject.set_title(slide, "Warehouse Workloads")
     inject.set_subtitle(slide, "[N] workload(s)")
@@ -177,15 +144,6 @@ def _bake_content(slide) -> None:
         inject.set_body_paragraphs(bodies[0], _CONTENT_BODY, tight=True)
 
 
-def _bake_two_column(slide) -> None:
-    inject.set_title(slide, "Serverless & AI / Cortex")
-    inject.set_subtitle(slide, "Enabled features and projected spend")
-    bodies = inject.body_placeholders(slide)
-    if len(bodies) >= 2:
-        inject.set_body_paragraphs(bodies[0], _SERVERLESS_LEFT, font_size=1300, tight=True)
-        inject.set_body_paragraphs(bodies[1], _SERVERLESS_RIGHT, font_size=1300, tight=True)
-
-
 def _bake_thank_you(slide) -> None:
     # Keep the iconic "THANK / YOU" headline; the renderer overlays a partnering
     # line + next steps at build time.
@@ -196,10 +154,8 @@ _BAKERS = {
     "title": _bake_title,
     "agenda": _bake_agenda,
     "safe_harbor": _bake_safe_harbor,
-    "four_column_numbers": _bake_four_column,
     "table_styled": _bake_table_styled,
     "content": _bake_content,
-    "two_column": _bake_two_column,
     "thank_you": _bake_thank_you,
 }
 

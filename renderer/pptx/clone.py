@@ -64,10 +64,8 @@ BAKED_DONOR_ORDER: list[str] = [
     "title",
     "agenda",
     "safe_harbor",
-    "four_column_numbers",
     "table_styled",
     "content",
-    "two_column",
     "thank_you",
 ]
 
