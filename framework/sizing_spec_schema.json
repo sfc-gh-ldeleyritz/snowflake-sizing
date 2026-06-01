@@ -319,6 +319,20 @@
           "go_live_month": {
             "type": "integer",
             "minimum": 1
+          },
+          "gen": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "Standard-warehouse generation: 1 = Gen1 (default), 2 = Gen2 (per-cloud rates). Ignored for snowpark warehouses."
+          },
+          "warehouse_type": {
+            "type": "string",
+            "enum": ["standard", "snowpark"],
+            "description": "Warehouse type: 'standard' (default) or 'snowpark' (Snowpark-Optimized)."
+          },
+          "memory_config": {
+            "type": "string",
+            "description": "Snowpark-Optimized memory configuration (e.g. MEMORY_1X, MEMORY_1X_x86, MEMORY_16X). Only used when warehouse_type='snowpark'."
           }
         }
       }
@@ -1346,6 +1360,28 @@
         "notes": {
           "type": "string"
         }
+      }
+    },
+    "computed_totals": {
+      "description": "Authoritative full-stack TCV totals stamped by scripts/spec-prepare.py (framework/compute_totals.py): per-year cost arrays for warehouse compute, serverless, AI/Cortex, storage, and the other categories (SPCS, OpenFlow + OpenFlow-Oracle, data-transfer + PrivateLink, collaboration, replication), plus other_cost_per_year and core_year_total. The renderer recomputes these at render time from the pricing it loads; the renderer value is authoritative.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "pricing_snapshot": {
+      "description": "Provenance of the pricing data this sizing was built against, stamped by scripts/spec-prepare.py. The full rates live in a gitignored sidecar (<slug>.pricing.json, named by pinned_pricing_file); render-html.py auto-loads that sidecar so a re-render reproduces identical numbers. Use render-html.py --latest (one-off fresh) or --repin (re-pin) to rebuild against fresh live pricing.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "integer" },
+        "generated_at": { "type": "string" },
+        "master_effective_date": { "type": ["string", "null"] },
+        "master_version": { "type": ["string", "null"] },
+        "calc_schema": { "type": ["string", "null"] },
+        "calc_fetched_at": { "type": ["string", "null"] },
+        "calc_container_id": { "type": ["string", "null"] },
+        "calc_source_urls": { "type": "object", "additionalProperties": true },
+        "pricing_sha256": { "type": "string" },
+        "pinned_pricing_file": { "type": ["string", "null"] }
       }
     }
   }

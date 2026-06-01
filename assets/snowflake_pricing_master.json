@@ -1,12 +1,12 @@
 {
   "metadata": {
-    "effective_date": "2026-05-12",
+    "effective_date": "2026-05-29",
     "source": "Snowflake Service Consumption Table",
     "description": "Complete Snowflake Pricing Reference - All Components (incl. ramp curves & replication)",
-    "version": "2.3",
-    "last_updated": "2026-05-27",
+    "version": "2.4",
+    "last_updated": "2026-05-31",
     "source_pdf": "CreditConsumptionTable.pdf",
-    "regions_covered": 55
+    "regions_covered": 56
   },
   "credit_pricing": {
     "description": "On-Demand Credit Pricing by Cloud Provider, Region, and Edition ($/Credit)",
@@ -258,6 +258,14 @@
         "enterprise": 3.6,
         "business_critical": 4.8,
         "vps": 7.2
+      },
+      {
+        "cloud": "AWS",
+        "region": "Asia Pacific (New Zealand)",
+        "standard": 2.75,
+        "enterprise": 4.05,
+        "business_critical": 5.5,
+        "vps": 8.25
       },
       {
         "cloud": "AWS",
@@ -663,7 +671,8 @@
         "2XL": 48.0,
         "3XL": 96.0,
         "4XL": 192.0,
-        "5XL": 384.0
+        "5XL": 384.0,
+        "6XL": 768.0
       },
       {
         "constraint": "MEMORY_16X_x86",
@@ -1303,6 +1312,12 @@
           "preview": true
         },
         {
+          "model": "claude-opus-4-8",
+          "input": 3.0,
+          "output": 15.0,
+          "preview": true
+        },
+        {
           "model": "claude-sonnet-4-5",
           "input": 1.65,
           "output": 8.25
@@ -1345,6 +1360,12 @@
           "model": "gemini-3.1-pro-long-context",
           "input": 2.2,
           "output": 9.9,
+          "preview": true
+        },
+        {
+          "model": "gemini-3.5-flash",
+          "input": 0.9,
+          "output": 5.4,
           "preview": true
         },
         {
@@ -1451,6 +1472,24 @@
           "model": "pixtral-large",
           "input": 1.0,
           "output": 3.0
+        },
+        {
+          "model": "qwen3-32b",
+          "input": 0.09,
+          "output": 0.36,
+          "preview": true
+        },
+        {
+          "model": "qwen3-next-80b-a3b",
+          "input": 0.09,
+          "output": 0.72,
+          "preview": true
+        },
+        {
+          "model": "qwen3-vl-235b-a22b",
+          "input": 0.32,
+          "output": 1.6,
+          "preview": true
         },
         {
           "model": "snowflake-llama-3.1-405b",
@@ -1578,6 +1617,14 @@
         },
         {
           "model": "claude-opus-4-7",
+          "input": 3.25,
+          "output": 16.26,
+          "cache_write": 4.07,
+          "cache_read": 0.33,
+          "preview": true
+        },
+        {
+          "model": "claude-opus-4-8",
           "input": 3.25,
           "output": 16.26,
           "cache_write": 4.07,
@@ -1825,6 +1872,21 @@
           "feature": "Document AI",
           "rate": 8.0,
           "unit": "Credits per hour"
+        },
+        {
+          "feature": "AI_COMPLETE - twelvelabs-pegasus-1-2",
+          "rate": 0.294,
+          "unit": "Credits per 1,000 video seconds",
+          "output_token_rate": 4.5,
+          "output_token_unit": "Credits per 1M output tokens"
+        },
+        {
+          "feature": "AI_MULTI_EMBED - twelvelabs-marengo-embed-3-0",
+          "video_rate": 0.42,
+          "audio_rate": 0.084,
+          "image_rate": 0.06,
+          "text_rate": 0.042,
+          "unit": "Credits per 1,000 (video sec / audio sec / image req / text req)"
         }
       ]
     },
@@ -2016,6 +2078,24 @@
           "preview": true
         },
         {
+          "model": "claude-opus-4-8",
+          "inference_region": "AWS Regional",
+          "input": 5.5,
+          "output": 27.5,
+          "cache_write": 6.88,
+          "cache_read": 0.55,
+          "preview": true
+        },
+        {
+          "model": "claude-opus-4-8",
+          "inference_region": "AWS Global",
+          "input": 5.0,
+          "output": 25.0,
+          "cache_write": 6.25,
+          "cache_read": 0.5,
+          "preview": true
+        },
+        {
           "model": "openai-gpt-4.1",
           "inference_region": "Azure Regional",
           "input": 2.2,
@@ -2054,6 +2134,15 @@
           "inference_region": "Azure Regional",
           "input": 0.28,
           "output": 2.2,
+          "cache_write": null,
+          "cache_read": 0.03,
+          "preview": true
+        },
+        {
+          "model": "openai-gpt-5-mini",
+          "inference_region": "Azure Global",
+          "input": 0.25,
+          "output": 2.0,
           "cache_write": null,
           "cache_read": 0.03,
           "preview": true
@@ -2261,6 +2350,14 @@
         },
         {
           "model": "claude-opus-4-7",
+          "input": 2.75,
+          "output": 13.75,
+          "cache_write": 3.44,
+          "cache_read": 0.28,
+          "preview": true
+        },
+        {
+          "model": "claude-opus-4-8",
           "input": 2.75,
           "output": 13.75,
           "cache_write": 3.44,
@@ -2662,6 +2759,18 @@
           "tier_5": 16.49,
           "tier_6": 15.01,
           "tier_7": 13.5
+        },
+        {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "on_demand": 26.25,
+          "tier_1": 26.25,
+          "tier_2": 24.5,
+          "tier_3": 22.76,
+          "tier_4": 21.0,
+          "tier_5": 19.24,
+          "tier_6": 17.51,
+          "tier_7": 15.75
         },
         {
           "cloud": "Azure",
@@ -3133,6 +3242,11 @@
           "rate_per_gb_month": 0.37
         },
         {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "rate_per_gb_month": 0.43
+        },
+        {
           "cloud": "Azure",
           "region": "East US 2 (Virginia)",
           "rate_per_gb_month": 0.34
@@ -3478,6 +3592,15 @@
           "iops_per_1000_iops_month": 5.4,
           "throughput_per_gb_sec_month": 44.24,
           "snapshot_per_tb_month": 46.08
+        },
+        {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "instance_type": "CPU/GPU",
+          "volume_per_tb_month": 103.22,
+          "iops_per_1000_iops_month": 6.3,
+          "throughput_per_gb_sec_month": 51.61,
+          "snapshot_per_tb_month": 59.08
         },
         {
           "cloud": "Azure",
@@ -4025,6 +4148,14 @@
           "cold_retrieval_per_tb": 4.5
         },
         {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "cool_storage_per_tb_month": 5.25,
+          "cool_retrieval_per_tb": 30.0,
+          "cold_storage_per_tb_month": 2.1,
+          "cold_retrieval_per_tb": 5.25
+        },
+        {
           "cloud": "Azure",
           "region": "East US 2 (Virginia)",
           "cool_storage_per_tb_month": 4.0,
@@ -4414,6 +4545,12 @@
           "high_availability": 254.36
         },
         {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "standard": 148.38,
+          "high_availability": 296.76
+        },
+        {
           "cloud": "Azure",
           "region": "East US 2 (Virginia)",
           "standard": 118.21,
@@ -4706,6 +4843,12 @@
           "region": "Asia Pacific (Thailand)",
           "class_1_per_million": 4.5,
           "class_2_per_million": 0.36
+        },
+        {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "class_1_per_million": 5.78,
+          "class_2_per_million": 0.46
         },
         {
           "cloud": "Azure",
@@ -5071,6 +5214,13 @@
           "spcs_same_region": 3.07,
           "different_region": 80,
           "internet": 108
+        },
+        {
+          "region": "Asia Pacific (New Zealand)",
+          "same_region": 0.0,
+          "spcs_same_region": 3.07,
+          "different_region": 98,
+          "internet": 114
         }
       ]
     },
@@ -5637,6 +5787,14 @@
           "cloud": "AWS",
           "region": "Asia Pacific (Thailand)",
           "endpoint_fee_per_1k_hours": 11.7,
+          "data_first_1pb_per_tb": 10.24,
+          "data_next_4pb_per_tb": 6.14,
+          "data_over_5pb_per_tb": 4.09
+        },
+        {
+          "cloud": "AWS",
+          "region": "Asia Pacific (New Zealand)",
+          "endpoint_fee_per_1k_hours": 13.65,
           "data_first_1pb_per_tb": 10.24,
           "data_next_4pb_per_tb": 6.14,
           "data_over_5pb_per_tb": 4.09

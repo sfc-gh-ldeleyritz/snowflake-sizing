@@ -32,18 +32,28 @@ Parse `$ARGUMENTS`:
 - `--region "X"` - full region string. If omitted, infer from context; default `"AWS Europe (London)"`.
 - `--skip-glean`, `--skip-gong` - reduce research (requires user confirmation; see EXCEPTIONS in research sub-skill).
 - `--mode replication` or `--mode dr` - activate the replication research block (D1/D2/D3).
+- `--pptx` - after render-html completes, also run the render-pptx sub-skill to generate a Snowflake-branded PPTX from the same sizing JSON.
 
-Read pricing data using the plugin-relative path:
+Derive the three pricing rates with the live-calculator helper. It fetches the
+public Snowflake pricing calculator (falling back to the committed seed, then the
+static master, when offline) and resolves region aliases automatically:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/derive-rates.py \
+  --cloud <AWS|Azure|GCP> --region "<region>" --edition <Standard|Enterprise|Business Critical|VPS> --json
 ```
 
-Derive from pricing data:
+It returns `credit_rate`, `ai_credit_rate`, `storage_rate_per_tb`, and the
+editions available in that region. Add `--offline` to skip the network. The
+rates come from the live calculator block (`pricing["calc"]`):
 
-- `credit_rate` - from `credit_pricing.data` matching cloud + region + edition
-- `ai_credit_rate` - from `ai_credit_pricing.on_demand.global` ($2.00 default)
-- `storage_rate_per_tb` - from `storage.standard` for the region (`row["on_demand"]`)
+- `credit_rate` - Credit On Demand for cloud + region + edition
+- `ai_credit_rate` - AI Credit tier (global $2.00 / regional $2.20), classified by region
+- `storage_rate_per_tb` - Capacity Storage for the region
+
+The static `${CLAUDE_PLUGIN_ROOT}/assets/snowflake_pricing_master.json` remains
+the offline fallback and the source for sections the calculator does not cover
+(serverless, OpenFlow, Postgres, replication, ramp curves).
 
 ### Region name resolution (MANDATORY before pricing lookup)
 
@@ -165,10 +175,18 @@ it needs - main-agent context stays slim.
    `references/content-hygiene.md` as needed.
 
 3. **render-html** - `sub-skills/render-html/SKILL.md`
-   Phases 5 + 6. Writes spec JSON, substitutes template tokens, writes HTML,
-   runs the three quality gates in parallel, prints the final summary.
-   Loads `references/html-spec.md` (only here - 1000+ lines) and
-   `references/content-hygiene.md`.
+    Phases 5 + 6. Writes spec JSON, substitutes template tokens, writes HTML,
+    runs the three quality gates in parallel, prints the final summary.
+    Loads `references/html-spec.md` (only here - 1000+ lines) and
+    `references/content-hygiene.md`.
+
+4. **render-pptx** - `sub-skills/render-pptx/SKILL.md` *(only when `--pptx` is present)*
+    Phases 7 + 8. Runs `scripts/render-pptx.py` against the same
+    `sizings/<slug>.json` written in Phase 3, exports slide images for visual
+    QA, iterates until clean, prints the PPTX summary. Requires `python-pptx`
+    and LibreOffice (see sub-skill prerequisites). The `--pptx` flag is parsed
+    in Phase 1; the sub-skill is invoked only after render-html returns
+    successfully.
 
 ## Hooks active during this skill
 
@@ -180,7 +198,8 @@ it needs - main-agent context stays slim.
   and rejects leakage fields. For `sizings/*.html` it scans for em-dashes,
   content-hygiene tokens, unsubstituted `__TOKEN__` leftovers, and runs
   the Node sidecar JS render check (catches $0-renders). For
-  `temp/*-evidence*.md` it scans for em-dashes only.
+  `temp/*-evidence*.md` it scans for em-dashes only. For `sizings/*.pptx`
+  it skips all text scans (binary file) and allows the write through.
 - `hooks/session.py` (SessionStart, source=startup only) - cleans stale
   research-evidence files older than 30 days.
 

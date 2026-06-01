@@ -11,6 +11,20 @@ All functions are pure; they never mutate their inputs and have no side effects.
 """
 from __future__ import annotations
 
+import pathlib
+import sys
+
+# calc_access lives in framework/; add to sys.path so the native-shape readers
+# are importable whether this module is used via the renderer, the tests, or
+# stand-alone. Falls back gracefully to the flattened tables if unavailable.
+_FRAMEWORK_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "framework")
+if _FRAMEWORK_DIR not in sys.path:
+    sys.path.insert(0, _FRAMEWORK_DIR)
+try:
+    import calc_access
+except Exception:  # noqa: BLE001 (defensive: never block validation on import)
+    calc_access = None  # type: ignore
+
 # ── Region alias map ──────────────────────────────────────────────────────── #
 # Maps spec region strings (which LLMs freely invent) to the canonical key
 # used in snowflake_pricing_master.json.  Add new variants here as they appear.
@@ -70,9 +84,15 @@ def _storage_row(pricing: dict, cloud: str, region: str) -> dict | None:
 def lookup_credit_rate(pricing: dict, cloud: str, region: str, edition: str) -> float | None:
     """Return the on-demand credit rate for cloud/region/edition, or None if unresolved.
 
-    edition is case-insensitive and may use spaces or underscores
-    (e.g. 'Business Critical', 'business_critical').
+    Prefers the live calculator block (pricing['calc']) when present, falling back
+    to the flattened credit_pricing table. edition is case-insensitive and may use
+    spaces or underscores (e.g. 'Business Critical', 'business_critical').
     """
+    canon = _resolve_region(region)
+    if calc_access is not None and calc_access.has_calc(pricing):
+        rate = calc_access.credit_rate(pricing, cloud, canon, edition)
+        if rate is not None:
+            return rate
     row = _credit_row(pricing, cloud, region)
     if row is None:
         return None
@@ -83,6 +103,11 @@ def lookup_credit_rate(pricing: dict, cloud: str, region: str, edition: str) -> 
 
 def lookup_storage_rate(pricing: dict, cloud: str, region: str) -> float | None:
     """Return the on-demand standard storage rate ($/TB/month), or None if unresolved."""
+    canon = _resolve_region(region)
+    if calc_access is not None and calc_access.has_calc(pricing):
+        rate = calc_access.storage_rate(pricing, cloud, canon)
+        if rate is not None:
+            return rate
     row = _storage_row(pricing, cloud, region)
     if row is None:
         return None
@@ -93,16 +118,19 @@ def lookup_storage_rate(pricing: dict, cloud: str, region: str) -> float | None:
 def lookup_ai_credit_rate(pricing: dict, cloud: str, region: str) -> float:
     """Return the on-demand AI credit rate for the given cloud/region.
 
-    Uses the global rate ($2.00) for US/base-rate regions and the regional
-    rate ($2.20) for premium-priced EU/APAC regions.  The distinction is
-    derived from the credit_pricing table: regions whose enterprise rate
-    equals the global base ($3.00) get the global AI rate; all others
-    (higher enterprise rate) get the regional AI rate.
+    The two tiers (global $2.00, regional $2.20) are sourced from the live
+    calculator's 'AI Credit' price type when present, else the flattened
+    ai_credit_pricing table. The region is classified global vs regional by its
+    enterprise credit rate (global base $3.00 => global AI rate).
     """
-    ai = pricing.get("ai_credit_pricing") or {}
-    on_demand = ai.get("on_demand") or {}
-    global_rate = float(on_demand.get("global") or 2.0)
-    regional_rate = float(on_demand.get("regional") or 2.2)
+    if calc_access is not None and calc_access.has_calc(pricing):
+        rates = calc_access.ai_credit_rates(pricing)
+        global_rate = float(rates.get("global") or 2.0)
+        regional_rate = float(rates.get("regional") or 2.2)
+    else:
+        on_demand = (pricing.get("ai_credit_pricing") or {}).get("on_demand") or {}
+        global_rate = float(on_demand.get("global") or 2.0)
+        regional_rate = float(on_demand.get("regional") or 2.2)
 
     row = _credit_row(pricing, cloud, region)
     if row is None:
@@ -142,6 +170,20 @@ def validate_pricing(spec: dict, pricing: dict) -> list[str]:
             f"Numeric rate checks skipped."
         )
         return warnings  # can't validate rates without a resolved region
+
+    # ── edition availability (live regions.json product_families) ──────────── #
+    # Only checks when the live calc block is present and the region is known to
+    # regions.json; a missing region there is not an error (credit_pricing above
+    # already gates resolvability).
+    if calc_access is not None and calc_access.has_calc(pricing) and edition:
+        fams = calc_access.region_product_families(pricing, cloud, canon)
+        if fams:
+            norm_ed = calc_access.norm_edition(edition)
+            if norm_ed not in fams:
+                warnings.append(
+                    f"[pricing-check] EDITION_AVAILABILITY: '{edition}' is not offered in "
+                    f"{cloud} / {canon} per the live calculator (available: {', '.join(fams)})"
+                )
 
     # ── credit_rate ──────────────────────────────────────────────────────── #
     expected_cr = lookup_credit_rate(pricing, cloud, region, edition)

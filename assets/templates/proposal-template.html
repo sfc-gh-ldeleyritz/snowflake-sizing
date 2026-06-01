@@ -182,42 +182,50 @@ body {
 .account-type-reader { background: #e6f4fb; color: var(--sf-navy); }
 .account-type-managed { background: #fef0e0; color: #b35900; }
 
-/* Floating action buttons (top-right). Print / Save as PDF is primary (navy);
-   Save HTML is secondary. Both are hidden in @media print so they never
-   appear in the printed/exported output. */
-.print-btn {
+/* Floating action buttons, stacked vertically in the top-right corner
+   (top to bottom: Export JSON for PPTX, Save HTML, Print / Save PDF). The
+   whole .fab-stack is hidden in @media print so the buttons never appear in
+   the printed/exported output. */
+.fab-stack {
   position: fixed;
   top: 16px;
   right: 16px;
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.fab-stack button {
   padding: 8px 14px;
-  background: var(--sf-navy);
-  color: white;
-  border: none;
   border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+.print-btn {
+  background: var(--sf-navy);
+  color: white;
+  border: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .print-btn:hover { background: var(--sf-navy-deep); }
 
 .save-btn {
-  position: fixed;
-  top: 16px;
-  right: 185px;
-  z-index: 1000;
-  padding: 8px 14px;
   background: white;
   color: var(--sf-navy);
   border: 1px solid var(--sf-navy);
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
 .save-btn:hover { background: var(--sf-navy); color: white; }
+
+.pptx-btn {
+  background: white;
+  color: var(--sf-navy);
+  border: 1px solid var(--sf-navy);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+.pptx-btn:hover { background: var(--sf-navy); color: white; }
 
 
 .scenario-toggle {
@@ -408,7 +416,7 @@ li:hover .item-delete-btn { display: inline; }
   .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .kpi-tile { box-shadow: none; padding: 14px; border: 1px solid var(--gray-200); page-break-inside: avoid; break-inside: avoid; }
   .kpi-value { font-size: 20px; }
-  .tab-nav, .print-btn, .save-btn, .add-btn, .add-btn-group, .delete-btn,
+  .tab-nav, .fab-stack, .add-btn, .add-btn-group, .delete-btn,
   .scenario-toggle, .info-icon, #tt-tip, .item-delete-btn, .add-item-btn, .justification.note-empty { display: none !important; }
   li[contenteditable], span[contenteditable] { box-shadow: none !important; background: none !important; cursor: default !important; }
   .tab-content { display: block !important; page-break-before: auto; margin-top: 12px; }
@@ -462,8 +470,11 @@ li:hover .item-delete-btn { display: inline; }
 <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,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JjXttiQc5rQlKem0Jn7ptCZ+5rQlKe22JBznsyY26LQosee0KejotSno6LUnb/KzJhTotShZ6LUp5ui1KfXotSjd6LQpWOm0KH7otSjA6LUowOm0KH7otCZY6LUo3ei1KfXotijm6LUoWfKzJhTysyYU6LUoWei1KebotSn16LUo3ei1KFnptCh+57Qowei1KMDptCh+6LUoWei1KN3otSn16LYp5ui1KFnysyYU6LUnb+i1KejotCno6LYoseezJjblsCMd5rQlKee1Jn/nsyZ/5rQlKe22JBznsyY26LYosei0KejntSjp6LUnb+mzKVHotSm05rMmUOa1KR/lsiQy6LUnqei1KLrquCMk6rgjJOi1KLrotSep5bIkMua1KR/msyZQ57UptOmzKVHfvyAI3bsiD+e3KCDptSmK6LUo3ui1KfjotSjq57ImNeu1JzTotSjq6LUp+Oi1KN7ntSmK57coIN27Ig/fvyAIAAAAAP+zGgrptiiu6bUp7ue0KejntSjj6LUo6uezKjbstyY157Uo6ui2KeLptSnn6bUp7um2KK7/sxoKAAAAAAAAAADouS4L6bQodOi1J5DnsiQ/6LQosei1Kefnsyo27LImNei1KefotCix57IkP+i1J5DptCh06LkuCwAAAAAAAAAAAAAAAP+2JAfMmTMF68QnDem1J6Lotini67IkMuq2JDHotSni6bUnouvEJw3MmTMF/7YkBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+ZMwXotidC57Qnd+q1KhjqtSoY57Qnd+i2J0L/mTMFAAAAAAAAAAAAAAAAAAAAAPAPAADAAwAAgAEAAIABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIABAACAAQAAwAMAAPAPAAA=">
 </head>
 <body>
-<button class="print-btn" onclick="window.print()" title="Open the browser print dialog and choose 'Save as PDF'">Print / Save as PDF</button>
-<button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save HTML</button>
+  <div class="fab-stack">
+    <button class="pptx-btn" onclick="exportForPptx()" title="Generates a PPTX when the local render service (scripts/serve-pptx.py) is running; otherwise downloads the sizing spec as JSON">Export JSON for PPTX</button>
+    <button class="save-btn" onclick="saveSnapshot()" title="Download a versioned copy of this proposal">Save HTML</button>
+    <button class="print-btn" onclick="window.print()" title="Open the browser print dialog and choose 'Save as PDF'">Print / Save PDF</button>
+  </div>
 <div class="container">
 
 <!-- 1. Header -->
@@ -680,6 +691,88 @@ const SF_CHART_PALETTE = ['#11567F', '#1B7BAE', '#29B5E8', '#76D0F1', '#A0BBCC']
 
 const WH_CREDITS = { XS:1, S:2, M:4, L:8, XL:16, '2XL':32, '3XL':64, '4XL':128 };
 
+/* ===== PricingData: native-shape adapter over PRICING_DATA.calc =====
+   Mirrors framework/calc_access.py. Single source for rate lookups against the
+   live calculator block. All methods tolerate a missing calc block (return
+   null / [] so callers can fall back to the static PRICING_DATA sections). */
+const PricingData = (function () {
+  const calc = (PRICING_DATA && PRICING_DATA.calc) || {};
+  const CLOUD_ALIASES = { aws:'AWS', amazon:'AWS', 'amazon web services':'AWS',
+    azure:'Azure', 'microsoft azure':'Azure', 'ms azure':'Azure',
+    gcp:'GCP', google:'GCP', 'google cloud':'GCP', 'google cloud platform':'GCP' };
+  const EDITION_ALIASES = { standard:'Standard', enterprise:'Enterprise',
+    'business critical':'Business Critical', business_critical:'Business Critical',
+    'business-critical':'Business Critical', vps:'VPS', 'virtual private snowflake':'VPS' };
+  const SIZE_ALIASES = { 'x-small':'XS', xsmall:'XS', xs:'XS', small:'S', s:'S',
+    medium:'M', m:'M', large:'L', l:'L', 'x-large':'XL', xlarge:'XL', xl:'XL',
+    '2x-large':'2XL', '2xlarge':'2XL', '2xl':'2XL', '3x-large':'3XL', '3xlarge':'3XL', '3xl':'3XL',
+    '4x-large':'4XL', '4xlarge':'4XL', '4xl':'4XL', '5x-large':'5XL', '5xlarge':'5XL', '5xl':'5XL',
+    '6x-large':'6XL', '6xlarge':'6XL', '6xl':'6XL' };
+  const num = (v) => (v == null ? null : Number(v));
+  function normCloud(c){ if(!c) return null; const k=String(c).trim().toLowerCase(); return CLOUD_ALIASES[k] || String(c).trim(); }
+  function normEdition(e){ if(!e) return null; const k=String(e).trim().toLowerCase(); return EDITION_ALIASES[k] || String(e).trim(); }
+  function normSize(s){ if(!s) return null; const k=String(s).trim().toLowerCase(); return SIZE_ALIASES[k] || String(s).trim().toUpperCase(); }
+  function sizeOf(label){ const head=String(label||'').split(' - ')[0].split(' ')[0]; return normSize(head) || head.toUpperCase(); }
+  function priceType(name){ for(const pt of (calc.pricing||[])){ if(pt.priceType===name) return pt.data; } return null; }
+  function regionMatch(want, have){ if(want==null||have==null) return false; return String(want).trim().toLowerCase()===String(have).trim().toLowerCase(); }
+  function cloudRegionRows(data, cloud, region){ const cn=normCloud(cloud);
+    for(const c of (data||[])){ if(c.cloud!==cn && c.cloud!==cloud && c.cloud!=='All') continue;
+      for(const r of (c.data||[])){ if(regionMatch(region,r.region) || r.region==='All') return r.data||[]; } }
+    return []; }
+
+  function creditRate(cloud, region, edition){ const rows=cloudRegionRows(priceType('Credit On Demand'),cloud,region); const ed=normEdition(edition);
+    for(const row of rows){ if(row.productFamily2===ed) return num(row.listPrice); } return null; }
+  function storageRate(cloud, region){ const rows=cloudRegionRows(priceType('Storage'),cloud,region);
+    for(const row of rows){ if(row.productFamily2==='Capacity Storage') return num(row.listPrice); }
+    return rows.length ? num(rows[0].listPrice) : null; }
+  function aiCreditRates(){ const out={regional:null, global:null};
+    for(const c of (priceType('AI Credit')||[])){ for(const r of (c.data||[])){ for(const fam of (r.data||[])){
+      const nm=String(fam.productFamily2||'').trim().toLowerCase(); const rows=fam.data||[];
+      if((nm in out) && rows.length) out[nm]=num(rows[0].listPrice); } } } return out; }
+  function aiCreditRate(tier){ return aiCreditRates()[String(tier||'regional').trim().toLowerCase()]; }
+
+  function computeType(t){ for(const c of (priceType('computeTypes')||[])){ if(c.type===t) return c.data; } return null; }
+  function flatWh(data, size){ const want=normSize(size); for(const w of (data||[])){ if(sizeOf(w.warehouse)===want) return num(w.creditsPerHour); } return null; }
+  function warehouseCredits(size, opts){ opts=opts||{};
+    const wtype=String(opts.warehouseType||opts.type||'standard').toLowerCase(); const gen=Number(opts.gen||1);
+    if(wtype==='snowpark'||wtype==='snowpark_optimized'||wtype==='snowpark-optimized'){
+      const data=computeType('SNOWPARK')||[]; const want=normSize(size); const mem=opts.memoryConfig||'MEMORY_1X';
+      for(const w of data){ if(sizeOf(w.warehouse)!==want) continue; const q={}; (w.additionalQualifiers||[]).forEach(x=>{q[x.label]=x.value;});
+        if((q.memoryConfiguration||'MEMORY_1X')===mem) return num(w.creditsPerHour); } return null; }
+    if(gen===2){ const data=computeType('STANDARD_GEN_2')||[]; const cn=normCloud(opts.cloud)||'AWS';
+      let col=data.find(x=>x.cloud===cn); if(!col && data.length) col=data[0]; return flatWh(col?col.data:[], size); }
+    return flatWh(computeType('STANDARD_GEN_1'), size); }
+
+  function spcsData(){ for(const c of (priceType('computeTypes')||[])){ if(c.type==='SPCS') return c.data||[]; } return []; }
+  function spcsFamilies(){ const out=[]; for(const grp of spcsData()){ for(const fam of (grp.data||[])){ const label=fam.instanceFamily||'';
+    out.push({ instanceType:grp.instanceType, family:label.split(' - ')[0].trim(), label:label, creditsPerHour:fam.creditsPerHour }); } } return out; }
+  function spcsCredit(family){ if(!family) return null; const want=String(family).trim().toLowerCase();
+    for(const f of spcsFamilies()){ if(f.family.toLowerCase()===want) return num(f.creditsPerHour); } return null; }
+  function snowparkMemoryConfigs(){ const data=computeType('SNOWPARK')||[]; const seen=[];
+    for(const w of data){ for(const q of (w.additionalQualifiers||[])){ if(q.label==='memoryConfiguration' && seen.indexOf(q.value)<0) seen.push(q.value); } }
+    return seen.length ? seen : ['MEMORY_1X']; }
+
+  function aiTokenRate(pt, fn, model, subtype){ if(model===undefined) model=null;
+    for(const st of (priceType(pt)||[])){ if(subtype!=null && st.subTypeName!==subtype) continue;
+      for(const f of (st.data||[])){ if(f.functionName!==fn) continue;
+        for(const m of (f.data||[])){ if((m.modelName||null)===model) return num(m.creditConversionRate); } } } return null; }
+  function aiModels(pt, fn, subtype){ const seen=new Set();
+    for(const st of (priceType(pt)||[])){ if(subtype!=null && st.subTypeName!==subtype) continue;
+      for(const f of (st.data||[])){ if(fn!=null && f.functionName!==fn) continue;
+        for(const m of (f.data||[])){ if(m.modelName) seen.add(m.modelName); } } } return Array.from(seen).sort(); }
+
+  function regions(cloud){ const cn=normCloud(cloud); const out=[];
+    for(const c of (calc.regions||[])){ if(cn && c.cloud!==cn) continue;
+      for(const cont of (c.data||[])){ for(const r of (cont.data||[])){ if(r.region) out.push(r.region); } } } return out; }
+  function regionProductFamilies(cloud, region){ const cn=normCloud(cloud);
+    for(const c of (calc.regions||[])){ if(c.cloud!==cn) continue;
+      for(const cont of (c.data||[])){ for(const r of (cont.data||[])){ if(regionMatch(region,r.region)) return (r.data||{}).product_families||null; } } } return null; }
+
+  return { hasCalc: !!(calc && calc.pricing), normCloud, normEdition, normSize, sizeOf, priceType,
+    creditRate, storageRate, aiCreditRates, aiCreditRate, warehouseCredits, computeType,
+    spcsFamilies, spcsCredit, snowparkMemoryConfigs, aiTokenRate, aiModels, regions, regionProductFamilies };
+})();
+
 // ========== Per-feature tooltips ==========
 // Hover or focus an .info-icon[data-tt="key"] to display these strings.
 const FEATURE_TOOLTIPS = {
@@ -728,7 +821,7 @@ const FEATURE_TOOLTIPS = {
   ai_translate: 'AI_TRANSLATE function. Billed per million tokens.',
   ai_extract: 'AI_EXTRACT function. Billed per million tokens.',
   ai_transcribe: 'AI_TRANSCRIBE function. Billed per million tokens.',
-  embeddings: 'EMBED_TEXT and related embedding functions. Billed per million tokens.',
+  embed_text: 'EMBED_TEXT and related embedding functions. Billed per million tokens.',
 
   // SPCS / OpenFlow / Collaboration
   spcs: 'Snowpark Container Services. Billed per instance-hour, by generation and instance family.',
@@ -915,8 +1008,20 @@ function nextId(prefix) { return prefix + '-' + (_nextId++) + '-' + Math.random(
 })();
 
 // ========== Calculation engine ==========
+// Warehouse credits/hour via the live calculator (PricingData), honouring gen
+// (1/2), warehouse_type and memory_config, with the static WH_CREDITS table as
+// an offline fallback. Single source shared by every warehouse cost display,
+// and the fix for the historical 5XL/6XL = 1-credit bug.
+function whRate(size, w) {
+  w = w || {};
+  const r = PricingData.warehouseCredits(size, {
+    gen: w.gen, warehouseType: w.warehouse_type, memoryConfig: w.memory_config,
+    cloud: (SIZING_SPEC.meta || {}).cloud,
+  });
+  return (r == null) ? (WH_CREDITS[size] || 1) : r;
+}
 function whMonthlyCredits(w) {
-  const rate = WH_CREDITS[w.size] || 1;
+  const rate = whRate(w.size, w);
   const avgClusters = (w.clusters_min + w.clusters_max) / 2;
   return rate * w.hours_per_day * w.days_per_month * avgClusters;
 }
@@ -1106,18 +1211,22 @@ function calcAICredits() {
 }
 
 function calcSPCSCost() {
-  if (!SIZING_SPEC.spcs.enabled) return 0;
-  const SPCS_GEN1 = { XS_MEM: 1.5, S_MEM: 3, M_MEM: 6, L_MEM: 12, XS_HIPU: 1.5, S_HIPU: 3, M_HIPU: 6 };
-  return SIZING_SPEC.spcs.instances.reduce((sum, inst) => {
-    if (inst.generation === 'gen2') {
-      const gen2Data = PRICING_DATA.spcs.spcs_gen2.data.find(r => r.family === inst.instance_type);
-      const cloud = SIZING_SPEC.meta.cloud.toLowerCase();
-      const rate = gen2Data ? (gen2Data[cloud] || 0) : 0;
-      return sum + rate * (inst.hours_monthly || 0) * (inst.count || 0);
-    } else {
-      const rate = SPCS_GEN1[inst.instance_type] || 0;
-      return sum + rate * (inst.hours_monthly || 0) * (inst.count || 0);
+  const s = SIZING_SPEC.spcs;
+  if (!s || !s.enabled || !Array.isArray(s.instances)) return 0;
+  // Returns SPCS compute-pool credits/MONTH (caller applies × 12 × ramp × cr).
+  // Keyed to the schema fields instance_family/num_instances/hours_per_day/days_per_month.
+  return s.instances.reduce((sum, inst) => {
+    let rate = PricingData.spcsCredit(inst.instance_family);
+    if (rate == null) {
+      // Fallback to the static master tables (cpu/highmem/gpu/spcs_gen2) by family code.
+      const spcs = PRICING_DATA.spcs || {};
+      const want = String(inst.instance_family || '').trim().toLowerCase();
+      for (const grp of ['cpu', 'highmem', 'gpu', 'spcs_gen2']) {
+        const row = ((spcs[grp] && spcs[grp].data) || []).find(r => String(r.family || '').trim().toLowerCase() === want);
+        if (row) { rate = row.credits_per_hour; break; }
+      }
     }
+    return sum + (rate || 0) * (inst.num_instances || 0) * (inst.hours_per_day || 0) * (inst.days_per_month || 0);
   }, 0);
 }
 
@@ -1137,91 +1246,49 @@ function calcTransferCost() {
 }
 
 function calcCollabCost() {
+  // Returns collaboration $/MONTH: reader-account credits × cr + native-app /
+  // marketplace subscriptions. Schema-keyed (reader_accounts/native_apps/marketplace).
   const c = SIZING_SPEC.collaboration;
-  if (!c || !Array.isArray(c.accounts)) return 0;
-  return c.accounts.reduce((sum, a) => {
-    if (a.enabled === false) return sum;
-    const rate = WH_CREDITS[a.warehouse_size] || 1;
-    return sum + rate * (a.hours_per_day || 0) * (a.days_per_month || 0);
-  }, 0);
+  if (!c) return 0;
+  const cr = SIZING_SPEC.meta.credit_rate || 0;
+  let total = 0;
+  const ra = c.reader_accounts;
+  if (ra && ra.enabled) {
+    total += whRate(ra.warehouse_size || 'XS', ra) * (ra.hours_per_day || 0) * (ra.days_per_month || 0) * cr;
+  }
+  if (c.native_apps && c.native_apps.enabled) total += c.native_apps.monthly_subscription || 0;
+  if (c.marketplace && c.marketplace.enabled) total += c.marketplace.monthly_subscription || 0;
+  return total;
 }
 
-// OpenFlow cost constants - sourced from official Openflow pricing calculator
-// SPCS rates: Snowflake Credit Consumption Table, Table 1(d) - credits per compute pool node/hr
-const _OF_SPCS_RATES   = { Small: 0.11, Medium: 0.41, Large: 0.83 };
-const _OF_CTRL_POOL    = 0.11;   // CPU_X64_S control pool, always-on, per deployment
-// BYOC vCPU counts per runtime size - Openflow documentation
-const _OF_BYOC_VCPU    = { Small: 1, Medium: 4, Large: 8 };
-const _OF_BYOC_CR_VCPU = 0.0225; // credits per vCPU per hour, Table 1(g)
-// Warehouse credits per hour for MERGE operations
+// OpenFlow connector cost constants.
+// Warehouse credits/hour for MERGE operations (gen-1 standard, XS-XL).
 const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
-// BYOC region pricing - fixed monthly (EKS+mgmt+NAT+NLB+agent+EBS+secrets) and per-node EC2 hourly
-// Source: AWS Price List API as of 2025-11-16 via official calculator fetch_byoc_pricing.py
-const _OF_BYOC_REG = {
-  'us-east-1':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
-  'us-west-2':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
-  'eu-west-1':      { fixed: 505.79, small: 0.2247, medium: 0.8988, large: 1.7976, ebs: 0.088  },
-  'eu-west-2':      { fixed: 522.57, small: 0.2331, medium: 0.9324, large: 1.8648, ebs: 0.0928 },
-  'eu-central-1':   { fixed: 537.74, small: 0.2415, medium: 0.966,  large: 1.932,  ebs: 0.0952 },
-  'ap-southeast-1': { fixed: 560.53, small: 0.252,  medium: 1.008,  large: 2.016,  ebs: 0.096  },
-  'ap-northeast-1': { fixed: 575.49, small: 0.2604, medium: 1.0416, large: 2.0832, ebs: 0.096  },
-};
+// Snowpipe-Streaming ingest sizing: schema carries rows/day, not GB, so convert
+// rows -> uncompressed GB via an assumed average bytes/row, priced at the SS rate.
+const _OF_AVG_ROW_BYTES    = 1024;
+const _OF_SNOWPIPE_CR_PER_GB = 0.0037;
 
 function calcOpenflowCost(cr, ramp) {
+  // Returns OpenFlow connector cost in DOLLARS for the year (already ramped × cr).
+  // Model: warehouse MERGE credits + Snowpipe-Streaming ingest from rows_per_day_M.
+  // BYOC infra/region/node topology is intentionally dropped (not in the schema);
+  // OpenFlow-Oracle licensing is handled separately in computeYearData.
   const of = SIZING_SPEC.openflow;
-  if (!of || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
-
-  let total = 0;
-
-  // SPCS control pool: one per deployment (added once if any SPCS instance exists)
-  const hasSpcs = of.instances.some(inst => (inst.deployment || 'BYOC') === 'SPCS');
-  if (hasSpcs) {
-    total += _OF_CTRL_POOL * 730 * 12 * ramp * cr;
-  }
-
-  // BYOC fixed infrastructure: one per deployment regardless of instance count
-  const byocInsts = of.instances.filter(inst => (inst.deployment || 'BYOC') === 'BYOC');
-  if (byocInsts.length > 0) {
-    const reg = (_OF_BYOC_REG[byocInsts[0].byoc_region] || _OF_BYOC_REG['us-east-1']);
-    total += reg.fixed * 12; // fixed infra is always-on, no ramp
-  }
-
+  if (!of || !of.enabled || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
+  let monthlyCredits = 0;
   for (const inst of of.instances) {
-    const deployment   = inst.deployment || 'BYOC';
-    const size         = inst.runtime_size || 'Medium';
-    const nodes        = inst.runtime_nodes || inst.source_connections || 1;
-    const poolNodes    = Math.ceil(nodes / 3);
-    const dataGb       = inst.monthly_data_gb || 0;
-    const whSize       = inst.warehouse_size;
-    const whHours      = inst.warehouse_hours_monthly || 0;
-
-    if (deployment === 'SPCS') {
-      // SPCS: compute pool credits (packing ratio 3:1)
-      const rate = _OF_SPCS_RATES[size] || 0.41;
-      total += poolNodes * rate * 730 * 12 * ramp * cr;
-    } else {
-      // BYOC: EC2 + EBS per compute pool node (always-on, no ramp)
-      const reg  = _OF_BYOC_REG[inst.byoc_region] || _OF_BYOC_REG['us-east-1'];
-      const ec2Rate = reg[size.toLowerCase()] || reg.medium;
-      const ebsCost = 200 * reg.ebs * poolNodes;
-      total += (ec2Rate * 730 * poolNodes + ebsCost) * 12;
-      // BYOC vCPU Snowflake credits (ramped)
-      const vcpus = (_OF_BYOC_VCPU[size] || 4) * nodes;
-      total += vcpus * 730 * _OF_BYOC_CR_VCPU * cr * 12 * ramp;
+    const whHours = inst.warehouse_hours_monthly || 0;
+    if (inst.warehouse_size && whHours > 0) {
+      monthlyCredits += (_OF_WH_CR[inst.warehouse_size] || 1) * whHours;
     }
-
-    // Snowpipe Streaming: data ingestion cost (all connector types)
-    if (dataGb > 0) {
-      total += dataGb * 0.0037 * cr * 12 * ramp;
-    }
-
-    // Warehouse MERGE cost (optional - CDC workloads with dedicated warehouse)
-    if (whSize && whHours > 0) {
-      total += (_OF_WH_CR[whSize] || 1) * whHours * cr * 12 * ramp;
+    const rowsM = inst.rows_per_day_M || 0;
+    if (rowsM > 0) {
+      const monthlyGb = rowsM * 1000000 * 30 * _OF_AVG_ROW_BYTES / 1e9;
+      monthlyCredits += monthlyGb * _OF_SNOWPIPE_CR_PER_GB;
     }
   }
-
-  return total;
+  return monthlyCredits * 12 * ramp * cr;
 }
 
 // ========== Replication / DR / Migration cost ==========
@@ -1332,9 +1399,9 @@ function computeYearData(opts) {
     const slCredits = calcServerlessCredits() * 12 * defRamp;
     const aiCredits = calcAICredits() * 12 * defRamp;
     const storageCost = storageForYear(y) * sr * 12;
-    const spcsCost = calcSPCSCost() * 12 * defRamp;
+    const spcsCost = calcSPCSCost() * 12 * defRamp * cr;
     const ofCost   = calcOpenflowCost(cr, defRamp);
-    const oracleCost = SIZING_SPEC.openflow_oracle.enabled
+    const oracleCost = (SIZING_SPEC.openflow_oracle && SIZING_SPEC.openflow_oracle.enabled)
       ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * (y <= 3 ? 110 : 40) * 12
       : 0;
     const transferCost = calcTransferCost() * 12;
@@ -1394,8 +1461,10 @@ function updateGroupHeaderTotals() {
 
   set('gh-d-storage', storageForYear(1) * sr);
 
+  // calcCollabCost now returns $/month directly (reader credits already × cr +
+  // subscription dollars), so the group-header derives credits as dollars / cr.
   const collabMonthly = calcCollabCost();
-  set('gh-cr-collab', collabMonthly); set('gh-d-collab', collabMonthly * cr);
+  set('gh-cr-collab', cr > 0 ? collabMonthly / cr : 0); set('gh-d-collab', collabMonthly);
 
   // Replication: show monthly average (year-1 total / 12) so the group-header reads consistently.
   const rep1 = calcReplicationForYear(1);
@@ -1506,6 +1575,29 @@ function updateWorkload(id, field, value) {
   }
 }
 
+// Warehouse generation / type. Maps the single Type select to gen + warehouse_type
+// (+ a default memory_config for Snowpark), repopulating so the size list and the
+// memory-config selector reflect the new type, then recalculates.
+function updateWorkloadType(id, value) {
+  const w = SIZING_SPEC.workloads.find(x => x.id === id);
+  if (!w) return;
+  if (value === 'snowpark') {
+    w.warehouse_type = 'snowpark';
+    w.gen = 1;
+    if (!w.memory_config) w.memory_config = (PricingData.snowparkMemoryConfigs()[0] || 'MEMORY_1X');
+  } else {
+    w.warehouse_type = 'standard';
+    w.gen = (value === 'standard-2') ? 2 : 1;
+  }
+  // Gen2 / Snowpark cap at 4XL: clamp an out-of-range size down.
+  if ((w.warehouse_type === 'snowpark' || w.gen === 2) && (w.size === '5XL' || w.size === '6XL')) {
+    w.size = '4XL';
+  }
+  populateWorkloadCards();
+  updateWorkloadCalcs();
+  recalculate();
+}
+
 function updateServerless(key, field, value) {
   if (SIZING_SPEC.serverless[key]) {
     SIZING_SPEC.serverless[key][field] = value;
@@ -1555,17 +1647,22 @@ function updateStorage(field, value) {
 function updateGlobal(field, value) {
   SIZING_SPEC.meta[field] = value;
   if (field === 'edition' || field === 'cloud' || field === 'region') {
-    // Re-derive list rate from the pricing JSON; effective rate is set by applyDiscount() below.
-    const row = PRICING_DATA.credit_pricing.data.find(r => r.cloud === SIZING_SPEC.meta.cloud && r.region === SIZING_SPEC.meta.region);
-    if (row) {
-      const ed = SIZING_SPEC.meta.edition.toLowerCase().replace(' ', '_');
-      const newRate = row[ed];
-      if (newRate) SIZING_SPEC.meta.list_credit_rate = newRate;
+    const meta = SIZING_SPEC.meta;
+    // Re-derive list rate from the live calculator (falls back to the flattened table).
+    let newRate = PricingData.creditRate(meta.cloud, meta.region, meta.edition);
+    if (newRate == null) {
+      const row = PRICING_DATA.credit_pricing.data.find(r => r.cloud === meta.cloud && r.region === meta.region);
+      if (row) { const ed = meta.edition.toLowerCase().replace(' ', '_'); newRate = row[ed]; }
     }
+    if (newRate) meta.list_credit_rate = newRate;
     // Re-derive storage rate for the new cloud/region (edition doesn't affect storage pricing).
-    const storageRow = (PRICING_DATA.storage?.standard?.data || [])
-      .find(r => r.cloud === SIZING_SPEC.meta.cloud && r.region === SIZING_SPEC.meta.region);
-    if (storageRow?.on_demand != null) SIZING_SPEC.meta.storage_rate_per_tb = storageRow.on_demand;
+    let stRate = PricingData.storageRate(meta.cloud, meta.region);
+    if (stRate == null) {
+      const storageRow = (PRICING_DATA.storage?.standard?.data || [])
+        .find(r => r.cloud === meta.cloud && r.region === meta.region);
+      if (storageRow?.on_demand != null) stRate = storageRow.on_demand;
+    }
+    if (stRate != null) meta.storage_rate_per_tb = stRate;
     populateGlobalSettings();
   }
   if (field === 'contract_years') {
@@ -1660,7 +1757,7 @@ function updateWorkloadCalcs() {
     if (calcEl) {
       const monthly = whMonthlyCredits(w);
       const annual = monthly * 12;
-      const rate = WH_CREDITS[w.size];
+      const rate = whRate(w.size, w);
       const avg = (w.clusters_min + w.clusters_max) / 2;
       calcEl.textContent = `${rate} cr/hr x ${w.hours_per_day} hrs x ${w.days_per_month} days x ${avg} clusters = ${fmt(monthly)} cr/mo -> ${fmt(annual)} cr/yr`;
     }
@@ -1773,9 +1870,23 @@ function updateExpectedGrowth(value) {
 
 // ========== Populators ==========
 function populateWorkloadCards() {
-  const sizes = ['XS','S','M','L','XL','2XL','3XL','4XL'];
   const html = SIZING_SPEC.workloads.map(w => {
-    const sizeOpts = sizes.map(s => `<option value="${s}" ${s===w.size?'selected':''}>${s} - ${WH_CREDITS[s]} cr/hr</option>`).join('');
+    const isSnowpark = w.warehouse_type === 'snowpark';
+    // Gen2 and Snowpark-Optimized top out at 4XL; Gen1 standard goes to 6XL.
+    const sizes = (isSnowpark || w.gen === 2)
+      ? ['XS','S','M','L','XL','2XL','3XL','4XL']
+      : ['XS','S','M','L','XL','2XL','3XL','4XL','5XL','6XL'];
+    const sizeOpts = sizes.map(s => `<option value="${s}" ${s===w.size?'selected':''}>${s} - ${whRate(s, w)} cr/hr</option>`).join('');
+    const typeVal = isSnowpark ? 'snowpark' : ('standard-' + (w.gen || 1));
+    const typeOpts = [['standard-1','Standard (Gen1)'],['standard-2','Standard (Gen2)'],['snowpark','Snowpark-Optimized']]
+      .map(([v,l]) => `<option value="${v}" ${v===typeVal?'selected':''}>${l}</option>`).join('');
+    const memBlock = isSnowpark
+      ? `<label>Memory Config
+          <select id="mem-${w.id}" onchange="updateWorkload('${w.id}', 'memory_config', this.value)">${
+            PricingData.snowparkMemoryConfigs().map(mc => `<option value="${mc}" ${mc===(w.memory_config||'MEMORY_1X')?'selected':''}>${mc}</option>`).join('')
+          }</select>
+        </label>`
+      : '';
     // Per-workload sourcing note: editable + deletable, mirroring the Assumptions/Confirm lists.
     // A null justification means the note was deleted; show a re-add affordance instead.
     const noteBlock = (w.justification != null)
@@ -1801,6 +1912,10 @@ function populateWorkloadCards() {
         <label>Warehouse Size
           <select id="size-${w.id}" onchange="updateWorkload('${w.id}', 'size', this.value)">${sizeOpts}</select>
         </label>
+        <label>Warehouse Type
+          <select id="wtype-${w.id}" onchange="updateWorkloadType('${w.id}', this.value)">${typeOpts}</select>
+        </label>
+        ${memBlock}
         <label>Hours/Day: <span id="hrs-val-${w.id}">${w.hours_per_day}</span>
           <input type="range" id="hrs-${w.id}" min="0" max="24" step="0.5" value="${w.hours_per_day}"
                  oninput="updateWorkload('${w.id}', 'hours_per_day', +this.value)">
@@ -2111,12 +2226,15 @@ function populateSPCSPanel() {
       '<p style="color: var(--gray-600); font-style: italic;">No SPCS instances configured. Click + Add SPCS Instance to create one.</p>';
     return;
   }
-  const gen2Families = (PRICING_DATA.spcs && PRICING_DATA.spcs.spcs_gen2 && PRICING_DATA.spcs.spcs_gen2.data || []).map(r => r.family);
+  // gen2 families now come from the live calculator SPCS compute pools
+  // (HIGHMEM_X64 / CPU_X64 / GPU); gen1 keeps the legacy memory/HIPU pools.
+  const gen2Families = PricingData.spcsFamilies();
   const gen1Types = ['XS_MEM', 'S_MEM', 'M_MEM', 'L_MEM', 'XS_HIPU', 'S_HIPU', 'M_HIPU'];
   const html = sp.instances.map(inst => {
     const isGen2 = inst.generation === 'gen2';
-    const typeOpts = (isGen2 ? gen2Families : gen1Types)
-      .map(t => `<option value="${t}" ${t===inst.instance_type?'selected':''}>${t}</option>`).join('');
+    const typeOpts = isGen2
+      ? gen2Families.map(f => `<option value="${f.family}" ${f.family===inst.instance_type?'selected':''}>${f.family} - ${f.creditsPerHour} cr/hr</option>`).join('')
+      : gen1Types.map(t => `<option value="${t}" ${t===inst.instance_type?'selected':''}>${t}</option>`).join('');
     return `<div class="workload-card" data-id="${inst.id}">
       <div class="workload-header">
         <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
@@ -2155,7 +2273,7 @@ function addSPCSInstance() {
     id: nextId('sp'),
     label: 'New instance',
     generation: 'gen2',
-    instance_type: 'GEN_X64_G2_4',
+    instance_type: (PricingData.spcsFamilies()[0] || {}).family || 'CPU_X64_M',
     count: 1,
     hours_monthly: 730,
   });
@@ -2177,7 +2295,7 @@ function updateSPCSInstance(id, field, value) {
   inst[field] = value;
   if (field === 'generation') {
     // Re-render so the instance-type select shows the right options.
-    inst.instance_type = (value === 'gen2') ? 'GEN_X64_G2_4' : 'XS_MEM';
+    inst.instance_type = (value === 'gen2') ? ((PricingData.spcsFamilies()[0] || {}).family || 'CPU_X64_M') : 'XS_MEM';
     populateSPCSPanel();
   }
   recalculate();
@@ -2856,6 +2974,77 @@ function saveSnapshot() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ========== Export for PPTX (one-click bridge, JSON fallback) ==========
+// Primary path: POST the current SIZING_SPEC to the local render bridge
+// (scripts/serve-pptx.py), which calls build_pptx.build() and streams back a
+// real .pptx for the browser to download. If that service is not running we
+// fall back to downloading the spec JSON (the legacy behavior), which can be
+// fed to scripts/render-pptx.py by hand.
+// SIZING_SPEC is always current - event handlers sync every in-UI edit
+// directly into the object, so no additional flush is needed.
+const PPTX_BRIDGE_URL = 'http://127.0.0.1:8765';
+
+// Trigger a browser download for a Blob under a given filename.
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Legacy fallback: download the raw spec as <base>.json.
+function downloadSpecJson(base) {
+  const blob = new Blob([JSON.stringify(SIZING_SPEC, null, 2)], { type: 'application/json;charset=utf-8' });
+  triggerDownload(blob, base + '.json');
+}
+
+async function exportForPptx() {
+  const meta = SIZING_SPEC.meta || {};
+  const slug = (meta.customer || 'customer').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+  const years = meta.contract_years || 1;
+  const version = meta.version_number || 1;
+  const today = new Date().toISOString().slice(0, 10);
+  const base = slug + '-' + years + 'year-sizing-v' + version + '-' + today;
+
+  // Abort the bridge request if it stalls, so we can fall back promptly.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  let resp;
+  try {
+    resp = await fetch(PPTX_BRIDGE_URL + '/render-pptx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(SIZING_SPEC),
+      signal: controller.signal
+    });
+  } catch (err) {
+    // Network error or timeout => bridge not reachable. Silent JSON fallback.
+    clearTimeout(timer);
+    console.info('PPTX bridge unreachable (' + ((err && err.name) || 'error') + '); downloading spec JSON instead. Start scripts/serve-pptx.py for one-click PPTX.');
+    downloadSpecJson(base);
+    return;
+  }
+  clearTimeout(timer);
+
+  if (!resp.ok) {
+    // Bridge is up but the build failed. Surface the error so the spec can be
+    // fixed, and still drop the JSON as a safety net.
+    let detail = 'HTTP ' + resp.status;
+    try { detail = (await resp.text()) || detail; } catch (e) {}
+    console.error('PPTX bridge error:\n' + detail);
+    alert('PPTX render failed (the spec JSON was downloaded as a fallback):\n\n' + detail);
+    downloadSpecJson(base);
+    return;
+  }
+
+  const blob = await resp.blob();
+  triggerDownload(blob, base + '.pptx');
 }
 
 </script>

@@ -46,7 +46,8 @@ _SKELETON_PATH = _PLUGIN_ROOT / "framework" / "sizing_spec_skeleton.json"
 sys.path.insert(0, str(_PLUGIN_ROOT / "scripts"))
 sys.path.insert(0, str(_PLUGIN_ROOT / "framework"))
 from _schema_loader import SCHEMA  # noqa: E402
-from compute_totals import compute_core_totals, load_pricing  # noqa: E402
+from compute_totals import compute_core_totals  # noqa: E402
+import live_pricing as lp  # noqa: E402  (merged static + live calc, for pinning)
 
 
 # ── Legacy field rename map ───────────────────────────────────────────────── #
@@ -178,6 +179,10 @@ def _stamp_meta_defaults(spec: dict) -> None:
         meta["generated_date"] = _dt.date.today().isoformat()
 
 
+# Pricing-snapshot helpers live in framework/live_pricing.py (the single home for
+# pricing provenance); re-exported here as lp.build_pricing_snapshot / lp.pricing_sha256.
+
+
 # ── Validation ────────────────────────────────────────────────────────────── #
 
 def validate_spec(spec: dict) -> list[str]:
@@ -261,12 +266,26 @@ def validate_spec(spec: dict) -> list[str]:
 
 # ── Driver ────────────────────────────────────────────────────────────────── #
 
-def prepare(patch: dict, *, pricing: dict | None = None, skeleton: dict | None = None) -> tuple[dict, list[str]]:
-    """Build a normalized SIZING_SPEC from a patch dict. Returns (spec, warnings)."""
+def prepare(
+    patch: dict,
+    *,
+    pricing: dict | None = None,
+    skeleton: dict | None = None,
+    prefer_live: bool = False,
+) -> tuple[dict, list[str], dict]:
+    """Build a normalized SIZING_SPEC from a patch dict.
+
+    Returns ``(spec, warnings, pricing)`` where ``pricing`` is the merged dict
+    (static master + native ``calc`` block) the totals were computed against and
+    that the caller pins as the sidecar. ``prefer_live`` controls the loader: the
+    CLI passes True to pin the freshest live calculator data (graceful fallback to
+    cache → committed seed → static master); the default False keeps library/test
+    callers network-free and deterministic.
+    """
     if skeleton is None:
         skeleton = json.loads(_SKELETON_PATH.read_text(encoding="utf-8"))
     if pricing is None:
-        pricing = load_pricing(_PLUGIN_ROOT)
+        pricing = lp.load_pricing(_PLUGIN_ROOT, prefer_live=prefer_live, offline=not prefer_live)
     warnings: list[str] = []
 
     spec = _deep_merge(skeleton, patch or {})
@@ -278,7 +297,8 @@ def prepare(patch: dict, *, pricing: dict | None = None, skeleton: dict | None =
     _stamp_meta_defaults(spec)
 
     spec["computed_totals"] = compute_core_totals(spec, pricing)
-    return spec, warnings
+    spec["pricing_snapshot"] = lp.build_pricing_snapshot(pricing)
+    return spec, warnings, pricing
 
 
 def _read_patch(path: str) -> dict:
@@ -295,6 +315,11 @@ def main() -> int:
         "--validate-only",
         metavar="SPEC_PATH",
         help="Validate an existing spec; do not normalize. Exits non-zero on errors.",
+    )
+    parser.add_argument(
+        "--offline", action="store_true",
+        help="Pin the committed seed / static master instead of fetching the live "
+             "calculator (deterministic, network-free).",
     )
     args = parser.parse_args()
 
@@ -313,7 +338,7 @@ def main() -> int:
         parser.error("--patch and --out are required (or use --validate-only).")
 
     patch = _read_patch(args.patch)
-    spec, warnings = prepare(patch)
+    spec, warnings, pricing = prepare(patch, prefer_live=not args.offline)
     errors = validate_spec(spec)
 
     if errors:
@@ -325,10 +350,17 @@ def main() -> int:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    pathlib.Path(args.out).write_text(
-        json.dumps(spec, indent=2) + "\n", encoding="utf-8"
-    )
+    out_path = pathlib.Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Pin the exact merged pricing as a sidecar next to the spec so a re-render
+    # reproduces identical numbers (render-html auto-loads it). sizings/* is
+    # gitignored, so this is a local artifact to archive alongside the proposal.
+    sidecar = out_path.parent / (out_path.stem + ".pricing.json")
+    spec["pricing_snapshot"]["pinned_pricing_file"] = sidecar.name
+    sidecar.write_text(json.dumps(pricing, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    out_path.write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8")
     print(f"spec-prepare: wrote {args.out}")
     if warnings:
         print(f"  Auto-corrections ({len(warnings)}):")
@@ -338,6 +370,12 @@ def main() -> int:
     print(
         f"  core TCV: ${ct['core_tcv']:,.0f}  "
         f"(per-year {[f'${y:,.0f}' for y in ct['core_year_total']]})"
+    )
+    snap = spec["pricing_snapshot"]
+    print(
+        f"  pinned pricing -> {sidecar.name}  "
+        f"(master {snap['master_effective_date']} v{snap['master_version']}, "
+        f"calc {snap['calc_fetched_at']}, sha {snap['pricing_sha256'][:12]})"
     )
     return 0
 

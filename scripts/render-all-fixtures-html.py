@@ -44,6 +44,9 @@ def main() -> int:
                     help="Directory to write rendered *.html (default: temp/fixtures-html).")
     ap.add_argument("--template", type=pathlib.Path, default=None,
                     help="Override template path (default: render-html.py's default, the latest proposal template).")
+    ap.add_argument("--live", action="store_true",
+                    help="Fetch live calculator pricing per fixture. Default: --offline "
+                         "(committed seed/cache) for deterministic, network-free smoke tests.")
     args = ap.parse_args()
 
     fixtures_dir = args.fixtures_dir.resolve()
@@ -67,6 +70,8 @@ def main() -> int:
     for spec in fixtures:
         out_html = out_dir / (spec.stem + ".html")
         cmd = [sys.executable, str(_RENDER_CLI), "--spec", str(spec), "--out", str(out_html)]
+        if not args.live:
+            cmd.append("--offline")
         if args.template is not None:
             cmd += ["--template", str(args.template.resolve())]
 

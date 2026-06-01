@@ -1,5 +1,474 @@
 # snowflake-sizing changelog
 
+## [v2.11.0] — Full compute-cost coverage in the PPTX deck (SPCS, OpenFlow, transfer, collaboration, replication)
+
+The generated deck now reports the **entire** compute stack from the JSON spec,
+not just warehouse / serverless / AI / storage. `framework/compute_totals.py`
+(the authoritative math the renderer injects into both the HTML and the PPTX) is
+extended with the previously JS-only categories — SPCS, OpenFlow + OpenFlow-Oracle,
+data-transfer + PrivateLink, collaboration, and replication/DR — and the canonical
+HTML template JS is brought back in sync, fixing field-name drift and a credit-rate
+bug. The Serverless/AI slide and the cost-detail slide and charts now itemise these
+categories so TCV reconciles end-to-end.
+
+### Added
+
+- **`framework/compute_totals.py` — other-compute stack.** New schema-keyed
+  functions (`spcs_monthly_credits`, `openflow_connector_monthly_credits`,
+  `openflow_oracle_cost_for_year`, `transfer_monthly_cost`,
+  `collaboration_monthly_cost`, `replication_for_year`) feed five new per-year
+  arrays (`spcs_cost_per_year`, `openflow_cost_per_year`,
+  `data_transfer_cost_per_year`, `collaboration_cost_per_year`,
+  `replication_cost_per_year`) plus `other_cost_per_year`. These are now included
+  in `core_year_total` / `core_tcv`. All optional keys are guarded so lean specs
+  stay at $0. SPCS rates resolve via the live calc block with a fallback to the
+  static master tables. OpenFlow uses a pragmatic schema-driven model (warehouse
+  MERGE credits + Snowpipe-Streaming ingest from `rows_per_day_M` via a documented
+  bytes/row assumption); the BYOC infra/region/node topology the old JS assumed is
+  dropped because it is not represented in the schema.
+- **`renderer/pptx/slides.py` — itemised rows.** The Serverless/AI slide (now
+  titled *Serverless, AI & Other Compute*) appends SPCS / OpenFlow / Data Transfer /
+  Collaboration / Replication rows when non-zero (lean decks stay tight), and the
+  *Cost Detail by Year* slide gains an **Other** row so its visible rows reconcile
+  to the Total.
+- **`renderer/pptx/charts.py` + `brand.py` — "Other" series.** The stacked-column
+  chart and the category-mix donut add an *Other* series/slice (5th brand color)
+  so the chart TCV matches the headline.
+- **`tests/test_compute_totals.py` — coverage** for the new categories (presence,
+  non-zero on the full fixture, `other == Σ categories`, total includes other,
+  SPCS credit-rate scaling, collaboration subscriptions, lean-spec zero).
+
+### Fixed
+
+- **Credit-rate bug for SPCS & collaboration.** The HTML `computeYearData` added
+  raw SPCS credits and reader-account credits to a dollar total without `× cr`,
+  and `calcCollabCost` never counted native-app / marketplace subscriptions. SPCS
+  now applies the credit rate and collaboration counts subscriptions in both the
+  Python module and the HTML JS.
+- **Schema field-name drift in the HTML JS.** `calcSPCSCost`, `calcOpenflowCost`,
+  and `calcCollabCost` read fields that do not exist in schema-conformant specs
+  (`generation/instance_type/hours_monthly/count`, `deployment/runtime_size/
+  byoc_region/monthly_data_gb`, `collaboration.accounts[]`). They are rewritten to
+  the real schema fields (`instance_family/num_instances/hours_per_day/
+  days_per_month`, `warehouse_size/rows_per_day_M/warehouse_hours_monthly`,
+  `reader_accounts/native_apps/marketplace`) and matched to the Python formulas.
+
+### Known issue (pre-existing, out of scope)
+
+- The Python `compute_core_totals` ramp model does **not** apply
+  `meta.annual_growth_rate`, while the HTML live `recalculate()` does (and treats
+  year 2+ as full-capacity). The PPTX (Python) and the live HTML headline therefore
+  diverge on multi-year specs across *all* core categories — not just the new ones.
+  This is unchanged by this release and tracked separately.
+
+## [v2.10.1] — Hand-authored "Understanding Your Snowflake Costs" slide preserved across re-bakes
+
+The **Understanding Your Snowflake Costs** donor is now a hand-authored *One
+Column Layout* content slide — a title, a "Pricing & sizing basis" subtitle, a
+"Confidential" textbox, and Compute / Storage / Data-Transfer cost cards —
+replacing the old Quote-Violet section divider that was cloned from the master
+and text-swapped. Because this slide exists only in the committed base template
+(not in the Snowflake master), the bake script now clones it from the committed
+template and preserves it verbatim instead of regenerating (and clobbering) it.
+No schema change; render output is unchanged for callers since the renderer
+already duplicated the committed donor verbatim.
+
+### Changed
+
+- **`scripts/create-sizing-template.py` — understanding_costs sourced from the
+  committed base template.** `main()` now loads the existing
+  `sizing-base-template.pptx` and clones the `understanding_costs` donor from it
+  (at its `BAKED_DONOR_ORDER` index) instead of from master idx 3, so a re-bake
+  preserves the hand-authored cost-card slide byte-for-byte. A guard exits with a
+  clear error if the committed template is missing or has fewer slides than the
+  expected donor count (the slide cannot be recovered from the master). The
+  per-donor log line now reports an honest source (`src=base[6]` vs
+  `src=master[N]`), `_bake_understanding_costs` is now a no-op (the slide is
+  complete and self-contained), and the `"understanding_costs": 3` entry was
+  removed from `SRC_INDEX`. Module docstring updated accordingly.
+- **`renderer/pptx/slides.py` — corrected stale comments.**
+  `build_understanding_costs_slide` and its section header now describe the donor
+  as the hand-authored One Column Layout content slide committed in the base
+  template (duplicated verbatim), not a master-sourced section divider. Behavior
+  unchanged.
+
+## [v2.10.0] — One-click PPTX export via a local render bridge
+
+The proposal HTML's **"Export JSON for PPTX"** button can now generate a real
+`.pptx` in one click. A new stdlib-only bridge server, `scripts/serve-pptx.py`,
+accepts the in-browser `SIZING_SPEC` over loopback HTTP, runs the same
+`renderer/pptx/build_pptx.build()` path as the CLI, and streams the deck back
+for the browser to download. When the bridge is **not** running the button
+silently falls back to its previous behavior (downloading the spec JSON), so
+emailed and standalone proposals are unaffected. No new dependencies; no schema
+or template-rebake change.
+
+### Added
+
+- **`scripts/serve-pptx.py` — local PPTX render bridge.** A `ThreadingHTTPServer`
+  (stdlib `http.server`) bound to `127.0.0.1:8765`, exposing `GET /health` and
+  `POST /render-pptx`. The POST handler parses the request body as a
+  `SIZING_SPEC`, calls `build(spec, pricing)` with **no** `out_path` (returns
+  bytes only — nothing is written to disk), and replies with the deck as
+  `application/vnd.openxmlformats-officedocument.presentationml.presentation`.
+  Pricing is loaded once at startup from `assets/snowflake_pricing_master.json`
+  (overridable via `--pricing`); because `build()` deep-copies before stripping,
+  the in-memory pricing dict is reused safely across requests. Flags: `--port`
+  (default 8765), `--host` (default `127.0.0.1`), `--open <html>`, `--no-open`.
+  Malformed JSON returns `400`; a build exception returns `500` with the
+  traceback text so the SE can fix the spec. Every response sets
+  `Access-Control-Allow-Origin: *` (plus an `OPTIONS` preflight handler) so a
+  `file://` proposal (`Origin: null`) can read the binary response; the button
+  posts a safelisted `text/plain` content-type to avoid a preflight on the hot
+  path.
+
+### Changed
+
+- **`assets/templates/proposal-template.html` — button wired to the bridge.**
+  `exportForPptx()` is now `async`: it POSTs the current `SIZING_SPEC` to the
+  bridge and, on success, downloads `<slug>-...-v<n>-<date>.pptx`. A shared
+  `triggerDownload()` helper performs the blob download. On a network error or
+  30s `AbortController` timeout it silently falls back to the JSON download via
+  `downloadSpecJson()`; on an HTTP error from a running bridge it surfaces the
+  server message via `alert()` and still drops the JSON as a safety net. The
+  button **label is unchanged** ("Export JSON for PPTX"); only its tooltip is
+  updated to explain the bridge-vs-JSON behavior. Authoritative `computed_totals`
+  and internal-pricing stripping happen server-side inside `build()`, so a
+  browser-edited (possibly stale) `computed_totals` block cannot affect the deck.
+- **`render-pptx` sub-skill SKILL.md** documents the one-click bridge: start
+  `scripts/serve-pptx.py`, click the button for a direct `.pptx`, with the JSON
+  fallback when the service is down.
+
+## [v2.9.1] — Vertical floating-button stack in the proposal HTML
+
+Cosmetic refinement to `assets/templates/proposal-template.html`: the three
+floating action buttons that v2.4.0 / v2.5.0 laid out as a horizontal top-right
+row (each individually `position: fixed` at a hand-tuned `right` offset) now
+stack **vertically** in a single flex container. No schema, script, or behavior
+change — the `onclick` handlers (`exportForPptx()`, `saveSnapshot()`,
+`window.print()`) and tooltips are untouched.
+
+### Changed
+
+- **Floating buttons are now a vertical flex stack.** A new `.fab-stack`
+  container (`position: fixed; top/right: 16px; z-index: 1000; flex-direction:
+  column; gap: 8px; align-items: stretch`) owns the positioning; the per-button
+  rules (`.print-btn` / `.save-btn` / `.pptx-btn`) drop their individual
+  `position/top/right/z-index` and keep only colors, borders, and shadows, with
+  the shared `padding`/`border-radius`/`font` lifted onto `.fab-stack button`.
+  `align-items: stretch` makes all three equal width, retiring the brittle
+  16 / 185 / 355px `right` offsets that previously kept the row from overlapping.
+  DOM order top-to-bottom is **Export JSON for PPTX → Save HTML → Print / Save
+  PDF**.
+- **Two buttons renamed.** "Export for PPTX" → **"Export JSON for PPTX"** (makes
+  it explicit that the button downloads the sizing spec as JSON, not a deck);
+  the v2.4.0 **"Print / Save as PDF"** label is shortened to **"Print / Save
+  PDF"**. **Save HTML** is unchanged.
+- **`@media print` hide rule** now lists `.fab-stack` in place of the three
+  individual `.print-btn, .save-btn, .pptx-btn` classes, so the whole stack
+  stays hidden in printed / exported PDF output.
+
+## [v2.9.0] — PPTX cost-mix doughnut, scenario comparison, and per-year ACV totals
+
+Adds two toggleable slides to the native PPTX deck and surfaces per-year ACV
+(annual contract value) on the year-by-year slide. Everything renders on the
+existing v2.8.0 donors (`content`, `table_styled`) — **no template rebake, no
+schema change**. The deck is now **up to 10 slides** (6 with all toggles off);
+both new slides default ON via a `meta` flag.
+
+### Added
+
+- **Cost Mix doughnut (slide 6, `build_workload_donut_slide`)** — a native
+  `DOUGHNUT` chart in `charts.py:add_workload_donut`. Primary mode plots each
+  workload's Year-1 warehouse credits ("Compute Mix by Workload"); with fewer than
+  two workloads it falls back to the Compute/Serverless/AI/Storage cost mix ("Cost
+  Mix by Category"). Slices are colored per data point via a new `_color_points()`
+  helper. Toggle: `meta.include_workload_donut`.
+- **Scenario Comparison (slide 9, `build_scenario_slide`)** — a Conservative /
+  Expected / Aggressive TCV table that re-runs the SAME `compute_core_totals()`
+  engine on a deep-copied spec. Levers are a go-live month shift plus a RELATIVE
+  ramp-curve step along `fastest < fast < linear < slow < slowest`, so TCV is
+  always monotone **Conservative <= Expected <= Aggressive**. The Expected row reuses
+  the authoritative `computed_totals`, so its TCV equals the deck headline exactly;
+  it is bolded via the new `fill_table(bold_row_index=...)` keyword. Optional
+  `spec.scenarios` (`{label, go_live_delta, curve_steps}`) overrides the defaults.
+  Toggle: `meta.include_scenarios`.
+- **Per-year ACV totals on the Year-by-Year slide** — `build_year_chart_slide`
+  now sets the subtitle to each year's ACV (= `core_year_total[y]`) in dollars
+  via `_acv_subtitle`, exact for terms up to 3 years and abbreviated beyond that
+  so the line stays on one line and does not wrap into the chart.
+- **`inject.fill_table(..., bold_row_index=...)`** — bolds a single highlighted
+  row (reuses `_bold_row`), mirroring `bold_last_row`.
+- **`tests/test_pptx.py`** — content + toggle tests for the doughnut and scenario
+  slides, a per-year-ACV assertion, a `_shift_curve` unit suite, a
+  scenario-monotonicity regression on the `healthcare-bc-slowramp`
+  (`slowest`-baseline) fixture, and a `set_body_paragraphs` font-size unit test.
+
+### Fixed
+
+- **`inject.set_body_paragraphs(font_size=Pt(...))`** rendered text at the EMU
+  value (e.g. `Pt(14)` -> 2032pt, whose giant bullet glyphs filled the slide as a
+  blue "mosaic"). pptx `Length` subclasses `int`, so the `isinstance(font_size,
+  int)` branch caught Pt/Emu/Inches and read their EMU integer as centipoints; the
+  check now tests `Length` first and converts via `font_size.pt * 100`.
+
+### Changed
+
+- **`build_pptx.py`** threads `pricing` into the donut + scenario builders, reads
+  the two new `meta` toggles (default true), wires the builders in deck order, and
+  updates the slide-order docstring (up to 10 slides). `slides.py` module docstring
+  and `_AGENDA_SECTIONS` updated to match.
+- **`render-pptx/SKILL.md`** documents the 10-slide deck map, the toggles, the
+  doughnut modes, the per-year ACV subtitle, and the scenario-engine consistency
+  invariant; the visual-QA checklist and expected slide count are refreshed.
+
+## [v2.8.0] — PPTX deck styling & layout refinements
+
+Polishes the native PPTX deck after design review: de-blues the styled tables to
+white data rows, reorders the content slides to lead with costs, and drops the
+redundant Executive Summary slide. The deck is now **8 slides** (6 with both the
+safe-harbor and agenda toggles off), down from 9.
+
+### Added
+
+- **`inject.fill_table(..., data_row_fill=...)`** — a new keyword that recolors
+  every data row (all rows after the header) via a new `_set_cell_fill()` helper,
+  which rewrites each cell's existing `a:solidFill` in place (schema-order-safe)
+  and leaves the header fill and the cells' light-gray bottom borders (the row
+  gridlines) untouched. The three styled-table builders pass `"FFFFFF"`.
+- **`tests/test_pptx.py`** — `test_data_rows_white` (header stays `11577F`, first
+  data row is `FFFFFF`) and `test_no_exec_summary_slide`.
+
+### Changed
+
+- **Styled tables now read white.** The slide-19 donor ships all-blue rows
+  (`29B5E8`); the cost-detail, warehouse-workloads, and serverless tables now
+  render white (`FFFFFF`) data rows under the navy (`11577F`) header, with the
+  donor's light-gray (`C8C8C8`) horizontal gridlines preserved and bold **Total**
+  rows on the cost-detail and serverless tables.
+- **Content slides reordered** to Cost Detail by Year → Year-by-Year chart →
+  Warehouse Workloads → Serverless & AI / Cortex — updated in the `build_pptx.py`
+  build order and the `slides.py` builder defs + section comments, with the agenda
+  list and both module docstrings updated to match.
+- **`scripts/create-sizing-template.py`** bakes the white data row into the
+  committed `assets/templates/sizing-base-template.pptx` (`_bake_table_styled`),
+  so the template's standalone styled table matches the rendered decks, and its
+  baked agenda scaffolding matches the new section order. Template regenerated.
+
+### Removed
+
+- **Executive Summary slide** (`build_exec_summary_slide` plus its build call and
+  import); the agenda no longer lists it.
+- **Two now-unused donor slides** dropped from the base template, taking it from
+  **8 → 6 donors** (`title`, `agenda`, `safe_harbor`, `table_styled`, `content`,
+  `thank_you`): `four_column_numbers` (the former Executive Summary donor) and
+  `two_column` (long unused — the serverless slide uses `table_styled`). Because
+  donors are resolved by bake-order index, this was a lock-step change across the
+  reader (`clone.BAKED_DONOR_ORDER`) and writer (`create-sizing-template.py`:
+  `SRC_INDEX`, `_FOOTER_KINDS`, `_BAKERS`, and the `_bake_four_column` /
+  `_bake_two_column` helpers + their sample-text constants), then a template regen.
+
+### Notes
+
+- The PPTX renderer is donor/clone-based: `build_pptx.py` duplicates pre-baked
+  designer "donor" slides and injects content via `inject.py`, then deletes the
+  donors — so these are content/layout refinements on that pipeline, not a new
+  renderer.
+- Slide-count test baseline dropped 7 → 6 (default deck 9 → 8).
+- Validated: `scripts/render-pptx.py` on the acme fixture (8 slides, correct
+  order, white rows + navy headers + bold totals, no Executive Summary, zero
+  `29B5E8` data cells); LibreOffice PDF eyeball; full suite **351 passed**.
+
+## [v2.7.0] — pricing freshness automation & per-sizing pinning
+
+Keeps pricing as fresh as possible for every service with a cache fallback, and
+makes each delivered sizing reproducible. Calculator-backed rates auto-refresh
+under guards; PDF-only sections are monitored (detect-only) so a human can update
+them; every sizing pins the exact pricing it used.
+
+### Added
+
+- **`framework/pricing_checks.py`** — the structural + range guards (credit ∈ [1,10],
+  storage ∈ [15,60], AI credit ∈ [1.5,2.5], Gen1 doubling, calc price types, static
+  sections) factored into one importable `check_pricing()` shared by the CLI and the
+  seed-refresh gate.
+- **`scripts/refresh-seed.py`** — guarded auto-refresh of `assets/live_pricing_seed.json`:
+  fetch live → run the guards → write **only** if they pass and the content changed;
+  otherwise keep the last-good seed. `--dry-run` reports without writing.
+- **`scripts/check-pdf-freshness.py`** — detect-only check that parses the `Effective:`
+  date from the legal *Service Consumption Table* PDF and compares it to the master's
+  `metadata.effective_date` (exit 0 in-sync / 1 stale / 2 skipped). Never edits the master.
+- **`.github/workflows/pricing-refresh.yml`** — weekly + manual workflow: commits a
+  guarded seed refresh, and opens/updates a GitHub issue when the PDF is newer than the
+  master. Alerting is CI-only (no render-time staleness warnings).
+- **Per-sizing `pricing_snapshot`** — `spec-prepare.py` stamps pricing provenance
+  (master/calc dates, container id, source URLs, SHA-256) and writes a
+  `sizings/<slug>.pricing.json` sidecar with the exact merged pricing. Documented in
+  `framework/sizing_spec_schema.json`.
+- **`live_pricing.build_pricing_snapshot()` / `pricing_sha256()`** — provenance helpers
+  reused by spec-prepare and render.
+- **`render-html.py --latest` / `--repin`** — render against fresh live pricing one-off,
+  or refresh the pin.
+- **Tests:** `tests/test_pricing_freshness.py` (21 cases) covering the guards, the
+  refresh gate, PDF date parsing/decision, and snapshot pinning / reproducibility.
+
+### Changed
+
+- **`spec-prepare.py`** now builds totals against the merged live calculator pricing
+  (live → cache → seed → master, `--offline` to force deterministic) instead of the
+  static master alone, and returns the pricing it used so the CLI can pin it.
+- **`render-html.py`** resolves pricing as: explicit `--pricing` > `--latest`/`--repin`
+  fresh fetch > pinned sidecar (reproducible) > live/seed fallback, with a SHA-256
+  integrity check on the pinned sidecar.
+- **`verify-pricing-json.py`** is now a thin CLI over `framework/pricing_checks.py`
+  (identical output and exit codes).
+
+### Notes
+
+- **Scope of "always latest":** calculator-backed rates (warehouse / credit / storage /
+  AI credit / SPCS) refresh **automatically** under guards. PDF-only sections
+  (`ai_features` token rates, serverless, OpenFlow, Postgres, replication, …) are
+  **detect-only** — the workflow flags staleness but a human still hand-updates the
+  master, so the lag is minimized, not eliminated.
+- **Reproducibility:** a pinned re-render matches the original to the dollar; only the
+  wall-clock `computed_at` / `generated_at` provenance stamps differ between runs.
+- `computed_totals` is now documented in `framework/sizing_spec_schema.json` alongside
+  the new `pricing_snapshot` (both optional; top-level `additionalProperties` already
+  permitted them).
+- The committed **seed and master are unchanged** by this release — only the tooling,
+  CI, and pinning are added. `sizings/<slug>.pricing.json` sidecars are git-ignored
+  local artifacts.
+- Validated: `verify-pricing-json.py --offline` (0 warnings), `check-pdf-freshness.py`
+  (in sync: master = PDF = 2026-05-29), `refresh-seed.py --dry-run` (guards pass, seed
+  untouched); full non-pptx suite **322 passed**, including 21 new freshness tests.
+
+## [v2.6.1] — pricing data refresh (Service Consumption Table, May 29, 2026)
+
+Refreshes `assets/snowflake_pricing_master.json` against the latest Snowflake
+Service Consumption Table (Effective May 29, 2026). Gap analysis in
+`temp/gap-report.md`. Data-only; no code changes.
+
+### Added
+
+- **claude-opus-4-8** across all four AI rate tables: Cortex AI Functions 6(a)
+  (3.00 / 15.00, preview), SI/Agents/Analyst 6(d) (3.25 / 16.26 / 4.07 / 0.33),
+  Cortex Code 6(e) (2.75 / 13.75 / 3.44 / 0.28), and REST API w/ caching 6(b)
+  (AWS Regional 5.50 / 27.50 / 6.88 / 0.55 and AWS Global 5.00 / 25.00 / 6.25 / 0.50).
+- **New 6(a) models:** gemini-3.5-flash (0.90 / 5.40), qwen3-32b (0.09 / 0.36),
+  qwen3-next-80b-a3b (0.09 / 0.72), qwen3-vl-235b-a22b (0.32 / 1.60) — all preview.
+- **openai-gpt-5-mini Azure Global** (0.25 / 2.00) added to REST API 6(b).
+- **Table 6(g) "Other":** twelvelabs-pegasus-1-2 and twelvelabs-marengo-embed-3-0
+  (multi-unit video/audio/image/text pricing).
+- **AWS Asia Pacific (New Zealand)** region added across all 9 per-region tables
+  (credit pricing 2a; storage standard/hybrid/SPCS-block/archive/Postgres/requests
+  3a–3g; data transfer 4a and Outbound PrivateLink 4e), bringing region coverage to 56.
+
+### Changed
+
+- **Snowpark-Optimized MEMORY_16X** gains the **6XL = 768** column (Table 1c).
+- **metadata:** effective_date 2026-05-12 → 2026-05-29, regions_covered 55 → 56,
+  version 2.3 → 2.4, last_updated → 2026-05-31.
+
+### Notes
+
+- The legacy **claude-4-sonnet** row was removed from Tables 6(d)/6(e) in the
+  May 29 SCT but is intentionally **retained (flagged legacy)** here to preserve
+  backward selectability for existing sizings; it remains in 6(a) legacy and 6(b).
+- The live-pricing **seed is unchanged**: `live_pricing.load_pricing()` reads
+  `ai_features` (and all static sections) from the master and only attaches the
+  `calc` block from the live/cache/seed source, so the AI additions take effect
+  at render time directly from the master.
+- Validated: `verify-pricing-json.py --offline` (0 warnings); full suite 315 passed.
+
+## [v2.6.0] — live pricing from the Snowflake calculator
+
+### Added
+
+- **Live pricing fetch.** New `framework/live_pricing.py` fetches the public
+  Snowflake pricing calculator at render time. It scrapes the calculator page for
+  its version-specific JSON endpoints (`pricing` + `regions`), fetches and parses
+  them, and attaches them natively under a `calc` namespace via `merge_pricing()`.
+  Endpoint discovery falls back to pinned URLs; the whole fetch falls back through
+  a runtime cache (`assets/live_pricing_cache.json`, git-ignored) and a committed
+  offline seed (`assets/live_pricing_seed.json`) to the static master, so a fresh
+  clone always renders deterministically offline. CLI: `--refresh`,
+  `--write-seed`, `--print-endpoints`, `--offline`.
+- **Native-shape accessor layer.** `framework/calc_access.py` (Python) and a
+  matching `PricingData` adapter inside `assets/templates/proposal-template.html`
+  (JS) are the single source for reading rates from the `calc` block:
+  `credit_rate`, `storage_rate`, `ai_credit_rate(s)`, `warehouse_credits`
+  (gen1/gen2/snowpark + memory config), `spcs_families`/`spcs_credit`,
+  `ai_token_rate`/`ai_models`, `calc_regions`, `region_product_families`.
+- **Warehouse feature parity.** Workload cards gain a **Warehouse Type** selector
+  (Standard Gen1 / Standard Gen2 / Snowpark-Optimized) with a memory-config picker
+  for Snowpark, and the size dropdown now offers **5XL/6XL** for Gen1. Schema adds
+  optional `gen`, `warehouse_type`, `memory_config` to each workload.
+- **SPCS gen2 from live calculator.** The SPCS tab's gen2 families now come from
+  the live SPCS compute pools (HIGHMEM_X64 / CPU_X64 / GPU) with their credit rates,
+  replacing the static `spcs.spcs_gen2` table (legacy per-cloud lookup retained as a
+  fallback). SPCS is JS-only, so there is no Python/JS drift risk.
+- **`scripts/derive-rates.py`.** Phase 1 helper that resolves credit / AI-credit /
+  storage rates (and available editions) for a cloud-region-edition from the live
+  calculator, replacing hand-reading of the pricing JSON.
+- **Region/edition availability check.** `validate_pricing()` now warns when a
+  spec's edition is not offered in its region per the live `regions.json`
+  `product_families`.
+- **Tests.** New `tests/test_live_pricing.py` (fetch parsing, merge, accessors,
+  offline fallback — network-free) plus calc-path coverage added to
+  `test_compute_totals.py`, `test_pricing_validation.py`, and
+  `test_schema_conformance.py`. A new `tests/fixtures/feature-coverage-warehouses-3year.json`
+  exercises 6XL, Gen2, Snowpark-Optimized (memory configs), and live SPCS families
+  (GPU / HIGHMEM); `test_golden_files.py` now renders fixtures against the
+  offline-merged (calc) pricing — matching `render-html.py` — so those features are
+  validated through the full render pipeline. Suite is now 315 passing.
+
+### Changed
+
+- **The 5XL/6XL = 1-credit bug is fixed.** `compute_totals.py` and the template JS
+  now derive warehouse credits/hour through the accessor layer
+  (`warehouse_credits()` / `whRate()`), so 5XL bills 256 cr/hr and 6XL 512 cr/hr
+  (previously both silently fell through to 1). The static `WH_CREDITS` table is
+  retained only as an offline fallback. Gen1 XS–4XL values are unchanged, so
+  existing sizings are unaffected.
+- **`pricing_validator.py`** lookups (`lookup_credit_rate`, `lookup_storage_rate`,
+  `lookup_ai_credit_rate`) read the live `calc` block when present, falling back to
+  the flattened tables — verified rate-for-rate identical to the static master for
+  every bundled fixture.
+- **`scripts/render-html.py`** defaults to a live fetch; `--offline` skips the
+  network and `--pricing PATH` pins an explicit pricing JSON for deterministic
+  tests / reproductions.
+- **`render-all-fixtures-html.py`** renders fixtures `--offline` by default (against
+  the committed seed) for deterministic, network-free smoke tests; `--live` opts in.
+- **`scripts/verify-pricing-json.py`** rewritten from ~1000 lines of pinned exact
+  values to structural + range sanity checks over the merged pricing (price types
+  present, credit ∈ [1,10], storage ∈ [15,60], AI credit ∈ [1.5,2.5], Gen1 credits
+  double per size step, Gen2/Snowpark/SPCS present and positive).
+- **`SKILL.md`** Phase 1 now derives rates via `scripts/derive-rates.py`.
+
+### Notes
+
+- Cortex Complete / Cortex Analyst LLM **token** rates are not published by the
+  calculator and remain sourced from the static `ai_features` tables (which are
+  more complete than the calculator's model lists), keeping the Python first-load
+  KPIs and the in-page JS recalculation in lockstep.
+
+## [v2.5.0] — native PPTX export (Snowflake-branded deck)
+
+### Added
+
+- **Native PowerPoint export.** A new `renderer/pptx/` package generates a Snowflake-branded `.pptx` deck directly from a sizing spec JSON, with no LibreOffice/Office dependency. `brand.py` holds the canonical Snowflake brand constants (palette, fonts), `charts.py` builds native python-pptx charts straight from the `computed_totals` arrays (editable in PowerPoint, not rasterized images), `slides.py` assembles the individual slides, and `build_pptx.py` is the public entry point.
+- **Authoritative numbers, recomputed.** `build_pptx.py` re-runs `compute_core_totals()` against the spec rather than trusting any pre-baked figures, so the deck always reflects the canonical cost math.
+- **`scripts/render-pptx.py` CLI.** Loads the spec JSON, builds the deck, and performs a sanity check that the output begins with the `PK` ZIP magic bytes (a valid `.pptx` is a ZIP container).
+- **`scripts/pptx-qa-export.sh`.** A QA helper that renders the bundled fixtures to PPTX for visual inspection.
+- **`render-pptx` sub-skill.** New `skills/snowflake-sizing/sub-skills/render-pptx/` wiring so the deck can be produced as part of the sizing workflow.
+- **"Export for PPTX" button** in `assets/templates/proposal-template.html` and a matching `--pptx` flag on the `snowflake-sizing` command.
+- **Unit tests.** `tests/test_pptx.py` covers the generator engine; the full suite is now 248 passing.
+
+### Changed
+
+- **`hooks/sizing-guard.py`** updated to allow the new pptx source/script paths.
+- **`skills/snowflake-sizing/SKILL.md` and `commands/snowflake-sizing.md`** updated to document and wire the render-pptx sub-skill and the `--pptx` flag.
+
 ## [v2.4.0] — remove one-click Download PDF; native Print is the sole PDF path
 
 ### Removed
