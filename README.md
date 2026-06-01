@@ -119,13 +119,40 @@ CPU_X64 / GPU). Cortex Complete / Analyst LLM token rates stay in the static mas
 `PricingData` adapter in the template (JS) — a single native-shape accessor layer
 shared by the cost math and the in-page recalculation.
 
+### Freshness automation & per-sizing pinning
+
+A scheduled GitHub Actions workflow (`.github/workflows/pricing-refresh.yml`,
+weekly + manual) keeps the committed data fresh:
+
+- **Seed auto-refresh** (`scripts/refresh-seed.py`) fetches the live calculator and
+  rewrites `assets/live_pricing_seed.json` **only if** the fetch passes the same
+  structural + range guards as `verify-pricing-json` (factored into the importable
+  `framework/pricing_checks.py`) **and** the content actually changed. A failed
+  guard or fetch leaves the last-good seed untouched.
+- **PDF staleness detection** (`scripts/check-pdf-freshness.py`, detect-only) reads
+  the `Effective:` date off the legal *Service Consumption Table* PDF and compares
+  it to the master's `metadata.effective_date`. When the PDF is newer the workflow
+  opens/updates a GitHub issue — it **never** edits the master (the static sections
+  are still hand-curated from the PDF). Alerting is CI-only; there are no
+  render-time staleness warnings.
+
+**Per-sizing pin:** `spec-prepare.py` stamps a `pricing_snapshot` provenance block
+(master/calc dates, container id, source URLs, a SHA-256 of the merged pricing) into
+each spec and writes the exact pricing it used to a `sizings/<slug>.pricing.json`
+sidecar. `render-html.py` auto-loads that sidecar so a re-render reproduces identical
+numbers; `--latest` renders against fresh pricing one-off, and `--repin` refreshes the
+pin. (`sizings/*` is git-ignored, so the sidecar is a local artifact to archive with
+the proposal.)
+
 ```bash
-# Default render fetches live (falls back to cache -> seed -> master):
+# Default render auto-loads the pinned <slug>.pricing.json sidecar (reproducible):
 python3 scripts/render-html.py --spec sizings/<slug>.json --out sizings/<slug>.html
 
-# Force offline (no network), or pin an explicit pricing JSON for reproducibility:
+# Force offline, pin an explicit pricing JSON, render fresh, or re-pin:
 python3 scripts/render-html.py --spec ... --out ... --offline
 python3 scripts/render-html.py --spec ... --out ... --pricing assets/snowflake_pricing_master.json
+python3 scripts/render-html.py --spec ... --out ... --latest    # one-off fresh fetch
+python3 scripts/render-html.py --spec ... --out ... --repin      # fresh fetch + re-pin
 
 # Derive credit / AI-credit / storage rates for a region (Phase 1 helper):
 python3 scripts/derive-rates.py --cloud AWS --region "London" --edition Enterprise
@@ -133,13 +160,18 @@ python3 scripts/derive-rates.py --cloud AWS --region "London" --edition Enterpri
 # Refresh the runtime cache or re-commit the offline seed:
 python3 framework/live_pricing.py --refresh
 python3 framework/live_pricing.py --write-seed     # update assets/live_pricing_seed.json
+python3 scripts/refresh-seed.py [--dry-run]        # guarded refresh (used by CI)
 
 # Structural + range sanity checks (live, --offline, or a specific file):
 python3 scripts/verify-pricing-json.py [--offline] [--pricing <file>]
+
+# Detect whether the legal PDF is newer than the master (detect-only):
+python3 scripts/check-pdf-freshness.py
 ```
 
 To update the static sections, edit `assets/snowflake_pricing_master.json` and its
-`metadata.effective_date`; to refresh the live snapshot, re-run `--write-seed`.
+`metadata.effective_date` (the PDF detector flags when this is overdue); to refresh
+the live snapshot, run `scripts/refresh-seed.py` or `live_pricing.py --write-seed`.
 
 ## Branding
 

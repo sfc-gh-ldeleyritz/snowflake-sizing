@@ -1361,6 +1361,28 @@
           "type": "string"
         }
       }
+    },
+    "computed_totals": {
+      "description": "Authoritative core TCV totals stamped by scripts/spec-prepare.py (framework/compute_totals.py). The renderer recomputes these at render time from the pricing it loads; the renderer value is authoritative.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "pricing_snapshot": {
+      "description": "Provenance of the pricing data this sizing was built against, stamped by scripts/spec-prepare.py. The full rates live in a gitignored sidecar (<slug>.pricing.json, named by pinned_pricing_file); render-html.py auto-loads that sidecar so a re-render reproduces identical numbers. Use render-html.py --latest (one-off fresh) or --repin (re-pin) to rebuild against fresh live pricing.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "integer" },
+        "generated_at": { "type": "string" },
+        "master_effective_date": { "type": ["string", "null"] },
+        "master_version": { "type": ["string", "null"] },
+        "calc_schema": { "type": ["string", "null"] },
+        "calc_fetched_at": { "type": ["string", "null"] },
+        "calc_container_id": { "type": ["string", "null"] },
+        "calc_source_urls": { "type": "object", "additionalProperties": true },
+        "pricing_sha256": { "type": "string" },
+        "pinned_pricing_file": { "type": ["string", "null"] }
+      }
     }
   }
 }

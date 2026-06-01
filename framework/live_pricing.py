@@ -50,11 +50,14 @@ Public surface
     merge_pricing(static_base, calc_block) -> dict
     load_pricing(plugin_root=None, prefer_live=True, offline=False, timeout=...) -> dict
     write_seed(calc_block, plugin_root=None) -> None
+    pricing_sha256(pricing) -> str
+    build_pricing_snapshot(pricing) -> dict
 """
 from __future__ import annotations
 
 import copy
 import datetime as _dt
+import hashlib
 import json
 import pathlib
 import re
@@ -277,6 +280,44 @@ def write_seed(calc_block: dict, plugin_root: Optional[pathlib.Path] = None) -> 
     _seed_path(plugin_root).write_text(
         json.dumps(calc_block, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+
+
+# ── Pricing snapshot / pinning ────────────────────────────────────────────── #
+
+def pricing_sha256(pricing: dict) -> str:
+    """Stable hash of a merged pricing dict (canonical JSON, key-sorted)."""
+    payload = json.dumps(pricing or {}, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def build_pricing_snapshot(pricing: dict) -> dict:
+    """Capture the provenance of the pricing used to build a sizing.
+
+    Stamped into a spec as the optional top-level ``pricing_snapshot`` block so a
+    delivered sizing records exactly which rates it was built against. The full
+    rates live in a sidecar (``<slug>.pricing.json``); this block is the metadata
+    + an integrity hash that lets a re-render confirm it loaded the same data.
+    ``pinned_pricing_file`` is filled by the caller once the sidecar path is known.
+    """
+    meta = (pricing or {}).get("metadata") or {}
+    calc = (pricing or {}).get("calc") or {}
+    src = calc.get("source") or {}
+    return {
+        "schema_version": 1,
+        "generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        "master_effective_date": meta.get("effective_date"),
+        "master_version": meta.get("version"),
+        "calc_schema": calc.get("schema"),
+        "calc_fetched_at": calc.get("fetched_at"),
+        "calc_container_id": src.get("container_id"),
+        "calc_source_urls": {
+            "calculator_page": src.get("calculator_page"),
+            "pricing_url": src.get("pricing_url"),
+            "regions_url": src.get("regions_url"),
+        },
+        "pricing_sha256": pricing_sha256(pricing),
+        "pinned_pricing_file": None,
+    }
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────── #

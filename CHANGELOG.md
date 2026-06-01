@@ -1,5 +1,68 @@
 # snowflake-sizing changelog
 
+## [v2.7.0] — pricing freshness automation & per-sizing pinning
+
+Keeps pricing as fresh as possible for every service with a cache fallback, and
+makes each delivered sizing reproducible. Calculator-backed rates auto-refresh
+under guards; PDF-only sections are monitored (detect-only) so a human can update
+them; every sizing pins the exact pricing it used.
+
+### Added
+
+- **`framework/pricing_checks.py`** — the structural + range guards (credit ∈ [1,10],
+  storage ∈ [15,60], AI credit ∈ [1.5,2.5], Gen1 doubling, calc price types, static
+  sections) factored into one importable `check_pricing()` shared by the CLI and the
+  seed-refresh gate.
+- **`scripts/refresh-seed.py`** — guarded auto-refresh of `assets/live_pricing_seed.json`:
+  fetch live → run the guards → write **only** if they pass and the content changed;
+  otherwise keep the last-good seed. `--dry-run` reports without writing.
+- **`scripts/check-pdf-freshness.py`** — detect-only check that parses the `Effective:`
+  date from the legal *Service Consumption Table* PDF and compares it to the master's
+  `metadata.effective_date` (exit 0 in-sync / 1 stale / 2 skipped). Never edits the master.
+- **`.github/workflows/pricing-refresh.yml`** — weekly + manual workflow: commits a
+  guarded seed refresh, and opens/updates a GitHub issue when the PDF is newer than the
+  master. Alerting is CI-only (no render-time staleness warnings).
+- **Per-sizing `pricing_snapshot`** — `spec-prepare.py` stamps pricing provenance
+  (master/calc dates, container id, source URLs, SHA-256) and writes a
+  `sizings/<slug>.pricing.json` sidecar with the exact merged pricing. Documented in
+  `framework/sizing_spec_schema.json`.
+- **`live_pricing.build_pricing_snapshot()` / `pricing_sha256()`** — provenance helpers
+  reused by spec-prepare and render.
+- **`render-html.py --latest` / `--repin`** — render against fresh live pricing one-off,
+  or refresh the pin.
+- **Tests:** `tests/test_pricing_freshness.py` (21 cases) covering the guards, the
+  refresh gate, PDF date parsing/decision, and snapshot pinning / reproducibility.
+
+### Changed
+
+- **`spec-prepare.py`** now builds totals against the merged live calculator pricing
+  (live → cache → seed → master, `--offline` to force deterministic) instead of the
+  static master alone, and returns the pricing it used so the CLI can pin it.
+- **`render-html.py`** resolves pricing as: explicit `--pricing` > `--latest`/`--repin`
+  fresh fetch > pinned sidecar (reproducible) > live/seed fallback, with a SHA-256
+  integrity check on the pinned sidecar.
+- **`verify-pricing-json.py`** is now a thin CLI over `framework/pricing_checks.py`
+  (identical output and exit codes).
+
+### Notes
+
+- **Scope of "always latest":** calculator-backed rates (warehouse / credit / storage /
+  AI credit / SPCS) refresh **automatically** under guards. PDF-only sections
+  (`ai_features` token rates, serverless, OpenFlow, Postgres, replication, …) are
+  **detect-only** — the workflow flags staleness but a human still hand-updates the
+  master, so the lag is minimized, not eliminated.
+- **Reproducibility:** a pinned re-render matches the original to the dollar; only the
+  wall-clock `computed_at` / `generated_at` provenance stamps differ between runs.
+- `computed_totals` is now documented in `framework/sizing_spec_schema.json` alongside
+  the new `pricing_snapshot` (both optional; top-level `additionalProperties` already
+  permitted them).
+- The committed **seed and master are unchanged** by this release — only the tooling,
+  CI, and pinning are added. `sizings/<slug>.pricing.json` sidecars are git-ignored
+  local artifacts.
+- Validated: `verify-pricing-json.py --offline` (0 warnings), `check-pdf-freshness.py`
+  (in sync: master = PDF = 2026-05-29), `refresh-seed.py --dry-run` (guards pass, seed
+  untouched); full non-pptx suite **322 passed**, including 21 new freshness tests.
+
 ## [v2.6.1] — pricing data refresh (Service Consumption Table, May 29, 2026)
 
 Refreshes `assets/snowflake_pricing_master.json` against the latest Snowflake

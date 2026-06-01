@@ -106,7 +106,11 @@ def main() -> int:
     per_year_str = ", ".join(f"${y:,.0f}" for y in per_year)
     print(f"  core TCV : ${ct.get('core_tcv', 0):,.0f}")
     print(f"  per-year : [{per_year_str}]")
-    print(f"  slides   : 7")
+    import io as _io
+    import zipfile as _zip
+    _n = len([n for n in _zip.ZipFile(_io.BytesIO(pptx_bytes)).namelist()
+              if n.startswith("ppt/slides/slide") and n.endswith(".xml")])
+    print(f"  slides   : {_n}")
 
     return 0
 
