@@ -40,12 +40,13 @@ WHITE  = rgb(COLORS["white"])
 LGRAY  = rgb(COLORS["lightGray"])
 DGRAY  = rgb(COLORS["darkGray"])
 
-# Chart series colors in order (compute, serverless, AI, storage).
+# Chart series colors in order (compute, serverless, AI, storage, other).
 CHART_SERIES_COLORS = [
     rgb(COLORS["snowflakeBlue"]),
     rgb(COLORS["starBlue"]),
     rgb(COLORS["valenciaOrange"]),
     rgb(COLORS["purpleMoon"]),
+    rgb(COLORS["firstLight"]),
 ]
 
 # ── Fonts ─────────────────────────────────────────────────────────────────── #

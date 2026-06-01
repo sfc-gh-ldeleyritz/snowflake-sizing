@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """Python port of the JS sizing math used by proposal-template.html.
 
-This is the authoritative source for the drift-prone "core" TCV components:
-warehouse compute, serverless, AI/Cortex, and storage. SPCS, OpenFlow,
-replication, data-transfer, and collaboration stay JS-side for now (rarely
-configured, low risk of formula divergence). The point of this module is to
-eliminate the previous-session bug where the JS storage formula computed
-$426k while Python's simpler formula computed $416k - same root values, two
-slightly different formulas, $10k delta.
+This is the authoritative source for the drift-prone TCV components. It covers
+the full compute stack: warehouse compute, serverless, AI/Cortex, storage, and
+the "other" categories (SPCS, OpenFlow + OpenFlow-Oracle, data-transfer +
+PrivateLink, collaboration, and replication/DR). The HTML live-recalc JS is kept
+field-for-field and formula-for-formula in sync with this module so the
+Python-injected first-load totals never drift from JS recalculation.
+
+Note: SPCS/OpenFlow/collaboration are keyed to the schema field names
+(instance_family/num_instances, warehouse_size/rows_per_day_M,
+reader_accounts/native_apps/marketplace) and apply the credit rate, fixing an
+earlier divergence where the JS read non-schema fields and added raw credits to
+dollar totals.
 
 Public surface:
 
@@ -19,7 +24,7 @@ The returned dict has shape:
       "schema_version": 1,
       "computed_at": "<UTC ISO-8601>",
       "computed_by": "framework/compute_totals.py",
-      "scope": "warehouse | serverless | ai | storage (core)",
+      "scope": "warehouse | serverless | ai | storage | spcs | openflow | transfer | collab | replication (full compute stack)",
       "warehouse_credits_per_year": [Y1, Y2, Y3, ...],
       "serverless_credits_per_year": [...],
       "ai_credits_per_year":         [...],
@@ -28,13 +33,19 @@ The returned dict has shape:
       "serverless_cost_per_year":    [...],   # serverless_credits * credit_rate
       "ai_cost_per_year":            [...],   # ai_credits * ai_credit_rate
       "storage_cost_per_year":       [...],   # active_tb * storage_rate * 12
-      "core_year_total":             [...],   # sum of the four cost arrays
+      "spcs_cost_per_year":          [...],   # spcs_credits * credit_rate (ramped)
+      "openflow_cost_per_year":      [...],   # connector credits*cr (ramped) + Oracle licensing
+      "data_transfer_cost_per_year": [...],   # transfer + PrivateLink dollars
+      "collaboration_cost_per_year": [...],   # reader credits*cr + subscriptions (ramped)
+      "replication_cost_per_year":   [...],   # compute + egress + replica storage
+      "other_cost_per_year":         [...],   # sum of the five categories above
+      "core_year_total":             [...],   # sum of all cost arrays
       "core_tcv":                    <float>  # sum across years
     }
 
 The HTML template reads these values to render the headline KPIs on first
 load instead of recomputing them in JS. Live recalculate() still runs JS
-math for slider deltas; the core_* arrays stop the first-load drift.
+math for slider deltas; the per-year arrays stop the first-load drift.
 """
 from __future__ import annotations
 
@@ -318,6 +329,171 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
     return total
 
 
+# ── Other compute categories (SPCS / OpenFlow / transfer / collab / replication) ── #
+
+# OpenFlow connector ingest sizing assumption: average uncompressed bytes per
+# changed row for Snowpipe-Streaming volume. The schema carries rows/day, not GB,
+# so this documented constant converts rows -> uncompressed GB. Mirrors the JS
+# _OF_AVG_ROW_BYTES in proposal-template.html.
+_OF_AVG_ROW_BYTES = 1024
+_OF_SNOWPIPE_CREDITS_PER_GB = 0.0037  # mirrors serverless snowpipe_streaming rate
+
+
+def _wh_credits_for_size(size: str, pricing: Optional[dict] = None, cloud: Optional[str] = None) -> float:
+    """Gen-1 standard credits/hour for a warehouse size label (calc block or fallback)."""
+    if pricing is not None and calc_access.has_calc(pricing):
+        rate = calc_access.warehouse_credits(pricing, size, cloud=cloud)
+        if rate is not None:
+            return rate
+    return WH_CREDITS.get(size, 1)
+
+
+def spcs_monthly_credits(spec: dict, pricing: dict) -> float:
+    """SPCS compute pool credits/month, summed across instances (schema-keyed)."""
+    s = spec.get("spcs") or {}
+    if not s.get("enabled"):
+        return 0.0
+    total = 0.0
+    for inst in s.get("instances") or []:
+        fam = inst.get("instance_family")
+        rate = calc_access.spcs_credit(pricing, fam)
+        if rate is None:
+            rate = _spcs_credit_fallback(pricing, fam)
+        total += (
+            (rate or 0.0)
+            * (inst.get("num_instances", 0) or 0)
+            * (inst.get("hours_per_day", 0) or 0)
+            * (inst.get("days_per_month", 0) or 0)
+        )
+    return total
+
+
+def _spcs_credit_fallback(pricing: dict, family: str) -> Optional[float]:
+    """Look up SPCS credits/hour from the static master tables when no calc block.
+
+    Mirrors the JS fallback to PRICING_DATA.spcs (cpu/highmem/gpu/spcs_gen2),
+    keyed by the same family codes the schema uses (e.g. 'CPU_X64_M').
+    """
+    if not family:
+        return None
+    want = family.strip().lower()
+    spcs = pricing.get("spcs") or {}
+    for group in ("cpu", "highmem", "gpu", "spcs_gen2"):
+        for row in ((spcs.get(group) or {}).get("data") or []):
+            if (row.get("family") or "").strip().lower() == want:
+                v = row.get("credits_per_hour")
+                return float(v) if v is not None else None
+    return None
+
+
+def openflow_connector_monthly_credits(spec: dict, pricing: dict, cloud: Optional[str] = None) -> float:
+    """OpenFlow connector credits/month: warehouse MERGE + Snowpipe-Streaming ingest.
+
+    Warehouse MERGE = wh_credits(size) * warehouse_hours_monthly. Ingest converts
+    rows_per_day_M -> uncompressed GB/month via _OF_AVG_ROW_BYTES, priced at the
+    Snowpipe-Streaming rate. BYOC infra/region constants are intentionally dropped
+    (not represented in the schema).
+    """
+    of = spec.get("openflow") or {}
+    if not of.get("enabled"):
+        return 0.0
+    total = 0.0
+    for inst in of.get("instances") or []:
+        wh_size = inst.get("warehouse_size")
+        wh_hours = inst.get("warehouse_hours_monthly", 0) or 0
+        if wh_size and wh_hours:
+            total += _wh_credits_for_size(wh_size, pricing, cloud) * wh_hours
+        rows_m = inst.get("rows_per_day_M", 0) or 0
+        if rows_m:
+            monthly_gb = rows_m * 1_000_000 * 30 * _OF_AVG_ROW_BYTES / 1e9
+            total += monthly_gb * _OF_SNOWPIPE_CREDITS_PER_GB
+    return total
+
+
+def openflow_oracle_cost_for_year(spec: dict, year: int) -> float:
+    """OpenFlow-Oracle connector licensing $/year ($110/core/mo yrs 1-3, $40 after)."""
+    oo = spec.get("openflow_oracle") or {}
+    if not oo.get("enabled"):
+        return 0.0
+    cores = oo.get("licensed_cores", 0) or 0
+    rate = 110 if year <= 3 else 40
+    return cores * rate * 12
+
+
+def transfer_monthly_cost(spec: dict) -> float:
+    """Data-transfer + PrivateLink $/month (already dollars; mirrors calcTransferCost)."""
+    dt = spec.get("data_transfer") or {}
+    pl = spec.get("privatelink") or {}
+    total = 0.0
+    if dt.get("enabled"):
+        pattern = dt.get("pattern")
+        rate = 0.0 if pattern == "same_region" else (0.08 if pattern == "cross_region" else 0.154)
+        total += (dt.get("tb_per_month", 0) or 0) * 1024 * rate
+    if pl.get("enabled"):
+        total += (pl.get("endpoints", 0) or 0) * 7.30
+        total += (pl.get("tb_processed_monthly", 0) or 0) * 1024 * 0.01
+    return total
+
+
+def collaboration_monthly_cost(spec: dict, pricing: dict, cr: float, cloud: Optional[str] = None) -> float:
+    """Collaboration $/month: reader-account credits*cr + native-app/marketplace subscriptions."""
+    c = spec.get("collaboration") or {}
+    total = 0.0
+    ra = c.get("reader_accounts") or {}
+    if ra.get("enabled"):
+        rate = _wh_credits_for_size(ra.get("warehouse_size", "XS"), pricing, cloud)
+        total += rate * (ra.get("hours_per_day", 0) or 0) * (ra.get("days_per_month", 0) or 0) * cr
+    na = c.get("native_apps") or {}
+    if na.get("enabled"):
+        total += na.get("monthly_subscription", 0) or 0
+    mp = c.get("marketplace") or {}
+    if mp.get("enabled"):
+        total += mp.get("monthly_subscription", 0) or 0
+    return total
+
+
+def replication_for_year(spec: dict, pricing: dict, year: int) -> dict:
+    """Per-year replication cost (compute + egress + replica storage); ports calcReplicationForYear."""
+    zero = {"compute_credits": 0.0, "compute_cost": 0.0, "egress_cost": 0.0,
+            "storage_cost": 0.0, "total_cost": 0.0}
+    rep = spec.get("replication") or {}
+    if not rep or rep.get("enabled") is False:
+        return zero
+    cr = float((spec.get("meta") or {}).get("credit_rate", 0) or 0)
+    yoy = (rep.get("yoy_pct") if rep.get("yoy_pct") is not None else 10) / 100.0
+    growth = (rep.get("storage_growth_pct") if rep.get("storage_growth_pct") is not None else 15) / 100.0
+    cred_per_tb = rep.get("compute_credits_per_TB") if rep.get("compute_credits_per_TB") is not None else 4
+    storage_rate = rep.get("replica_storage_per_tb_per_month") if rep.get("replica_storage_per_tb_per_month") is not None else 23
+
+    active_tb = rep.get("initial_TB", 0) or 0
+    growth_tb = active_tb * growth
+    change_tb = (rep.get("monthly_change_TB", 0) or 0) * 12
+    for _y in range(2, year + 1):
+        active_tb = active_tb + growth_tb
+        growth_tb = growth_tb * (1 + yoy)
+        change_tb = change_tb * (1 + yoy)
+    avg_tb = active_tb + (growth_tb / 2)
+
+    matrix = (pricing.get("replication") or {}).get("egress_matrix") or {}
+    egress_rate = 0.0
+    src, tgt = rep.get("source_region"), rep.get("target_region")
+    if src and tgt and isinstance(matrix.get(src), dict) and isinstance(matrix[src].get(tgt), (int, float)):
+        egress_rate = matrix[src][tgt]
+
+    basis_tb = (active_tb + growth_tb + change_tb) if year == 1 else (growth_tb + change_tb)
+    compute_credits = basis_tb * cred_per_tb
+    compute_cost = compute_credits * cr
+    egress_cost = basis_tb * egress_rate
+    storage_cost = avg_tb * storage_rate * 12
+    return {
+        "compute_credits": compute_credits,
+        "compute_cost": compute_cost,
+        "egress_cost": egress_cost,
+        "storage_cost": storage_cost,
+        "total_cost": compute_cost + egress_cost + storage_cost,
+    }
+
+
 # ── Public entry point ────────────────────────────────────────────────────── #
 
 def compute_core_totals(spec: dict, pricing: dict) -> dict:
@@ -330,6 +506,11 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
 
     sl_monthly = serverless_monthly_credits(spec)
     ai_monthly = ai_monthly_credits(spec, pricing)
+    cloud = meta.get("cloud")
+    spcs_monthly = spcs_monthly_credits(spec, pricing)
+    of_conn_monthly = openflow_connector_monthly_credits(spec, pricing, cloud)
+    transfer_monthly = transfer_monthly_cost(spec)
+    collab_monthly = collaboration_monthly_cost(spec, pricing, cr, cloud)
 
     wh_credits_yr = []
     sl_credits_yr = []
@@ -339,6 +520,12 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
     sl_cost_yr = []
     ai_cost_yr = []
     st_cost_yr = []
+    spcs_cost_yr = []
+    of_cost_yr = []
+    transfer_cost_yr = []
+    collab_cost_yr = []
+    repl_cost_yr = []
+    other_cost_yr = []
     core_total_yr = []
 
     for y in range(1, years + 1):
@@ -360,7 +547,17 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         sl_cost = sl_credits * cr
         ai_cost = ai_credits * ai_cr
         st_cost = st_tb * sr * 12
-        core_total = compute_cost + sl_cost + ai_cost + st_cost
+
+        # Other compute categories (ramped on the meta-default window where
+        # adoption-sensitive; transfer + Oracle licensing are not ramped).
+        spcs_cost = spcs_monthly * 12 * def_ramp * cr
+        of_cost = of_conn_monthly * 12 * def_ramp * cr + openflow_oracle_cost_for_year(spec, y)
+        transfer_cost = transfer_monthly * 12
+        collab_cost = collab_monthly * 12 * def_ramp
+        repl_cost = replication_for_year(spec, pricing, y)["total_cost"]
+        other_cost = spcs_cost + of_cost + transfer_cost + collab_cost + repl_cost
+
+        core_total = compute_cost + sl_cost + ai_cost + st_cost + other_cost
 
         wh_credits_yr.append(round(wh_credits, 2))
         sl_credits_yr.append(round(sl_credits, 2))
@@ -370,13 +567,19 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         sl_cost_yr.append(round(sl_cost, 2))
         ai_cost_yr.append(round(ai_cost, 2))
         st_cost_yr.append(round(st_cost, 2))
+        spcs_cost_yr.append(round(spcs_cost, 2))
+        of_cost_yr.append(round(of_cost, 2))
+        transfer_cost_yr.append(round(transfer_cost, 2))
+        collab_cost_yr.append(round(collab_cost, 2))
+        repl_cost_yr.append(round(repl_cost, 2))
+        other_cost_yr.append(round(other_cost, 2))
         core_total_yr.append(round(core_total, 2))
 
     return {
         "schema_version": 1,
         "computed_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "computed_by": "framework/compute_totals.py",
-        "scope": "warehouse | serverless | ai | storage (core; excludes spcs/openflow/replication/transfer/collab)",
+        "scope": "warehouse | serverless | ai | storage | spcs | openflow | transfer | collab | replication (full compute stack)",
         "warehouse_credits_per_year": wh_credits_yr,
         "serverless_credits_per_year": sl_credits_yr,
         "ai_credits_per_year": ai_credits_yr,
@@ -385,6 +588,12 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         "serverless_cost_per_year": sl_cost_yr,
         "ai_cost_per_year": ai_cost_yr,
         "storage_cost_per_year": st_cost_yr,
+        "spcs_cost_per_year": spcs_cost_yr,
+        "openflow_cost_per_year": of_cost_yr,
+        "data_transfer_cost_per_year": transfer_cost_yr,
+        "collaboration_cost_per_year": collab_cost_yr,
+        "replication_cost_per_year": repl_cost_yr,
+        "other_cost_per_year": other_cost_yr,
         "core_year_total": core_total_yr,
         "core_tcv": round(sum(core_total_yr), 2),
     }

@@ -89,7 +89,7 @@ def add_year_by_year_chart(
 ) -> object:
     """Add a stacked column chart of per-year costs to *slide*.
 
-    Series: Compute, Serverless, AI, Storage (from computed_totals arrays).
+    Series: Compute, Serverless, AI, Storage, Other (from computed_totals arrays).
     Returns the Chart object.
     """
     years = len(computed_totals.get("core_year_total", []))
@@ -103,6 +103,7 @@ def add_year_by_year_chart(
         ("Serverless", "serverless_cost_per_year"),
         ("AI/Cortex",  "ai_cost_per_year"),
         ("Storage",    "storage_cost_per_year"),
+        ("Other",      "other_cost_per_year"),
     ]
     for label, key in series_defs:
         values = computed_totals.get(key, [0] * years)
@@ -220,6 +221,7 @@ def _workload_donut_data(spec: dict, pricing: dict, computed_totals: dict):
         ("Serverless", "serverless_cost_per_year"),
         ("AI/Cortex", "ai_cost_per_year"),
         ("Storage", "storage_cost_per_year"),
+        ("Other", "other_cost_per_year"),
     ]
     labels, values = [], []
     for label, key in cats:

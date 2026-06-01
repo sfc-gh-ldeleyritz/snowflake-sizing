@@ -1363,7 +1363,7 @@
       }
     },
     "computed_totals": {
-      "description": "Authoritative core TCV totals stamped by scripts/spec-prepare.py (framework/compute_totals.py). The renderer recomputes these at render time from the pricing it loads; the renderer value is authoritative.",
+      "description": "Authoritative full-stack TCV totals stamped by scripts/spec-prepare.py (framework/compute_totals.py): per-year cost arrays for warehouse compute, serverless, AI/Cortex, storage, and the other categories (SPCS, OpenFlow + OpenFlow-Oracle, data-transfer + PrivateLink, collaboration, replication), plus other_cost_per_year and core_year_total. The renderer recomputes these at render time from the pricing it loads; the renderer value is authoritative.",
       "type": "object",
       "additionalProperties": true
     },

@@ -1,5 +1,66 @@
 # snowflake-sizing changelog
 
+## [v2.11.0] — Full compute-cost coverage in the PPTX deck (SPCS, OpenFlow, transfer, collaboration, replication)
+
+The generated deck now reports the **entire** compute stack from the JSON spec,
+not just warehouse / serverless / AI / storage. `framework/compute_totals.py`
+(the authoritative math the renderer injects into both the HTML and the PPTX) is
+extended with the previously JS-only categories — SPCS, OpenFlow + OpenFlow-Oracle,
+data-transfer + PrivateLink, collaboration, and replication/DR — and the canonical
+HTML template JS is brought back in sync, fixing field-name drift and a credit-rate
+bug. The Serverless/AI slide and the cost-detail slide and charts now itemise these
+categories so TCV reconciles end-to-end.
+
+### Added
+
+- **`framework/compute_totals.py` — other-compute stack.** New schema-keyed
+  functions (`spcs_monthly_credits`, `openflow_connector_monthly_credits`,
+  `openflow_oracle_cost_for_year`, `transfer_monthly_cost`,
+  `collaboration_monthly_cost`, `replication_for_year`) feed five new per-year
+  arrays (`spcs_cost_per_year`, `openflow_cost_per_year`,
+  `data_transfer_cost_per_year`, `collaboration_cost_per_year`,
+  `replication_cost_per_year`) plus `other_cost_per_year`. These are now included
+  in `core_year_total` / `core_tcv`. All optional keys are guarded so lean specs
+  stay at $0. SPCS rates resolve via the live calc block with a fallback to the
+  static master tables. OpenFlow uses a pragmatic schema-driven model (warehouse
+  MERGE credits + Snowpipe-Streaming ingest from `rows_per_day_M` via a documented
+  bytes/row assumption); the BYOC infra/region/node topology the old JS assumed is
+  dropped because it is not represented in the schema.
+- **`renderer/pptx/slides.py` — itemised rows.** The Serverless/AI slide (now
+  titled *Serverless, AI & Other Compute*) appends SPCS / OpenFlow / Data Transfer /
+  Collaboration / Replication rows when non-zero (lean decks stay tight), and the
+  *Cost Detail by Year* slide gains an **Other** row so its visible rows reconcile
+  to the Total.
+- **`renderer/pptx/charts.py` + `brand.py` — "Other" series.** The stacked-column
+  chart and the category-mix donut add an *Other* series/slice (5th brand color)
+  so the chart TCV matches the headline.
+- **`tests/test_compute_totals.py` — coverage** for the new categories (presence,
+  non-zero on the full fixture, `other == Σ categories`, total includes other,
+  SPCS credit-rate scaling, collaboration subscriptions, lean-spec zero).
+
+### Fixed
+
+- **Credit-rate bug for SPCS & collaboration.** The HTML `computeYearData` added
+  raw SPCS credits and reader-account credits to a dollar total without `× cr`,
+  and `calcCollabCost` never counted native-app / marketplace subscriptions. SPCS
+  now applies the credit rate and collaboration counts subscriptions in both the
+  Python module and the HTML JS.
+- **Schema field-name drift in the HTML JS.** `calcSPCSCost`, `calcOpenflowCost`,
+  and `calcCollabCost` read fields that do not exist in schema-conformant specs
+  (`generation/instance_type/hours_monthly/count`, `deployment/runtime_size/
+  byoc_region/monthly_data_gb`, `collaboration.accounts[]`). They are rewritten to
+  the real schema fields (`instance_family/num_instances/hours_per_day/
+  days_per_month`, `warehouse_size/rows_per_day_M/warehouse_hours_monthly`,
+  `reader_accounts/native_apps/marketplace`) and matched to the Python formulas.
+
+### Known issue (pre-existing, out of scope)
+
+- The Python `compute_core_totals` ramp model does **not** apply
+  `meta.annual_growth_rate`, while the HTML live `recalculate()` does (and treats
+  year 2+ as full-capacity). The PPTX (Python) and the live HTML headline therefore
+  diverge on multi-year specs across *all* core categories — not just the new ones.
+  This is unchanged by this release and tracked separately.
+
 ## [v2.10.1] — Hand-authored "Understanding Your Snowflake Costs" slide preserved across re-bakes
 
 The **Understanding Your Snowflake Costs** donor is now a hand-authored *One

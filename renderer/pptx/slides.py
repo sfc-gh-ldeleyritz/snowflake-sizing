@@ -145,6 +145,7 @@ _COST_ROWS = [
     ("Serverless", "serverless_cost_per_year"),
     ("AI / Cortex", "ai_cost_per_year"),
     ("Storage", "storage_cost_per_year"),
+    ("Other (SPCS/OpenFlow/Transfer/Collab/Repl.)", "other_cost_per_year"),
     ("Snowflake Services Delivery", None),
     ("Educational Services", None),
     ("Total", "core_year_total"),
@@ -281,11 +282,19 @@ def build_workloads_slide(prs, donor, spec, computed_totals):
     return slide
 
 
-# ── Slide 8: Serverless & AI / Cortex (styled table, by year) ──────────────── #
+# ── Slide 8: Serverless, AI & Other Compute (styled table, by year) ────────── #
 
+# Full non-warehouse compute stack. Rows with all-zero spend are dropped so lean
+# specs keep a tight table (only Serverless / AI typically show). Keys map to the
+# per-year dollar arrays in framework/compute_totals.compute_core_totals().
 _SERVERLESS_AI_ROWS = [
     ("Serverless", "serverless_cost_per_year"),
     ("AI / Cortex", "ai_cost_per_year"),
+    ("SPCS", "spcs_cost_per_year"),
+    ("OpenFlow", "openflow_cost_per_year"),
+    ("Data Transfer", "data_transfer_cost_per_year"),
+    ("Collaboration", "collaboration_cost_per_year"),
+    ("Replication / DR", "replication_cost_per_year"),
 ]
 
 
@@ -293,7 +302,7 @@ def build_serverless_ai_slide(prs, donor, spec, computed_totals):
     slide = clone.duplicate_slide_inpackage(prs, donor)
     years = len(computed_totals.get("core_year_total", []) or [])
 
-    inject.set_title(slide, "Serverless & AI / Cortex")
+    inject.set_title(slide, "Serverless, AI & Other Compute")
     inject.set_subtitle(slide, "Projected spend by year (USD)")
 
     headers = ["Category"] + [f"Year {y}" for y in range(1, years + 1)]
@@ -302,6 +311,9 @@ def build_serverless_ai_slide(prs, donor, spec, computed_totals):
     for label, key in _SERVERLESS_AI_ROWS:
         values = computed_totals.get(key, []) or []
         row_vals = [values[y] if y < len(values) else 0 for y in range(years)]
+        # Skip categories with no spend in any year (keeps lean decks tight).
+        if not any(round(v, 2) for v in row_vals):
+            continue
         for y in range(years):
             totals[y] += row_vals[y]
         rows.append([label] + [_fmt_dollar(v) for v in row_vals])

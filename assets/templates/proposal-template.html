@@ -1211,23 +1211,22 @@ function calcAICredits() {
 }
 
 function calcSPCSCost() {
-  if (!SIZING_SPEC.spcs.enabled) return 0;
-  const SPCS_GEN1 = { XS_MEM: 1.5, S_MEM: 3, M_MEM: 6, L_MEM: 12, XS_HIPU: 1.5, S_HIPU: 3, M_HIPU: 6 };
-  return SIZING_SPEC.spcs.instances.reduce((sum, inst) => {
-    if (inst.generation === 'gen2') {
-      // Live calculator SPCS rate (cloud-agnostic credits/hour); fall back to
-      // the legacy per-cloud spcs_gen2 table for any pre-calc instance type.
-      let rate = PricingData.spcsCredit(inst.instance_type);
-      if (rate == null) {
-        const gen2Data = (PRICING_DATA.spcs && PRICING_DATA.spcs.spcs_gen2 && PRICING_DATA.spcs.spcs_gen2.data || []).find(r => r.family === inst.instance_type);
-        const cloud = (SIZING_SPEC.meta.cloud || '').toLowerCase();
-        rate = gen2Data ? (gen2Data[cloud] || 0) : 0;
+  const s = SIZING_SPEC.spcs;
+  if (!s || !s.enabled || !Array.isArray(s.instances)) return 0;
+  // Returns SPCS compute-pool credits/MONTH (caller applies × 12 × ramp × cr).
+  // Keyed to the schema fields instance_family/num_instances/hours_per_day/days_per_month.
+  return s.instances.reduce((sum, inst) => {
+    let rate = PricingData.spcsCredit(inst.instance_family);
+    if (rate == null) {
+      // Fallback to the static master tables (cpu/highmem/gpu/spcs_gen2) by family code.
+      const spcs = PRICING_DATA.spcs || {};
+      const want = String(inst.instance_family || '').trim().toLowerCase();
+      for (const grp of ['cpu', 'highmem', 'gpu', 'spcs_gen2']) {
+        const row = ((spcs[grp] && spcs[grp].data) || []).find(r => String(r.family || '').trim().toLowerCase() === want);
+        if (row) { rate = row.credits_per_hour; break; }
       }
-      return sum + rate * (inst.hours_monthly || 0) * (inst.count || 0);
-    } else {
-      const rate = SPCS_GEN1[inst.instance_type] || 0;
-      return sum + rate * (inst.hours_monthly || 0) * (inst.count || 0);
     }
+    return sum + (rate || 0) * (inst.num_instances || 0) * (inst.hours_per_day || 0) * (inst.days_per_month || 0);
   }, 0);
 }
 
@@ -1247,91 +1246,49 @@ function calcTransferCost() {
 }
 
 function calcCollabCost() {
+  // Returns collaboration $/MONTH: reader-account credits × cr + native-app /
+  // marketplace subscriptions. Schema-keyed (reader_accounts/native_apps/marketplace).
   const c = SIZING_SPEC.collaboration;
-  if (!c || !Array.isArray(c.accounts)) return 0;
-  return c.accounts.reduce((sum, a) => {
-    if (a.enabled === false) return sum;
-    const rate = whRate(a.warehouse_size, a);
-    return sum + rate * (a.hours_per_day || 0) * (a.days_per_month || 0);
-  }, 0);
+  if (!c) return 0;
+  const cr = SIZING_SPEC.meta.credit_rate || 0;
+  let total = 0;
+  const ra = c.reader_accounts;
+  if (ra && ra.enabled) {
+    total += whRate(ra.warehouse_size || 'XS', ra) * (ra.hours_per_day || 0) * (ra.days_per_month || 0) * cr;
+  }
+  if (c.native_apps && c.native_apps.enabled) total += c.native_apps.monthly_subscription || 0;
+  if (c.marketplace && c.marketplace.enabled) total += c.marketplace.monthly_subscription || 0;
+  return total;
 }
 
-// OpenFlow cost constants - sourced from official Openflow pricing calculator
-// SPCS rates: Snowflake Credit Consumption Table, Table 1(d) - credits per compute pool node/hr
-const _OF_SPCS_RATES   = { Small: 0.11, Medium: 0.41, Large: 0.83 };
-const _OF_CTRL_POOL    = 0.11;   // CPU_X64_S control pool, always-on, per deployment
-// BYOC vCPU counts per runtime size - Openflow documentation
-const _OF_BYOC_VCPU    = { Small: 1, Medium: 4, Large: 8 };
-const _OF_BYOC_CR_VCPU = 0.0225; // credits per vCPU per hour, Table 1(g)
-// Warehouse credits per hour for MERGE operations
+// OpenFlow connector cost constants.
+// Warehouse credits/hour for MERGE operations (gen-1 standard, XS-XL).
 const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
-// BYOC region pricing - fixed monthly (EKS+mgmt+NAT+NLB+agent+EBS+secrets) and per-node EC2 hourly
-// Source: AWS Price List API as of 2025-11-16 via official calculator fetch_byoc_pricing.py
-const _OF_BYOC_REG = {
-  'us-east-1':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
-  'us-west-2':      { fixed: 463.39, small: 0.2016, medium: 0.8064, large: 1.6128, ebs: 0.08   },
-  'eu-west-1':      { fixed: 505.79, small: 0.2247, medium: 0.8988, large: 1.7976, ebs: 0.088  },
-  'eu-west-2':      { fixed: 522.57, small: 0.2331, medium: 0.9324, large: 1.8648, ebs: 0.0928 },
-  'eu-central-1':   { fixed: 537.74, small: 0.2415, medium: 0.966,  large: 1.932,  ebs: 0.0952 },
-  'ap-southeast-1': { fixed: 560.53, small: 0.252,  medium: 1.008,  large: 2.016,  ebs: 0.096  },
-  'ap-northeast-1': { fixed: 575.49, small: 0.2604, medium: 1.0416, large: 2.0832, ebs: 0.096  },
-};
+// Snowpipe-Streaming ingest sizing: schema carries rows/day, not GB, so convert
+// rows -> uncompressed GB via an assumed average bytes/row, priced at the SS rate.
+const _OF_AVG_ROW_BYTES    = 1024;
+const _OF_SNOWPIPE_CR_PER_GB = 0.0037;
 
 function calcOpenflowCost(cr, ramp) {
+  // Returns OpenFlow connector cost in DOLLARS for the year (already ramped × cr).
+  // Model: warehouse MERGE credits + Snowpipe-Streaming ingest from rows_per_day_M.
+  // BYOC infra/region/node topology is intentionally dropped (not in the schema);
+  // OpenFlow-Oracle licensing is handled separately in computeYearData.
   const of = SIZING_SPEC.openflow;
-  if (!of || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
-
-  let total = 0;
-
-  // SPCS control pool: one per deployment (added once if any SPCS instance exists)
-  const hasSpcs = of.instances.some(inst => (inst.deployment || 'BYOC') === 'SPCS');
-  if (hasSpcs) {
-    total += _OF_CTRL_POOL * 730 * 12 * ramp * cr;
-  }
-
-  // BYOC fixed infrastructure: one per deployment regardless of instance count
-  const byocInsts = of.instances.filter(inst => (inst.deployment || 'BYOC') === 'BYOC');
-  if (byocInsts.length > 0) {
-    const reg = (_OF_BYOC_REG[byocInsts[0].byoc_region] || _OF_BYOC_REG['us-east-1']);
-    total += reg.fixed * 12; // fixed infra is always-on, no ramp
-  }
-
+  if (!of || !of.enabled || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
+  let monthlyCredits = 0;
   for (const inst of of.instances) {
-    const deployment   = inst.deployment || 'BYOC';
-    const size         = inst.runtime_size || 'Medium';
-    const nodes        = inst.runtime_nodes || inst.source_connections || 1;
-    const poolNodes    = Math.ceil(nodes / 3);
-    const dataGb       = inst.monthly_data_gb || 0;
-    const whSize       = inst.warehouse_size;
-    const whHours      = inst.warehouse_hours_monthly || 0;
-
-    if (deployment === 'SPCS') {
-      // SPCS: compute pool credits (packing ratio 3:1)
-      const rate = _OF_SPCS_RATES[size] || 0.41;
-      total += poolNodes * rate * 730 * 12 * ramp * cr;
-    } else {
-      // BYOC: EC2 + EBS per compute pool node (always-on, no ramp)
-      const reg  = _OF_BYOC_REG[inst.byoc_region] || _OF_BYOC_REG['us-east-1'];
-      const ec2Rate = reg[size.toLowerCase()] || reg.medium;
-      const ebsCost = 200 * reg.ebs * poolNodes;
-      total += (ec2Rate * 730 * poolNodes + ebsCost) * 12;
-      // BYOC vCPU Snowflake credits (ramped)
-      const vcpus = (_OF_BYOC_VCPU[size] || 4) * nodes;
-      total += vcpus * 730 * _OF_BYOC_CR_VCPU * cr * 12 * ramp;
+    const whHours = inst.warehouse_hours_monthly || 0;
+    if (inst.warehouse_size && whHours > 0) {
+      monthlyCredits += (_OF_WH_CR[inst.warehouse_size] || 1) * whHours;
     }
-
-    // Snowpipe Streaming: data ingestion cost (all connector types)
-    if (dataGb > 0) {
-      total += dataGb * 0.0037 * cr * 12 * ramp;
-    }
-
-    // Warehouse MERGE cost (optional - CDC workloads with dedicated warehouse)
-    if (whSize && whHours > 0) {
-      total += (_OF_WH_CR[whSize] || 1) * whHours * cr * 12 * ramp;
+    const rowsM = inst.rows_per_day_M || 0;
+    if (rowsM > 0) {
+      const monthlyGb = rowsM * 1000000 * 30 * _OF_AVG_ROW_BYTES / 1e9;
+      monthlyCredits += monthlyGb * _OF_SNOWPIPE_CR_PER_GB;
     }
   }
-
-  return total;
+  return monthlyCredits * 12 * ramp * cr;
 }
 
 // ========== Replication / DR / Migration cost ==========
@@ -1442,9 +1399,9 @@ function computeYearData(opts) {
     const slCredits = calcServerlessCredits() * 12 * defRamp;
     const aiCredits = calcAICredits() * 12 * defRamp;
     const storageCost = storageForYear(y) * sr * 12;
-    const spcsCost = calcSPCSCost() * 12 * defRamp;
+    const spcsCost = calcSPCSCost() * 12 * defRamp * cr;
     const ofCost   = calcOpenflowCost(cr, defRamp);
-    const oracleCost = SIZING_SPEC.openflow_oracle.enabled
+    const oracleCost = (SIZING_SPEC.openflow_oracle && SIZING_SPEC.openflow_oracle.enabled)
       ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * (y <= 3 ? 110 : 40) * 12
       : 0;
     const transferCost = calcTransferCost() * 12;
@@ -1504,8 +1461,10 @@ function updateGroupHeaderTotals() {
 
   set('gh-d-storage', storageForYear(1) * sr);
 
+  // calcCollabCost now returns $/month directly (reader credits already × cr +
+  // subscription dollars), so the group-header derives credits as dollars / cr.
   const collabMonthly = calcCollabCost();
-  set('gh-cr-collab', collabMonthly); set('gh-d-collab', collabMonthly * cr);
+  set('gh-cr-collab', cr > 0 ? collabMonthly / cr : 0); set('gh-d-collab', collabMonthly);
 
   // Replication: show monthly average (year-1 total / 12) so the group-header reads consistently.
   const rep1 = calcReplicationForYear(1);
