@@ -32,7 +32,6 @@ Parse `$ARGUMENTS`:
 - `--region "X"` - full region string. If omitted, infer from context; default `"AWS Europe (London)"`.
 - `--skip-glean`, `--skip-gong` - reduce research (requires user confirmation; see EXCEPTIONS in research sub-skill).
 - `--mode replication` or `--mode dr` - activate the replication research block (D1/D2/D3).
-- `--pptx` - after render-html completes, also run the render-pptx sub-skill to generate a Snowflake-branded PPTX from the same sizing JSON.
 
 Derive the three pricing rates with the live-calculator helper. It fetches the
 public Snowflake pricing calculator (falling back to the committed seed, then the
@@ -180,13 +179,10 @@ it needs - main-agent context stays slim.
     Loads `references/html-spec.md` (only here - 1000+ lines) and
     `references/content-hygiene.md`.
 
-4. **render-pptx** - `sub-skills/render-pptx/SKILL.md` *(only when `--pptx` is present)*
-    Phases 7 + 8. Runs `scripts/render-pptx.py` against the same
-    `sizings/<slug>.json` written in Phase 3, exports slide images for visual
-    QA, iterates until clean, prints the PPTX summary. Requires `python-pptx`
-    and LibreOffice (see sub-skill prerequisites). The `--pptx` flag is parsed
-    in Phase 1; the sub-skill is invoked only after render-html returns
-    successfully.
+    PPTX is not an agent step: the rendered HTML proposal includes an
+    **Export to PPTX** button that builds a Snowflake-branded deck entirely
+    in the browser from the in-page spec. There is no `--pptx` flag and no
+    server/Python render path.
 
 ## Hooks active during this skill
 
@@ -198,8 +194,7 @@ it needs - main-agent context stays slim.
   and rejects leakage fields. For `sizings/*.html` it scans for em-dashes,
   content-hygiene tokens, unsubstituted `__TOKEN__` leftovers, and runs
   the Node sidecar JS render check (catches $0-renders). For
-  `temp/*-evidence*.md` it scans for em-dashes only. For `sizings/*.pptx`
-  it skips all text scans (binary file) and allows the write through.
+  `temp/*-evidence*.md` it scans for em-dashes only.
 - `hooks/session.py` (SessionStart, source=startup only) - cleans stale
   research-evidence files older than 30 days.
 

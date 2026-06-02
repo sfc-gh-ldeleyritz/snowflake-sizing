@@ -1,5 +1,39 @@
 # snowflake-sizing changelog
 
+## [v2.13.0] — Remove the automated `--pptx` path (PPTX is browser-only)
+
+### Removed
+
+- **`--pptx` CLI flag** and the entire automated PPTX render path, which had
+  been broken since `scripts/render-pptx.py`, `scripts/serve-pptx.py`, and the
+  `renderer/pptx/` package were removed. PPTX is now produced **only** by the
+  client-side **Export to PPTX** button in the proposal HTML, which builds the
+  deck entirely in the browser from the in-page `SIZING_SPEC`.
+- Deleted the dead/broken toolchain: `skills/snowflake-sizing/sub-skills/render-pptx/`,
+  `scripts/pptx-qa-export.sh` (LibreOffice QA), `tests/test_pptx.py` (imported the
+  missing `renderer.pptx` module), and `scripts/create-sizing-template.py` (broken
+  base-deck generator depending on `renderer.pptx` + an external plugin).
+
+### Changed
+
+- Stripped the `--pptx` flag and stale render/bridge docs from
+  `commands/snowflake-sizing.md`, `skills/snowflake-sizing/SKILL.md`, and
+  `README.md`; each now documents PPTX as the in-browser button only.
+- `hooks/sizing-guard.py` — removed the `sizing-pptx` path-kind branch (the
+  agent no longer writes `.pptx` files).
+- `framework/sizing_spec_schema.json` — tidied the top-level description to drop
+  the stale `/export-pptx`, `/export-xlsx` mention and corrected the consuming-hook
+  name to `hooks/sizing-guard.py`.
+
+### Kept
+
+- `assets/templates/proposal-template.html` (button + `pptxBuildFromSpec` +
+  embedded `SIZING_BASE_TEMPLATE_B64`), `assets/templates/sizing-base-template.pptx`,
+  `scripts/embed-pptx-assets.py` (the supported re-embed/maintenance path), and
+  `scripts/html-render-check.mjs`.
+
+---
+
 ## [v2.12.2] — Slide 7 update + embed-pptx-assets script
 
 ### Added

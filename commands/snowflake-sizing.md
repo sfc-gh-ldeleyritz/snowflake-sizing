@@ -1,6 +1,6 @@
 ---
 description: Generate an interactive Snowflake consumption estimate and customer-facing HTML proposal from a discovery context file.
-argument-hint: "<context-file> [--customer \"Name\"] [--years 3] [--edition Enterprise] [--region \"AWS US East (Northern Virginia)\"] [--pptx]"
+argument-hint: "<context-file> [--customer \"Name\"] [--years 3] [--edition Enterprise] [--region \"AWS US East (Northern Virginia)\"]"
 allowed-tools: [Read, Write, Bash, WebFetch, snowflake_sql_execute, mcp__glean__search, mcp__glean__read_document, mcp__glean__chat, mcp__glean__employee_search]
 skill: snowflake-sizing
 ---
@@ -24,9 +24,6 @@ The skill emits three artifacts: `sizings/<slug>-<N>year-sizing-v1-<date>.html` 
 | `--skip-glean` | off | Skip Glean research (requires user confirmation). |
 | `--skip-gong` | off | Skip Gong research (requires user confirmation). |
 | `--mode replication` | off | Activate the replication / DR research block. |
-| `--pptx` | off | After generating the HTML, also produce a Snowflake-branded PowerPoint (`.pptx`) from the same sizing JSON. Runs the render-pptx sub-skill with a full visual QA loop. Requires `python-pptx` (`pip install python-pptx`) and LibreOffice for QA image export. |
 
-**PPTX output** (only with `--pptx`):
-`sizings/<slug>-<N>year-sizing-v1-<date>.pptx` - 6-slide Snowflake-branded deck (Title, Exec Summary/TCV, Workloads Detail, Year-by-Year Costs, Serverless/AI Breakdown, Assumptions + Closer). Numbers are Python-authoritative: `render-pptx.py` re-runs `compute_core_totals()` on the spec before building slides.
+**PPTX output:** there is no automated PPTX flag. To produce a deck, open the generated HTML proposal and click the **Export to PPTX** button - it builds a Snowflake-branded deck entirely in the browser from the current (optionally edited) in-page spec. No server or Python step is involved.
 
-The HTML "Export for PPTX" button downloads the current in-browser spec as JSON; pass it to `scripts/render-pptx.py --spec <file.json> --out <file.pptx>` to pick up browser-side edits without re-running the full pipeline.

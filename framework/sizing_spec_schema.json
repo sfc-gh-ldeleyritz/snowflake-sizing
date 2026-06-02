@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "SIZING_SPEC",
-  "description": "Canonical schema for the snowflake-sizing SIZING_SPEC JSON artifact produced by the snowflake-sizing skill. Consumed by hooks/validate-sizing-json.py on every Write to sizings/*.json, and by future export skills (/export-pptx, /export-xlsx).",
+  "description": "Canonical schema for the snowflake-sizing SIZING_SPEC JSON artifact produced by the snowflake-sizing skill. Consumed by hooks/sizing-guard.py on every Write to sizings/*.json.",
   "type": "object",
   "required": [
     "meta",
