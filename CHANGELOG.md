@@ -1,5 +1,32 @@
 # snowflake-sizing changelog
 
+## [v2.13.2] — Fix SPCS, Collaboration, and OpenFlow tabs not updating pricing
+
+### Fixed
+
+- **SPCS tab changes had zero effect on pricing.** `calcSPCSCost()` was reading
+  the legacy schema fields `instance_family`, `num_instances`, `hours_per_day`,
+  and `days_per_month`, but the SPCS panel UI stores `instance_type`, `count`,
+  and `hours_monthly`. All three fields resolved to `undefined`, so every SPCS
+  instance always contributed $0 to the estimate. Fixed to read the current field
+  names, with fallbacks to the legacy names for existing sizings.
+
+- **Collaboration tab changes had zero effect on pricing.** `calcCollabCost()`
+  was reading `SIZING_SPEC.collaboration.reader_accounts` (old single-object
+  schema), but the Collaboration UI manages `SIZING_SPEC.collaboration.accounts[]`
+  (an array populated by "Add Reader Account" / "Add Managed Account"). Any
+  accounts added via the UI were invisible to the cost engine. Fixed to iterate
+  `c.accounts`, with a fallback to the legacy `reader_accounts` object for old
+  specs.
+
+- **OpenFlow "Monthly data (GB)" had zero effect on pricing.** `calcOpenflowCost()`
+  was reading `inst.rows_per_day_M`, which is never written by the UI. The
+  "Monthly data (GB)" input updates `inst.monthly_data_gb`. Fixed to use
+  `monthly_data_gb` directly, falling back to the `rows_per_day_M` conversion
+  for any specs that still carry that legacy field.
+
+---
+
 ## [v2.13.1] — Fix PPTX "Serverless, AI & Other Compute" slide + export error handling
 
 ### Fixed

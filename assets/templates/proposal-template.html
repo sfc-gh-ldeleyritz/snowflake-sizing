@@ -1296,19 +1296,25 @@ function calcSPCSCost() {
   const s = SIZING_SPEC.spcs;
   if (!s || !s.enabled || !Array.isArray(s.instances)) return 0;
   // Returns SPCS compute-pool credits/MONTH (caller applies × 12 × ramp × cr).
-  // Keyed to the schema fields instance_family/num_instances/hours_per_day/days_per_month.
+  // Supports new UI fields (instance_type / count / hours_monthly) with fallback to legacy
+  // schema fields (instance_family / num_instances / hours_per_day × days_per_month).
   return s.instances.reduce((sum, inst) => {
-    let rate = PricingData.spcsCredit(inst.instance_family);
+    const family = inst.instance_type || inst.instance_family;
+    const count  = inst.count != null ? inst.count : (inst.num_instances || 0);
+    const hours  = inst.hours_monthly != null
+      ? inst.hours_monthly
+      : (inst.hours_per_day || 0) * (inst.days_per_month || 0);
+    let rate = PricingData.spcsCredit(family);
     if (rate == null) {
       // Fallback to the static master tables (cpu/highmem/gpu/spcs_gen2) by family code.
       const spcs = PRICING_DATA.spcs || {};
-      const want = String(inst.instance_family || '').trim().toLowerCase();
+      const want = String(family || '').trim().toLowerCase();
       for (const grp of ['cpu', 'highmem', 'gpu', 'spcs_gen2']) {
         const row = ((spcs[grp] && spcs[grp].data) || []).find(r => String(r.family || '').trim().toLowerCase() === want);
         if (row) { rate = row.credits_per_hour; break; }
       }
     }
-    return sum + (rate || 0) * (inst.num_instances || 0) * (inst.hours_per_day || 0) * (inst.days_per_month || 0);
+    return sum + (rate || 0) * count * hours;
   }, 0);
 }
 
@@ -1328,15 +1334,21 @@ function calcTransferCost() {
 }
 
 function calcCollabCost() {
-  // Returns collaboration $/MONTH: reader-account credits × cr + native-app /
-  // marketplace subscriptions. Schema-keyed (reader_accounts/native_apps/marketplace).
+  // Returns collaboration $/MONTH: account credits × cr + native-app / marketplace subscriptions.
+  // New schema: c.accounts[] (array). Legacy schema: c.reader_accounts (single object, fallback).
   const c = SIZING_SPEC.collaboration;
   if (!c) return 0;
   const cr = SIZING_SPEC.meta.credit_rate || 0;
   let total = 0;
-  const ra = c.reader_accounts;
-  if (ra && ra.enabled) {
-    total += whRate(ra.warehouse_size || 'XS', ra) * (ra.hours_per_day || 0) * (ra.days_per_month || 0) * cr;
+  if (Array.isArray(c.accounts)) {
+    for (const a of c.accounts) {
+      total += whRate(a.warehouse_size || 'XS', a) * (a.hours_per_day || 0) * (a.days_per_month || 0) * cr;
+    }
+  } else {
+    const ra = c.reader_accounts;
+    if (ra && ra.enabled) {
+      total += whRate(ra.warehouse_size || 'XS', ra) * (ra.hours_per_day || 0) * (ra.days_per_month || 0) * cr;
+    }
   }
   if (c.native_apps && c.native_apps.enabled) total += c.native_apps.monthly_subscription || 0;
   if (c.marketplace && c.marketplace.enabled) total += c.marketplace.monthly_subscription || 0;
@@ -1346,14 +1358,12 @@ function calcCollabCost() {
 // OpenFlow connector cost constants.
 // Warehouse credits/hour for MERGE operations (gen-1 standard, XS-XL).
 const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
-// Snowpipe-Streaming ingest sizing: schema carries rows/day, not GB, so convert
-// rows -> uncompressed GB via an assumed average bytes/row, priced at the SS rate.
-const _OF_AVG_ROW_BYTES    = 1024;
+// Snowpipe-Streaming ingest: priced per GB/month at the SS rate.
 const _OF_SNOWPIPE_CR_PER_GB = 0.0037;
 
 function calcOpenflowCost(cr, ramp) {
   // Returns OpenFlow connector cost in DOLLARS for the year (already ramped × cr).
-  // Model: warehouse MERGE credits + Snowpipe-Streaming ingest from rows_per_day_M.
+  // Model: warehouse MERGE credits + Snowpipe-Streaming ingest from monthly_data_gb.
   // BYOC infra/region/node topology is intentionally dropped (not in the schema);
   // OpenFlow-Oracle licensing is handled separately in computeYearData.
   const of = SIZING_SPEC.openflow;
@@ -1365,9 +1375,10 @@ function calcOpenflowCost(cr, ramp) {
       monthlyCredits += (_OF_WH_CR[inst.warehouse_size] || 1) * whHours;
     }
     const rowsM = inst.rows_per_day_M || 0;
-    if (rowsM > 0) {
-      const monthlyGb = rowsM * 1000000 * 30 * _OF_AVG_ROW_BYTES / 1e9;
-      monthlyCredits += monthlyGb * _OF_SNOWPIPE_CR_PER_GB;
+    const monthlyDataGb = inst.monthly_data_gb || 0;
+    const ingestGb = monthlyDataGb > 0 ? monthlyDataGb : (rowsM > 0 ? rowsM * 1000000 * 30 * 1024 / 1e9 : 0);
+    if (ingestGb > 0) {
+      monthlyCredits += ingestGb * _OF_SNOWPIPE_CR_PER_GB;
     }
   }
   return monthlyCredits * 12 * ramp * cr;
