@@ -94,7 +94,7 @@ already duplicated the committed donor verbatim.
 
 ## [v2.10.0] — One-click PPTX export via a local render bridge
 
-The proposal HTML's **"Export JSON for PPTX"** button can now generate a real
+The proposal HTML's **"Export to PPTX"** button can now generate a real
 `.pptx` in one click. A new stdlib-only bridge server, `scripts/serve-pptx.py`,
 accepts the in-browser `SIZING_SPEC` over loopback HTTP, runs the same
 `renderer/pptx/build_pptx.build()` path as the CLI, and streams the deck back
@@ -131,7 +131,7 @@ or template-rebake change.
   30s `AbortController` timeout it silently falls back to the JSON download via
   `downloadSpecJson()`; on an HTTP error from a running bridge it surfaces the
   server message via `alert()` and still drops the JSON as a safety net. The
-  button **label is unchanged** ("Export JSON for PPTX"); only its tooltip is
+  button **label is unchanged** ("Export to PPTX"); only its tooltip is
   updated to explain the bridge-vs-JSON behavior. Authoritative `computed_totals`
   and internal-pricing stripping happen server-side inside `build()`, so a
   browser-edited (possibly stale) `computed_totals` block cannot affect the deck.
@@ -158,9 +158,9 @@ change — the `onclick` handlers (`exportForPptx()`, `saveSnapshot()`,
   the shared `padding`/`border-radius`/`font` lifted onto `.fab-stack button`.
   `align-items: stretch` makes all three equal width, retiring the brittle
   16 / 185 / 355px `right` offsets that previously kept the row from overlapping.
-  DOM order top-to-bottom is **Export JSON for PPTX → Save HTML → Print / Save
+  DOM order top-to-bottom is **Export to PPTX → Save HTML → Print / Save
   PDF**.
-- **Two buttons renamed.** "Export for PPTX" → **"Export JSON for PPTX"** (makes
+- **Two buttons renamed.** "Export for PPTX" → **"Export to PPTX"** (makes
   it explicit that the button downloads the sizing spec as JSON, not a deck);
   the v2.4.0 **"Print / Save as PDF"** label is shortened to **"Print / Save
   PDF"**. **Save HTML** is unchanged.

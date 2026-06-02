@@ -231,7 +231,7 @@ Generated:
   Core TCV (Python-authoritative): $<XXX,XXX>
 
 Open in PowerPoint: open sizings/<slug>-<N>year-sizing-v<version>-<date>.pptx
-One-click export:   run scripts/serve-pptx.py, then click "Export JSON for PPTX"
+One-click export:   run scripts/serve-pptx.py, then click "Export to PPTX"
   in the HTML proposal to download a .pptx directly (totals recomputed
   server-side). If the bridge is down, the button downloads JSON instead; pass
   it as --spec to render-pptx.py to pick up browser-side edits.

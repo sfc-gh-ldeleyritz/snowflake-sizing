@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local one-click PPTX render bridge for the proposal template.
 
-The proposal HTML's "Export JSON for PPTX" button POSTs its in-browser
+The proposal HTML's "Export to PPTX" button POSTs its in-browser
 SIZING_SPEC to this server, which calls renderer/pptx/build_pptx.build() and
 streams the resulting .pptx back as the HTTP response so the browser downloads
 a real PowerPoint. If this server is not running, the button falls back to
@@ -175,7 +175,7 @@ def main() -> int:
     print(f"  health : {base}/health")
     print(f"  render : POST {base}/render-pptx  (body = SIZING_SPEC JSON)")
     print(f"  pricing: {pricing_path}")
-    print("  In the proposal, click 'Export JSON for PPTX' to download a .pptx.")
+    print("  In the proposal, click 'Export to PPTX' to download a .pptx.")
     print("  Press Ctrl-C to stop.")
 
     if args.open_path and not args.no_open:

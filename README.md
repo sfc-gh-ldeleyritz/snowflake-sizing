@@ -77,12 +77,58 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 - **Birdbox ramp curves** — per-workload power-law ramp from `dev_start_month` to `go_live_month` (Slowest / Slow / Linear / Fast / Fastest / Manual). Global Settings defaults seed all new rows; individual rows can override.
 - **Platform Credit discount override** — toggle in Global Settings accepts a net rate ($/credit) or discount %. AI Credits remain fixed at $2.00 global / $2.20 regional (discount does not apply per Snowflake policy).
 - **Save Version** — top-right button snapshots the current `SIZING_SPEC` (including all SE edits), bumps `meta.version_number`, and downloads a self-contained HTML file named `<slug>-<N>year-sizing-v<N>-<YYYY-MM-DD>.html`.
-- **Export JSON** — downloads the current `SIZING_SPEC` as a portable `.json` file (same name convention as Save Version). Use this to round-trip browser edits back to disk, or to feed future export skills for PPTX/DOCX/XLSX generation.
+- **Export to PPTX** — if `scripts/serve-pptx.py` is running locally, POSTs the current `SIZING_SPEC` to the bridge and downloads a `.pptx` directly. If the bridge is not running, falls back to downloading the spec as a `.json` file, which can be fed to `scripts/render-pptx.py` by hand. See [PPTX Export](#pptx-export) below.
 - **Per-feature tooltips** — `ⓘ` icon next to every togglable feature explains what it is and how it bills. Hidden in print mode.
 - **Editable assumptions** — Stated Assumptions and Requires Confirmation items are `contenteditable` in the browser. Add, delete, or reword inline; changes persist in `SIZING_SPEC` and are saved by Save Version.
 - **Editable sourcing notes** — the `SOURCED:` / `ASSUMPTION:` line under each warehouse card is `contenteditable` too. Edit the source label and note text inline, delete the note with the `✕` button, or re-add it with **+ Add sourcing note**. Changes persist in `SIZING_SPEC` and are saved by Save Version; the empty-note affordance is hidden in print / PDF output.
 - **Scenario toggle** — checkbox above the Scenario Comparison grid to show/hide the Conservative and Aggressive cards.
 - **Print / Save as PDF** — floating button (primary) opens the native browser print dialog; choose "Save as PDF" as the destination for a clean multi-page A4 PDF. The `@media print` rules expand all tabs in flow, reflow Chart.js canvases, hide interactive chrome, and keep KPI tiles, charts, and table rows from splitting across page boundaries.
+
+## PPTX Export
+
+There are two ways to generate a `.pptx` from a sizing spec.
+
+### One-click from the browser (recommended)
+
+Start the local render bridge before opening the proposal:
+
+```bash
+python3 scripts/serve-pptx.py
+# or open a proposal directly:
+python3 scripts/serve-pptx.py --open sizings/<slug>.html
+```
+
+The bridge listens on `http://127.0.0.1:8765`. With it running, click **Export to PPTX** in the proposal HTML — the browser POSTs the current `SIZING_SPEC` (including any live edits) to the bridge, which builds the deck server-side and streams it back as a download. If the bridge is not running the button silently falls back to downloading the spec JSON.
+
+```bash
+python3 scripts/serve-pptx.py --help   # --port, --host, --pricing, --open, --no-open
+```
+
+### CLI render
+
+Render a `.pptx` directly from a spec file (no browser required):
+
+```bash
+python3 scripts/render-pptx.py --spec sizings/<slug>.json --out sizings/<slug>.pptx
+```
+
+Both paths call the same `renderer/pptx/build_pptx.build()` function and produce an identical deck. The bridge also strips any stale `computed_totals` from the posted spec and recomputes authoritative totals server-side, so browser-edited numbers cannot affect the rendered deck.
+
+### Deck contents (up to 10 slides)
+
+| # | Slide |
+|---|---|
+| 1 | Title |
+| 2 | Safe Harbor *(toggle: `meta.include_safe_harbor`)* |
+| 3 | Agenda *(toggle: `meta.include_agenda`)* |
+| 4 | Understanding Your Snowflake Costs |
+| 5 | Cost Detail by Year |
+| 6 | Cost Mix by Workload / Category *(toggle: `meta.include_workload_donut`)* |
+| 7 | Year-by-Year chart |
+| 8 | Warehouse Workloads |
+| 9 | Serverless, AI & Other Compute |
+| 10 | Scenario Comparison *(toggle: `meta.include_scenarios`)* |
+| last | Thank You |
 
 ## Context File Format
 
