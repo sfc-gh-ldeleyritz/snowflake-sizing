@@ -188,6 +188,18 @@ ChartStub.defaults = { font: {}, plugins: {} };
 
 const ChartDataLabelsStub = { id: 'datalabels' };
 
+// DOM serialization stubs. The PPTX-export module instantiates
+// `new DOMParser()` / `new XMLSerializer()` at the top level of its script
+// block (these are valid browser globals and do NOT cause a $0 render in a
+// real browser). The export DOM machinery itself only runs on a button
+// click, so minimal stubs are enough to let the page boot cleanly here.
+class DOMParserStub {
+  parseFromString() { return stubDocument; }
+}
+class XMLSerializerStub {
+  serializeToString() { return ''; }
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Build the sandbox and run
 // ────────────────────────────────────────────────────────────────────────────
@@ -210,6 +222,8 @@ const sandbox = {
   window: stubWindow,
   Chart: ChartStub,
   ChartDataLabels: ChartDataLabelsStub,
+  DOMParser: DOMParserStub,
+  XMLSerializer: XMLSerializerStub,
   console: sandboxConsole,
   setTimeout, clearTimeout, setInterval, clearInterval,
   Math, Date, JSON, Object, Array, String, Number, Boolean, RegExp,
