@@ -1360,15 +1360,18 @@ function calcCollabCost() {
 const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
 // Snowpipe-Streaming ingest: priced per GB/month at the SS rate.
 const _OF_SNOWPIPE_CR_PER_GB = 0.0037;
+// Runtime vCPU count by size tier, and per-vCPU-hour rate.
+const _OF_RUNTIME_VCPU = { 'Small': 1, 'Medium': 4, 'Large': 8 };
+const _OF_RUNTIME_RATE = 0.0225; // $/vCPU-hr
 
 function calcOpenflowCost(cr, ramp) {
   // Returns OpenFlow connector cost in DOLLARS for the year (already ramped × cr).
-  // Model: warehouse MERGE credits + Snowpipe-Streaming ingest from monthly_data_gb.
-  // BYOC infra/region/node topology is intentionally dropped (not in the schema);
+  // Model: warehouse MERGE credits + Snowpipe-Streaming ingest + runtime vCPU-hours.
   // OpenFlow-Oracle licensing is handled separately in computeYearData.
   const of = SIZING_SPEC.openflow;
   if (!of || !of.enabled || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
   let monthlyCredits = 0;
+  let monthlyDollars = 0;
   for (const inst of of.instances) {
     const whHours = inst.warehouse_hours_monthly || 0;
     if (inst.warehouse_size && whHours > 0) {
@@ -1380,8 +1383,13 @@ function calcOpenflowCost(cr, ramp) {
     if (ingestGb > 0) {
       monthlyCredits += ingestGb * _OF_SNOWPIPE_CR_PER_GB;
     }
+    // Runtime vCPU-hour billing ($0.0225/vCPU-hr, direct dollar cost)
+    const vcpus = (_OF_RUNTIME_VCPU[inst.runtime_size || 'Medium']) || 4;
+    const nodes = inst.runtime_nodes || 1;
+    const hoursM = inst.hours_monthly || 730;
+    monthlyDollars += vcpus * nodes * hoursM * _OF_RUNTIME_RATE;
   }
-  return monthlyCredits * 12 * ramp * cr;
+  return (monthlyCredits * cr + monthlyDollars) * 12 * ramp;
 }
 
 // ========== Replication / DR / Migration cost ==========
@@ -2496,6 +2504,7 @@ function populateOpenflowPanel() {
   const empty = '<p style="color: var(--gray-600); font-style: italic;">No OpenFlow instances configured. Click + Add OpenFlow Instance to create one.</p>';
   const header = groupHeaderRow('Connector', 'Type / Deployment / Size / Nodes', 'gh-cr-openflow', 'gh-d-openflow');
   document.getElementById('openflow-container').innerHTML = header + (instances.length ? cards : empty);
+  updateGroupHeaderTotals();
 }
 
 function addOpenflowInstance() {

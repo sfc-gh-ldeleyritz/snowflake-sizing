@@ -1,5 +1,34 @@
 # snowflake-sizing changelog
 
+## [v2.13.4] — Fix OpenFlow Runtime size and nodes not affecting pricing
+
+### Fixed
+
+- **Changing Runtime size (Small/Medium/Large) or Runtime nodes on the OpenFlow
+  tab had no effect on pricing.** `calcOpenflowCost()` only accounted for
+  warehouse MERGE credits and Snowpipe Streaming ingest; it never read
+  `runtime_size` or `runtime_nodes`. The billing model (`$0.0225/vCPU-hr`) was
+  documented in the tooltip but not implemented. Fixed by adding runtime vCPU-hour
+  cost as a direct-dollar accumulator (separate from credits, to avoid being
+  multiplied by the credit rate): `vcpus × nodes × hours_monthly × $0.0225 × 12 × ramp`.
+
+---
+
+## [v2.13.3] — Fix OpenFlow group header resetting to $0 on warehouse size change
+
+### Fixed
+
+- **OpenFlow group header showed $0 after changing Connector Type, Deployment, or
+  Warehouse size (MERGE).** Those three selects call `updateOpenflowInstance()` —
+  which runs `recalculate()` and correctly writes the totals into the DOM — then
+  immediately call `populateOpenflowPanel()`, which rebuilds the entire container
+  and overwrites the header with fresh zero values. No second `recalculate()` ran
+  afterwards. Fixed by calling `updateGroupHeaderTotals()` at the end of
+  `populateOpenflowPanel()` so any re-render of the panel restores the correct
+  monthly credit and dollar totals.
+
+---
+
 ## [v2.13.2] — Fix SPCS, Collaboration, and OpenFlow tabs not updating pricing
 
 ### Fixed
