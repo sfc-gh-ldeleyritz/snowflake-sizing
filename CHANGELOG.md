@@ -1,5 +1,66 @@
 # snowflake-sizing changelog
 
+## [v2.13.6] — Move OpenFlow runtime pricing into master spec; fix credits vs dollars
+
+### Fixed
+
+- **OpenFlow runtime vCPU-hour cost was treated as direct dollars instead of
+  credits.** The v2.13.4 fix added `_OF_RUNTIME_RATE = 0.0225` as a hardcoded
+  constant and placed the cost in a separate dollar bucket (bypassing the credit
+  rate multiplier). `CreditConsumptionTable.pdf` Table 1(h) confirms the rate is
+  **0.0225 Credits per vCPU per Hour**, not $/vCPU-hr. Fixed in both
+  `calcOpenflowCost()` and `compute_totals.py::openflow_connector_monthly_credits()`
+  to accumulate as credits (× `cr` → dollars).
+
+- **HTML tooltip for OpenFlow incorrectly showed `$0.0225/vCPU-hr`.** Corrected
+  to `0.0225 credits/vCPU-hr` to match the consumption table.
+
+- **`openflow_connector_monthly_credits()` ignored `monthly_data_gb`.** The Python
+  function only read `rows_per_day_M` (never written by the UI); ingest billing
+  was always $0. Fixed to prefer `monthly_data_gb`, falling back to the
+  `rows_per_day_M` conversion (mirrors the v2.13.2 fix on the HTML side).
+
+### Changed
+
+- **OpenFlow runtime pricing constants removed from `proposal-template.html` and
+  `compute_totals.py`.** Both now derive the BYOC credits/vCPU-hr rate from
+  `PRICING_DATA.openflow.data` at runtime, with a hardcoded fallback of 0.0225.
+
+- **`assets/snowflake_pricing_master.json` — `openflow.sizes` added.** The
+  runtime size tiers (Small = 1 vCPU, Medium = 4 vCPU, Large = 8 vCPU) are now
+  defined in the master spec alongside the rate, giving both the HTML and Python
+  engines a single source of truth.
+
+---
+
+## [v2.13.5] — Fix silent $0 billing for cortex_code and SPCS; expand test coverage
+
+### Fixed
+
+- **`cortex_code` flat-format specs billed $0 despite `enabled: true`.** `compute_totals.py::ai_monthly_credits()` was migrated to a new per-surface schema (`cli`/`snowsight`/`desktop` sub-objects) but the JSON schema still defines — and enforces via `additionalProperties: false` — the original flat format (`enabled`, `developers`, `queries_per_dev_per_day`, `avg_tokens_per_query`). The per-surface loop found nothing and silently returned $0. Fixed by adding a flat-format fallback: when no surface sub-object matches and `enabled: true`, compute tokens from the top-level fields. Affected 4 fixtures: `feature-coverage-warehouses-3year`, `gsmai`, `momentum-group`, `travelodge`.
+
+- **`feature-coverage-warehouses-3year` SPCS instances billed $0.** The fixture used old SPCS instance field names (`instance_type`, `generation`, `count`, `hours_monthly`); `compute_totals.py::spcs_monthly_credits()` reads the current names (`instance_family`, `num_instances`, `hours_per_day`, `days_per_month`). Updated fixture to use current field names — SPCS now correctly contributes 1,050 credits/month.
+
+- **Discounted specs triggered a spurious `credit_rate mismatch` warning.** `pricing_validator.py` compared `meta.credit_rate` against the on-demand table without accounting for negotiated discounts. When `discount.enabled: true` and `meta.list_credit_rate` matches the expected rate, the credit_rate check is now skipped.
+
+### Tests
+
+- **New fixture `tests/fixtures/feature-coverage-ai-serverless-3year.json`** — synthetic 3-year AWS Enterprise spec (15% discount, `credit_rate: 2.55`) exercising 13 previously-uncovered compute paths: `cortex_fine_tuning`, `document_ai`, `ai_parse_document_layout/ocr`, `serverless_tasks_flex`, `hybrid_tables_requests`, `snowpipe_streaming_classic`, `open_catalog`, `logging`, `telemetry_data_ingest`, `archive_storage_retrieval`, `archive_storage_write`. TCV pinned at ~$175,223.
+
+- **`test_acme_fixture_known_tcv`** tightened from a $200k–$600k sanity range to `pytest.approx(341_858, rel=0.01)`.
+
+- **New `TestAiMonthlyCredits`** — direct numeric tests for `ai_monthly_credits()`: cortex_code flat-format regression, doubling-developers linearity, fine_tuning at known rate (500M tokens × 3.4 cr/M = 1700 cr), embeddings hardcoded rate (0.05 cr/M-token), all-disabled returns zero.
+
+- **New `TestReplicationForYear`** — four tests for `replication_for_year()` math: year-1 includes initial TB, year-2 omits initial TB, storage cost positive, storage compounds year-over-year.
+
+- **New `TestTransferMonthlyCost`** — seven tests for `transfer_monthly_cost()` math: same-region free, cross-region rate ($0.08/GB), egress rate ($0.154/GB), PrivateLink endpoints ($7.30/endpoint), PrivateLink TB processed, combined, all-disabled zero.
+
+- **Reader-account billing test** added to `TestOtherCompute` — asserts reader-account collaboration cost is non-zero when `reader_accounts.enabled: true`.
+
+- Test count: 329 → 361 (all passing).
+
+---
+
 ## [v2.13.4] — Fix OpenFlow Runtime size and nodes not affecting pricing
 
 ### Fixed

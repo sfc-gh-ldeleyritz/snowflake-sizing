@@ -1119,6 +1119,11 @@
   },
   "openflow": {
     "description": "Table 1(h) - Snowflake OpenFlow Pricing",
+    "sizes": [
+      { "name": "Small",  "vcpus": 1 },
+      { "name": "Medium", "vcpus": 4 },
+      { "name": "Large",  "vcpus": 8 }
+    ],
     "data": [
       {
         "deployment": "BYOC",

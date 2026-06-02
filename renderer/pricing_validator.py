@@ -189,7 +189,16 @@ def validate_pricing(spec: dict, pricing: dict) -> list[str]:
     expected_cr = lookup_credit_rate(pricing, cloud, region, edition)
     actual_cr = meta.get("credit_rate")
     if expected_cr is not None and actual_cr is not None:
-        if abs(float(actual_cr) - expected_cr) > _TOL:
+        # Skip the credit_rate check when a negotiated discount is active and the
+        # pre-discount list_credit_rate matches the expected on-demand rate.
+        discount = meta.get("discount") or {}
+        list_cr = meta.get("list_credit_rate")
+        discount_active = (
+            discount.get("enabled")
+            and list_cr is not None
+            and abs(float(list_cr) - expected_cr) <= _TOL
+        )
+        if not discount_active and abs(float(actual_cr) - expected_cr) > _TOL:
             warnings.append(
                 f"[pricing-check] credit_rate mismatch: spec={actual_cr}, "
                 f"expected={expected_cr} "

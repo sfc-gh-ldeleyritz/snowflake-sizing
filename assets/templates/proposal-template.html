@@ -905,7 +905,7 @@ const FEATURE_TOOLTIPS = {
 
   // SPCS / OpenFlow / Collaboration
   spcs: 'Snowpark Container Services. Billed per instance-hour, by generation and instance family.',
-  openflow: 'Snowflake OpenFlow connector runtime. Billed per source-connection vCPU-hour ($0.0225/vCPU-hr).',
+  openflow: 'Snowflake OpenFlow connector runtime. Billed per source-connection vCPU-hour (0.0225 credits/vCPU-hr).',
   collab_reader: 'Reader account: read-only consumer account on the provider warehouse.',
   collab_managed: 'Managed account: writable consumer account billed via the provider warehouse compute model.',
 };
@@ -1360,9 +1360,6 @@ function calcCollabCost() {
 const _OF_WH_CR        = { 'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16 };
 // Snowpipe-Streaming ingest: priced per GB/month at the SS rate.
 const _OF_SNOWPIPE_CR_PER_GB = 0.0037;
-// Runtime vCPU count by size tier, and per-vCPU-hour rate.
-const _OF_RUNTIME_VCPU = { 'Small': 1, 'Medium': 4, 'Large': 8 };
-const _OF_RUNTIME_RATE = 0.0225; // $/vCPU-hr
 
 function calcOpenflowCost(cr, ramp) {
   // Returns OpenFlow connector cost in DOLLARS for the year (already ramped × cr).
@@ -1370,8 +1367,17 @@ function calcOpenflowCost(cr, ramp) {
   // OpenFlow-Oracle licensing is handled separately in computeYearData.
   const of = SIZING_SPEC.openflow;
   if (!of || !of.enabled || !Array.isArray(of.instances) || of.instances.length === 0) return 0;
+
+  // Derive size→vCPU map and BYOC credits/vCPU-hr from PRICING_DATA (Table 1(h))
+  const ofPricing = (PRICING_DATA.openflow) || {};
+  const runtimeVcpu = Object.fromEntries(
+    ((ofPricing.sizes) || [{ name: 'Small', vcpus: 1 }, { name: 'Medium', vcpus: 4 }, { name: 'Large', vcpus: 8 }])
+      .map(s => [s.name, s.vcpus])
+  );
+  const byocEntry = ((ofPricing.data) || []).find(d => d.deployment === 'BYOC');
+  const runtimeRate = (byocEntry && typeof byocEntry.rate === 'number') ? byocEntry.rate : 0.0225;
+
   let monthlyCredits = 0;
-  let monthlyDollars = 0;
   for (const inst of of.instances) {
     const whHours = inst.warehouse_hours_monthly || 0;
     if (inst.warehouse_size && whHours > 0) {
@@ -1383,13 +1389,13 @@ function calcOpenflowCost(cr, ramp) {
     if (ingestGb > 0) {
       monthlyCredits += ingestGb * _OF_SNOWPIPE_CR_PER_GB;
     }
-    // Runtime vCPU-hour billing ($0.0225/vCPU-hr, direct dollar cost)
-    const vcpus = (_OF_RUNTIME_VCPU[inst.runtime_size || 'Medium']) || 4;
+    // Runtime vCPU-hour billing (credits/vCPU-hr per Table 1(h))
+    const vcpus = (runtimeVcpu[inst.runtime_size || 'Medium']) || 4;
     const nodes = inst.runtime_nodes || 1;
     const hoursM = inst.hours_monthly || 730;
-    monthlyDollars += vcpus * nodes * hoursM * _OF_RUNTIME_RATE;
+    monthlyCredits += vcpus * nodes * hoursM * runtimeRate;
   }
-  return (monthlyCredits * cr + monthlyDollars) * 12 * ramp;
+  return monthlyCredits * cr * 12 * ramp;
 }
 
 // ========== Replication / DR / Migration cost ==========
