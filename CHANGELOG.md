@@ -1,5 +1,25 @@
 # snowflake-sizing changelog
 
+## [v2.12.2] — Slide 7 update + embed-pptx-assets script
+
+### Added
+
+- **`scripts/embed-pptx-assets.py`** — utility script that re-embeds
+  `assets/templates/sizing-base-template.pptx` into `proposal-template.html`
+  as the `SIZING_BASE_TEMPLATE_B64` base64 literal. Run after any edit to the
+  PPTX template to keep the in-browser "Export to PPTX" export in sync.
+  Usage: `python3 scripts/embed-pptx-assets.py` from the plugin root, then
+  commit both files.
+
+### Changed
+
+- **Slide 7 (`understanding_costs`) updated** in
+  `assets/templates/sizing-base-template.pptx`. The hand-authored
+  "Understanding Your Snowflake Costs" content slide has been revised;
+  `proposal-template.html` re-embedded accordingly.
+
+---
+
 ## [v2.12.1] — Fix "Click to add text" red-X placeholder on chart slides
 
 ### Fixed
