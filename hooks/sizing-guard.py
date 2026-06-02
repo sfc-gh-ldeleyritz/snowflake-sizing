@@ -72,7 +72,7 @@ _TOKEN_ALLOWLIST = {"SIZING_SPEC_BEGIN", "SIZING_SPEC_END"}
 # ── Path classification ───────────────────────────────────────────────────── #
 
 def _path_kind(path: str) -> str:
-    """Return 'sizing-json', 'sizing-html', 'sizing-pptx', 'evidence-md', or 'other'."""
+    """Return 'sizing-json', 'sizing-html', 'evidence-md', or 'other'."""
     if not path:
         return "other"
     p = path.replace("\\", "/")
@@ -85,8 +85,6 @@ def _path_kind(path: str) -> str:
         return "sizing-json"
     if p.endswith(".html") and in_sizings:
         return "sizing-html"
-    if p.endswith(".pptx") and in_sizings:
-        return "sizing-pptx"
     if in_temp and re.search(r"-evidence(?:-[a-z]+)?\.md$", p):
         return "evidence-md"
     return "other"
@@ -299,10 +297,6 @@ def main():
 
     kind = _path_kind(file_path)
     if kind == "other":
-        sys.exit(0)
-
-    # PPTX is binary - skip all text scans and allow through immediately.
-    if kind == "sizing-pptx":
         sys.exit(0)
 
     if kind == "sizing-json":

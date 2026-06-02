@@ -1,5 +1,310 @@
 # snowflake-sizing changelog
 
+## [v2.13.6] — Move OpenFlow runtime pricing into master spec; fix credits vs dollars
+
+### Fixed
+
+- **OpenFlow runtime vCPU-hour cost was treated as direct dollars instead of
+  credits.** The v2.13.4 fix added `_OF_RUNTIME_RATE = 0.0225` as a hardcoded
+  constant and placed the cost in a separate dollar bucket (bypassing the credit
+  rate multiplier). `CreditConsumptionTable.pdf` Table 1(h) confirms the rate is
+  **0.0225 Credits per vCPU per Hour**, not $/vCPU-hr. Fixed in both
+  `calcOpenflowCost()` and `compute_totals.py::openflow_connector_monthly_credits()`
+  to accumulate as credits (× `cr` → dollars).
+
+- **HTML tooltip for OpenFlow incorrectly showed `$0.0225/vCPU-hr`.** Corrected
+  to `0.0225 credits/vCPU-hr` to match the consumption table.
+
+- **`openflow_connector_monthly_credits()` ignored `monthly_data_gb`.** The Python
+  function only read `rows_per_day_M` (never written by the UI); ingest billing
+  was always $0. Fixed to prefer `monthly_data_gb`, falling back to the
+  `rows_per_day_M` conversion (mirrors the v2.13.2 fix on the HTML side).
+
+### Changed
+
+- **OpenFlow runtime pricing constants removed from `proposal-template.html` and
+  `compute_totals.py`.** Both now derive the BYOC credits/vCPU-hr rate from
+  `PRICING_DATA.openflow.data` at runtime, with a hardcoded fallback of 0.0225.
+
+- **`assets/snowflake_pricing_master.json` — `openflow.sizes` added.** The
+  runtime size tiers (Small = 1 vCPU, Medium = 4 vCPU, Large = 8 vCPU) are now
+  defined in the master spec alongside the rate, giving both the HTML and Python
+  engines a single source of truth.
+
+---
+
+## [v2.13.5] — Fix silent $0 billing for cortex_code and SPCS; expand test coverage
+
+### Fixed
+
+- **`cortex_code` flat-format specs billed $0 despite `enabled: true`.** `compute_totals.py::ai_monthly_credits()` was migrated to a new per-surface schema (`cli`/`snowsight`/`desktop` sub-objects) but the JSON schema still defines — and enforces via `additionalProperties: false` — the original flat format (`enabled`, `developers`, `queries_per_dev_per_day`, `avg_tokens_per_query`). The per-surface loop found nothing and silently returned $0. Fixed by adding a flat-format fallback: when no surface sub-object matches and `enabled: true`, compute tokens from the top-level fields. Affected 4 fixtures: `feature-coverage-warehouses-3year`, `gsmai`, `momentum-group`, `travelodge`.
+
+- **`feature-coverage-warehouses-3year` SPCS instances billed $0.** The fixture used old SPCS instance field names (`instance_type`, `generation`, `count`, `hours_monthly`); `compute_totals.py::spcs_monthly_credits()` reads the current names (`instance_family`, `num_instances`, `hours_per_day`, `days_per_month`). Updated fixture to use current field names — SPCS now correctly contributes 1,050 credits/month.
+
+- **Discounted specs triggered a spurious `credit_rate mismatch` warning.** `pricing_validator.py` compared `meta.credit_rate` against the on-demand table without accounting for negotiated discounts. When `discount.enabled: true` and `meta.list_credit_rate` matches the expected rate, the credit_rate check is now skipped.
+
+### Tests
+
+- **New fixture `tests/fixtures/feature-coverage-ai-serverless-3year.json`** — synthetic 3-year AWS Enterprise spec (15% discount, `credit_rate: 2.55`) exercising 13 previously-uncovered compute paths: `cortex_fine_tuning`, `document_ai`, `ai_parse_document_layout/ocr`, `serverless_tasks_flex`, `hybrid_tables_requests`, `snowpipe_streaming_classic`, `open_catalog`, `logging`, `telemetry_data_ingest`, `archive_storage_retrieval`, `archive_storage_write`. TCV pinned at ~$175,223.
+
+- **`test_acme_fixture_known_tcv`** tightened from a $200k–$600k sanity range to `pytest.approx(341_858, rel=0.01)`.
+
+- **New `TestAiMonthlyCredits`** — direct numeric tests for `ai_monthly_credits()`: cortex_code flat-format regression, doubling-developers linearity, fine_tuning at known rate (500M tokens × 3.4 cr/M = 1700 cr), embeddings hardcoded rate (0.05 cr/M-token), all-disabled returns zero.
+
+- **New `TestReplicationForYear`** — four tests for `replication_for_year()` math: year-1 includes initial TB, year-2 omits initial TB, storage cost positive, storage compounds year-over-year.
+
+- **New `TestTransferMonthlyCost`** — seven tests for `transfer_monthly_cost()` math: same-region free, cross-region rate ($0.08/GB), egress rate ($0.154/GB), PrivateLink endpoints ($7.30/endpoint), PrivateLink TB processed, combined, all-disabled zero.
+
+- **Reader-account billing test** added to `TestOtherCompute` — asserts reader-account collaboration cost is non-zero when `reader_accounts.enabled: true`.
+
+- Test count: 329 → 361 (all passing).
+
+---
+
+## [v2.13.4] — Fix OpenFlow Runtime size and nodes not affecting pricing
+
+### Fixed
+
+- **Changing Runtime size (Small/Medium/Large) or Runtime nodes on the OpenFlow
+  tab had no effect on pricing.** `calcOpenflowCost()` only accounted for
+  warehouse MERGE credits and Snowpipe Streaming ingest; it never read
+  `runtime_size` or `runtime_nodes`. The billing model (`$0.0225/vCPU-hr`) was
+  documented in the tooltip but not implemented. Fixed by adding runtime vCPU-hour
+  cost as a direct-dollar accumulator (separate from credits, to avoid being
+  multiplied by the credit rate): `vcpus × nodes × hours_monthly × $0.0225 × 12 × ramp`.
+
+---
+
+## [v2.13.3] — Fix OpenFlow group header resetting to $0 on warehouse size change
+
+### Fixed
+
+- **OpenFlow group header showed $0 after changing Connector Type, Deployment, or
+  Warehouse size (MERGE).** Those three selects call `updateOpenflowInstance()` —
+  which runs `recalculate()` and correctly writes the totals into the DOM — then
+  immediately call `populateOpenflowPanel()`, which rebuilds the entire container
+  and overwrites the header with fresh zero values. No second `recalculate()` ran
+  afterwards. Fixed by calling `updateGroupHeaderTotals()` at the end of
+  `populateOpenflowPanel()` so any re-render of the panel restores the correct
+  monthly credit and dollar totals.
+
+---
+
+## [v2.13.2] — Fix SPCS, Collaboration, and OpenFlow tabs not updating pricing
+
+### Fixed
+
+- **SPCS tab changes had zero effect on pricing.** `calcSPCSCost()` was reading
+  the legacy schema fields `instance_family`, `num_instances`, `hours_per_day`,
+  and `days_per_month`, but the SPCS panel UI stores `instance_type`, `count`,
+  and `hours_monthly`. All three fields resolved to `undefined`, so every SPCS
+  instance always contributed $0 to the estimate. Fixed to read the current field
+  names, with fallbacks to the legacy names for existing sizings.
+
+- **Collaboration tab changes had zero effect on pricing.** `calcCollabCost()`
+  was reading `SIZING_SPEC.collaboration.reader_accounts` (old single-object
+  schema), but the Collaboration UI manages `SIZING_SPEC.collaboration.accounts[]`
+  (an array populated by "Add Reader Account" / "Add Managed Account"). Any
+  accounts added via the UI were invisible to the cost engine. Fixed to iterate
+  `c.accounts`, with a fallback to the legacy `reader_accounts` object for old
+  specs.
+
+- **OpenFlow "Monthly data (GB)" had zero effect on pricing.** `calcOpenflowCost()`
+  was reading `inst.rows_per_day_M`, which is never written by the UI. The
+  "Monthly data (GB)" input updates `inst.monthly_data_gb`. Fixed to use
+  `monthly_data_gb` directly, falling back to the `rows_per_day_M` conversion
+  for any specs that still carry that legacy field.
+
+---
+
+## [v2.13.1] — Fix PPTX "Serverless, AI & Other Compute" slide + export error handling
+
+### Fixed
+
+- **SPCS, OpenFlow, Data Transfer, and Collaboration costs always showed $0** on
+  the "Serverless, AI & Other Compute" PPTX slide. `computeYearData()` computed
+  these costs internally but only exposed their aggregate as `otherCost`;
+  `_pptxComputedTotals()` hardcoded all four breakout fields to zero. Fixed by
+  adding `spcsCost`, `openflowCost`, `transferCost`, and `collabCost` to the
+  `yearData` row objects and wiring them through `pick()` in
+  `_pptxComputedTotals()`. The Total row on that slide was also undercounting as
+  a result — now correct.
+
+- **Silent failure on PPTX export error.** `exportForPptx()` had no `try/catch`,
+  so any error (JSZip CDN unavailable, XML parse failure, etc.) produced no
+  user-visible feedback. Wrapped the build+download call in `try/catch` with an
+  `alert()` on failure, consistent with the existing save-failure pattern.
+
+---
+
+## [v2.13.0] — Remove the automated `--pptx` path (PPTX is browser-only)
+
+### Removed
+
+- **`--pptx` CLI flag** and the entire automated PPTX render path, which had
+  been broken since `scripts/render-pptx.py`, `scripts/serve-pptx.py`, and the
+  `renderer/pptx/` package were removed. PPTX is now produced **only** by the
+  client-side **Export to PPTX** button in the proposal HTML, which builds the
+  deck entirely in the browser from the in-page `SIZING_SPEC`.
+- Deleted the dead/broken toolchain: `skills/snowflake-sizing/sub-skills/render-pptx/`,
+  `scripts/pptx-qa-export.sh` (LibreOffice QA), `tests/test_pptx.py` (imported the
+  missing `renderer.pptx` module), and `scripts/create-sizing-template.py` (broken
+  base-deck generator depending on `renderer.pptx` + an external plugin).
+
+### Changed
+
+- Stripped the `--pptx` flag and stale render/bridge docs from
+  `commands/snowflake-sizing.md`, `skills/snowflake-sizing/SKILL.md`, and
+  `README.md`; each now documents PPTX as the in-browser button only.
+- `hooks/sizing-guard.py` — removed the `sizing-pptx` path-kind branch (the
+  agent no longer writes `.pptx` files).
+- `framework/sizing_spec_schema.json` — tidied the top-level description to drop
+  the stale `/export-pptx`, `/export-xlsx` mention and corrected the consuming-hook
+  name to `hooks/sizing-guard.py`.
+
+### Kept
+
+- `assets/templates/proposal-template.html` (button + `pptxBuildFromSpec` +
+  embedded `SIZING_BASE_TEMPLATE_B64`), `assets/templates/sizing-base-template.pptx`,
+  `scripts/embed-pptx-assets.py` (the supported re-embed/maintenance path), and
+  `scripts/html-render-check.mjs`.
+
+---
+
+## [v2.12.2] — Slide 7 update + embed-pptx-assets script
+
+### Added
+
+- **`scripts/embed-pptx-assets.py`** — utility script that re-embeds
+  `assets/templates/sizing-base-template.pptx` into `proposal-template.html`
+  as the `SIZING_BASE_TEMPLATE_B64` base64 literal. Run after any edit to the
+  PPTX template to keep the in-browser "Export to PPTX" export in sync.
+  Usage: `python3 scripts/embed-pptx-assets.py` from the plugin root, then
+  commit both files.
+
+### Changed
+
+- **Slide 7 (`understanding_costs`) updated** in
+  `assets/templates/sizing-base-template.pptx`. The hand-authored
+  "Understanding Your Snowflake Costs" content slide has been revised;
+  `proposal-template.html` re-embedded accordingly.
+
+---
+
+## [v2.12.1] — Fix "Click to add text" red-X placeholder on chart slides
+
+### Fixed
+
+- **Empty body placeholder visible on chart slides (slides 6 & 7).** `_buildYearChart`
+  and `_buildDonut` clone the content donor slide, which carries a body content
+  placeholder (`<p:ph/>`, `idx=1`). The previous code called
+  `_setBodyParagraphs(bodies[0], [])` to clear its text, but the `<p:sp>` element
+  remained in the XML. PowerPoint renders empty content placeholders as a large
+  "Click to add text" box overlaid with a red X — covering the chart.
+  Fixed by replacing the clear call with
+  `_bodyShapes(doc).forEach(sp => sp.parentNode && sp.parentNode.removeChild(sp))`,
+  which removes the placeholder shape entirely from the DOM before serializing, so
+  only the injected `<p:graphicFrame>` (chart) occupies the body area.
+
+---
+
+## [v2.12.0] — Browser-side PPTX generation (no local server required)
+
+**"Export to PPTX"** now generates a Snowflake-branded `.pptx` directly in the
+browser using JSZip — no local render bridge, no Python runtime, no
+`scripts/serve-pptx.py` running in a terminal. Any SE can open the
+self-contained HTML proposal, click the button, and download a ready-to-present
+deck. The compiled HTML is fully standalone: the base template is embedded as
+base64, JSZip is inlined, and all slide-building logic runs client-side.
+
+Seven OPC/OOXML correctness bugs in the initial implementation were identified
+by systematically diffing generated PPTXs against PowerPoint's repaired output
+and fixed in this release. The deck now opens in PowerPoint on Mac without any
+"found a problem with content" repair dialog.
+
+### Added
+
+- **`assets/templates/proposal-template.html` — browser-side PPTX generator.**
+  `pptxBuildFromSpec(spec)` is a new async function that loads the base64-embedded
+  `sizing-base-template.pptx` via JSZip, clones the 7 donor slides into 10
+  generated slides (title, safe harbor, agenda, understanding costs, cost detail,
+  year chart, donut chart, warehouse workloads, serverless/AI, closer), rewrites
+  `presentation.xml`, `_rels/presentation.xml.rels`, `[Content_Types].xml`, and
+  `docProps/app.xml`, then triggers a browser download. JSZip is inlined;
+  no network requests are made.
+
+- **`_fixZipVersionNeeded(bytes)` — ZIP spec compliance patch.**
+  JSZip 3.x emits `version_needed=10` (1.0) on all entries including
+  DEFLATE-compressed ones. The ZIP spec (and PowerPoint Mac) require
+  `version_needed=20` (2.0) for DEFLATE. This function scans both the local-file
+  headers (`PK\x03\x04`) and central-directory headers (`PK\x01\x02`) and patches
+  any entry where `compress_method=8` and `version_needed=10`.
+
+- **Slide builders** for each of the 10 output slides:
+  `_buildTitle`, `_buildStaticSlide`, `_buildAgenda`, `_buildCostDetail`,
+  `_buildYearChart`, `_buildDonut`, `_buildWorkloads`, `_buildServerlessAI`,
+  `_buildCloser`. Charts use inline `<c:numCache>` / `<c:strCache>` data — no
+  embedded Excel workbook required.
+
+### Fixed
+
+- **ZIP `version_needed` header (OPC compliance).** JSZip sets `version_needed=10`
+  for DEFLATE entries; PowerPoint Mac validates this and triggered the repair
+  dialog. Fixed by `_fixZipVersionNeeded` patching both header types after
+  `generateAsync`.
+
+- **Slide numbering and rId collision.** Generated slides started at `slide1.xml`,
+  overlapping with the 7 donor slides still in the ZIP during build. Fixed by
+  numbering generated slides from `slide8.xml` onward (`nextSlideNum =
+  Object.keys(_DONOR_IDX).length + 1`). Slide rIds now start at
+  `max(existing rIds) + 1` to avoid conflicts with slide-master and font rIds.
+
+- **`docProps/app.xml` slide count not updated.** The base template had
+  `<Slides>7</Slides>` (donor count). Fixed by replacing the `<Slides>` value,
+  the `<vt:i4>` count in `HeadingPairs`, and the `<TitlesOfParts>` slide-title
+  list with values derived from the generated slide set.
+
+- **Orphaned `ppt/media/image18.png` (OPC violation).** The content donor
+  (`slide5.xml.rels`) references `image18.png` via `rId2`. Both
+  `_buildYearChart` and `_buildDonut` call `_stripRel(relsStr, 'rId2')` to swap
+  in a chart relationship, removing the rels entry but leaving the image file in
+  the ZIP with no referencing relationship — an OPC violation that PowerPoint
+  repairs by deleting the file. Fixed by a general orphaned-media purge block
+  that runs after all slide rels are finalized: scans every `.rels` file in the
+  ZIP for `ppt/media/*` references and removes any media file not referenced.
+
+- **`&amp;amp;` double-escape in `docProps/app.xml` titles.** The title
+  extraction regex captured raw XML text (e.g. `Serverless, AI &amp; Other
+  Compute`) and re-encoded it with `.replace(/&/g,'&amp;')`, turning `&amp;`
+  into `&amp;amp;`. Fixed by decoding all five XML entities from the raw text
+  before re-encoding for `app.xml`.
+
+- **Duplicate `cNvPr id` in chart slides (OOXML schema violation).** `_injectChartFrame`
+  assigned chart-frame shape IDs as `300 + chartIndex`. The content donor already
+  has `<p:cNvPr id="302">` (`PlaceHolder 1`), so the second chart (donut,
+  `chartIndex=2`, `id=302`) produced two shapes with the same id on `slide14`.
+  Fixed by computing the shape ID dynamically: `max(existing cNvPr ids in xmlStr)
+  + 1` instead of a fixed offset.
+
+- **Empty `<p:txBody>` in chart slides (OOXML schema violation).** Chart slides
+  call `_setBodyParagraphs(bodies[0], [])` to clear the donor body text. This
+  removed all `<a:p>` elements and added none, leaving a `<p:txBody>` with no
+  paragraphs. `CT_TextBody` requires at least one `<a:p>`. Fixed in
+  `_setBodyParagraphs`: when `lines=[]` leaves the text body empty, a single
+  paragraph is appended (proto paragraph cloned with all runs stripped) so the
+  body satisfies the schema while remaining visually empty.
+
+### Removed
+
+- **`scripts/serve-pptx.py` — local render bridge** (deleted). The bridge is
+  superseded by the browser-side generator. The "Export to PPTX" button no
+  longer requires any local server.
+- **`scripts/render-pptx.py`, `scripts/render-all-fixtures-pptx.py`** (deleted).
+  CLI helpers for the now-removed Python PPTX path.
+- **`renderer/pptx/` package** (deleted). `build_pptx.py`, `slides.py`,
+  `charts.py`, `clone.py`, `inject.py`, `brand.py`. The browser-side generator
+  replaces this entire package.
+
 ## [v2.11.0] — Full compute-cost coverage in the PPTX deck (SPCS, OpenFlow, transfer, collaboration, replication)
 
 The generated deck now reports the **entire** compute stack from the JSON spec,
@@ -94,7 +399,7 @@ already duplicated the committed donor verbatim.
 
 ## [v2.10.0] — One-click PPTX export via a local render bridge
 
-The proposal HTML's **"Export JSON for PPTX"** button can now generate a real
+The proposal HTML's **"Export to PPTX"** button can now generate a real
 `.pptx` in one click. A new stdlib-only bridge server, `scripts/serve-pptx.py`,
 accepts the in-browser `SIZING_SPEC` over loopback HTTP, runs the same
 `renderer/pptx/build_pptx.build()` path as the CLI, and streams the deck back
@@ -131,7 +436,7 @@ or template-rebake change.
   30s `AbortController` timeout it silently falls back to the JSON download via
   `downloadSpecJson()`; on an HTTP error from a running bridge it surfaces the
   server message via `alert()` and still drops the JSON as a safety net. The
-  button **label is unchanged** ("Export JSON for PPTX"); only its tooltip is
+  button **label is unchanged** ("Export to PPTX"); only its tooltip is
   updated to explain the bridge-vs-JSON behavior. Authoritative `computed_totals`
   and internal-pricing stripping happen server-side inside `build()`, so a
   browser-edited (possibly stale) `computed_totals` block cannot affect the deck.
@@ -158,9 +463,9 @@ change — the `onclick` handlers (`exportForPptx()`, `saveSnapshot()`,
   the shared `padding`/`border-radius`/`font` lifted onto `.fab-stack button`.
   `align-items: stretch` makes all three equal width, retiring the brittle
   16 / 185 / 355px `right` offsets that previously kept the row from overlapping.
-  DOM order top-to-bottom is **Export JSON for PPTX → Save HTML → Print / Save
+  DOM order top-to-bottom is **Export to PPTX → Save HTML → Print / Save
   PDF**.
-- **Two buttons renamed.** "Export for PPTX" → **"Export JSON for PPTX"** (makes
+- **Two buttons renamed.** "Export for PPTX" → **"Export to PPTX"** (makes
   it explicit that the button downloads the sizing spec as JSON, not a deck);
   the v2.4.0 **"Print / Save as PDF"** label is shortened to **"Print / Save
   PDF"**. **Save HTML** is unchanged.

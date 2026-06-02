@@ -276,9 +276,11 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
     if cco:
         cc_model = cco.get("model") or "claude-4-sonnet"
         cc_in_rate = si_rate(cc_model, "input")
+        surface_hit = False
         for surface in ("cli", "snowsight", "desktop"):
             s = cco.get(surface)
             if isinstance(s, dict) and s.get("enabled"):
+                surface_hit = True
                 tokens_M = (
                     (s.get("developers", 0) or 0)
                     * (s.get("queries_per_dev_per_day", 0) or 0)
@@ -287,6 +289,16 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
                     * 22
                 )
                 total += tokens_M * cc_in_rate
+        # Flat format (schema-canonical per sizing_spec_schema.json additionalProperties:false)
+        if not surface_hit and cco.get("enabled"):
+            tokens_M = (
+                (cco.get("developers", 0) or 0)
+                * (cco.get("queries_per_dev_per_day", 0) or 0)
+                * (cco.get("avg_tokens_per_query", 0) or 0)
+                / 1_000_000
+                * 22
+            )
+            total += tokens_M * cc_in_rate
 
     ca = ai.get("cortex_analyst") or {}
     if ca.get("enabled"):
@@ -387,16 +399,24 @@ def _spcs_credit_fallback(pricing: dict, family: str) -> Optional[float]:
 
 
 def openflow_connector_monthly_credits(spec: dict, pricing: dict, cloud: Optional[str] = None) -> float:
-    """OpenFlow connector credits/month: warehouse MERGE + Snowpipe-Streaming ingest.
+    """OpenFlow connector credits/month: warehouse MERGE + Snowpipe-Streaming ingest + runtime vCPU-hours.
 
     Warehouse MERGE = wh_credits(size) * warehouse_hours_monthly. Ingest converts
     rows_per_day_M -> uncompressed GB/month via _OF_AVG_ROW_BYTES, priced at the
-    Snowpipe-Streaming rate. BYOC infra/region constants are intentionally dropped
-    (not represented in the schema).
+    Snowpipe-Streaming rate. Runtime billing: vcpus * nodes * hours_monthly * 0.0225
+    credits/vCPU-hr (Table 1(h)), read from pricing["openflow"].
     """
     of = spec.get("openflow") or {}
     if not of.get("enabled"):
         return 0.0
+
+    of_pricing = pricing.get("openflow") or {}
+    size_map = {s["name"]: s["vcpus"] for s in of_pricing.get("sizes") or []}
+    if not size_map:
+        size_map = {"Small": 1, "Medium": 4, "Large": 8}
+    byoc_entry = next((d for d in (of_pricing.get("data") or []) if d.get("deployment") == "BYOC"), {})
+    runtime_rate = float(byoc_entry.get("rate") or 0.0225)
+
     total = 0.0
     for inst in of.get("instances") or []:
         wh_size = inst.get("warehouse_size")
@@ -404,9 +424,17 @@ def openflow_connector_monthly_credits(spec: dict, pricing: dict, cloud: Optiona
         if wh_size and wh_hours:
             total += _wh_credits_for_size(wh_size, pricing, cloud) * wh_hours
         rows_m = inst.get("rows_per_day_M", 0) or 0
-        if rows_m:
-            monthly_gb = rows_m * 1_000_000 * 30 * _OF_AVG_ROW_BYTES / 1e9
-            total += monthly_gb * _OF_SNOWPIPE_CREDITS_PER_GB
+        monthly_data_gb = inst.get("monthly_data_gb", 0) or 0
+        ingest_gb = monthly_data_gb if monthly_data_gb > 0 else (
+            rows_m * 1_000_000 * 30 * _OF_AVG_ROW_BYTES / 1e9 if rows_m > 0 else 0
+        )
+        if ingest_gb:
+            total += ingest_gb * _OF_SNOWPIPE_CREDITS_PER_GB
+        # Runtime vCPU-hour billing (credits/vCPU-hr per Table 1(h))
+        vcpus = size_map.get(inst.get("runtime_size") or "Medium", 4)
+        nodes = inst.get("runtime_nodes", 1) or 1
+        hours_m = inst.get("hours_monthly", 730) or 730
+        total += vcpus * nodes * hours_m * runtime_rate
     return total
 
 

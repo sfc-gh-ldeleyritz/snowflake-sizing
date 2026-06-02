@@ -37,14 +37,14 @@ Reduced research is only allowed via the narrow exceptions clause in `skills/sno
 Three artifacts:
 
 - `sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.html` — single self-contained interactive proposal.
-- `sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.json` — portable sizing spec (the `SIZING_SPEC` object). Source of truth for the HTML and future export formats (PPTX, DOCX, XLSX).
+- `sizings/<customer-slug>-<N>year-sizing-v1-<YYYY-MM-DD>.json` — portable sizing spec (the `SIZING_SPEC` object). Source of truth for the HTML, the in-browser PPTX export, and future export formats (DOCX, XLSX).
 - `temp/<customer-slug>-research-evidence.md` — Glean + Gong audit trail (B1/B2/B3 hits, Gong call inventory with retry log, verbatim transcript turns, and sizing-impacting findings).
 
 The `sizings/` directory holds customer outputs; the generated `.html` and `.json` files are git-ignored (only the directory itself ships, via `.gitkeep`). `temp/` is also git-ignored (scratch files only).
 
 ### Sizing Spec (`.json`)
 
-The `.json` file contains the complete `SIZING_SPEC` object — all workloads, serverless features, AI config, storage, metadata, assumptions, and confirm_required items. It is the source of truth from which the HTML is derived and from which future export formats (PPTX, DOCX, XLSX) will be generated.
+The `.json` file contains the complete `SIZING_SPEC` object — all workloads, serverless features, AI config, storage, metadata, assumptions, and confirm_required items. It is the source of truth from which the HTML is derived, from which the in-browser PPTX deck is built, and from which future export formats (DOCX, XLSX) will be generated.
 
 **Browser round-trip:** Open any saved HTML and click **Export JSON** to extract the current `SIZING_SPEC` (including any browser edits) back to a `.json` file.
 
@@ -77,12 +77,44 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 - **Birdbox ramp curves** — per-workload power-law ramp from `dev_start_month` to `go_live_month` (Slowest / Slow / Linear / Fast / Fastest / Manual). Global Settings defaults seed all new rows; individual rows can override.
 - **Platform Credit discount override** — toggle in Global Settings accepts a net rate ($/credit) or discount %. AI Credits remain fixed at $2.00 global / $2.20 regional (discount does not apply per Snowflake policy).
 - **Save Version** — top-right button snapshots the current `SIZING_SPEC` (including all SE edits), bumps `meta.version_number`, and downloads a self-contained HTML file named `<slug>-<N>year-sizing-v<N>-<YYYY-MM-DD>.html`.
-- **Export JSON** — downloads the current `SIZING_SPEC` as a portable `.json` file (same name convention as Save Version). Use this to round-trip browser edits back to disk, or to feed future export skills for PPTX/DOCX/XLSX generation.
+- **Export to PPTX** — builds a Snowflake-branded deck entirely in the browser from the current `SIZING_SPEC` (including any live edits) and downloads it as a `.pptx`. No local server, bridge, or Python step is required. See [PPTX Export](#pptx-export) below.
 - **Per-feature tooltips** — `ⓘ` icon next to every togglable feature explains what it is and how it bills. Hidden in print mode.
 - **Editable assumptions** — Stated Assumptions and Requires Confirmation items are `contenteditable` in the browser. Add, delete, or reword inline; changes persist in `SIZING_SPEC` and are saved by Save Version.
 - **Editable sourcing notes** — the `SOURCED:` / `ASSUMPTION:` line under each warehouse card is `contenteditable` too. Edit the source label and note text inline, delete the note with the `✕` button, or re-add it with **+ Add sourcing note**. Changes persist in `SIZING_SPEC` and are saved by Save Version; the empty-note affordance is hidden in print / PDF output.
 - **Scenario toggle** — checkbox above the Scenario Comparison grid to show/hide the Conservative and Aggressive cards.
 - **Print / Save as PDF** — floating button (primary) opens the native browser print dialog; choose "Save as PDF" as the destination for a clean multi-page A4 PDF. The `@media print` rules expand all tabs in flow, reflow Chart.js canvases, hide interactive chrome, and keep KPI tiles, charts, and table rows from splitting across page boundaries.
+
+## PPTX Export
+
+Open any generated proposal HTML and click **Export to PPTX**. The deck is
+assembled **entirely in the browser** from the current in-page `SIZING_SPEC`
+(JSZip + DOMParser against the embedded base template), so it picks up any live
+SE edits with no server, bridge, or Python step. The button works from a
+file:// URL or anywhere the HTML is opened.
+
+The base deck is baked into the HTML at build time as `SIZING_BASE_TEMPLATE_B64`
+from `assets/templates/sizing-base-template.pptx`. To refresh that embedded
+template after editing the base deck, re-embed it with:
+
+```bash
+python3 scripts/embed-pptx-assets.py
+```
+
+### Deck contents (up to 10 slides)
+
+| # | Slide |
+|---|---|
+| 1 | Title |
+| 2 | Safe Harbor *(toggle: `meta.include_safe_harbor`)* |
+| 3 | Agenda *(toggle: `meta.include_agenda`)* |
+| 4 | Understanding Your Snowflake Costs |
+| 5 | Cost Detail by Year |
+| 6 | Cost Mix by Workload / Category *(toggle: `meta.include_workload_donut`)* |
+| 7 | Year-by-Year chart |
+| 8 | Warehouse Workloads |
+| 9 | Serverless, AI & Other Compute |
+| 10 | Scenario Comparison *(toggle: `meta.include_scenarios`)* |
+| last | Thank You |
 
 ## Context File Format
 
