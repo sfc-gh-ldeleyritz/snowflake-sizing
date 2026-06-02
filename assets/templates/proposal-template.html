@@ -1497,7 +1497,11 @@ function computeYearData(opts) {
     yearData.push({ y, whCredits, slCredits, aiCredits,
                     computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal,
                     replicationCost: replication.total_cost,
-                    replicationDetail: replication });
+                    replicationDetail: replication,
+                    spcsCost,
+                    openflowCost: ofCost + oracleCost,
+                    transferCost,
+                    collabCost });
   }
   return yearData;
 }
@@ -3153,10 +3157,10 @@ function _pptxComputedTotals() {
     storage_cost_per_year:     pick('storageCost'),
     other_cost_per_year:       pick('otherCost'),
     replication_cost_per_year: pick('replicationCost'),
-    spcs_cost_per_year:        yd.map(()=>0),
-    openflow_cost_per_year:    yd.map(()=>0),
-    data_transfer_cost_per_year: yd.map(()=>0),
-    collaboration_cost_per_year: yd.map(()=>0),
+    spcs_cost_per_year:          pick('spcsCost'),
+    openflow_cost_per_year:      pick('openflowCost'),
+    data_transfer_cost_per_year: pick('transferCost'),
+    collaboration_cost_per_year: pick('collabCost'),
     wlLabels, wlCredits,
   };
 }
@@ -3889,9 +3893,13 @@ async function exportForPptx() {
   const today = new Date().toISOString().slice(0, 10);
   const base = slug + '-' + years + 'year-sizing-v' + version + '-' + today;
 
-  const bytes = await pptxBuildFromSpec(SIZING_SPEC);
-  const blob = new Blob([bytes], {type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
-  triggerDownload(blob, base + '.pptx');
+  try {
+    const bytes = await pptxBuildFromSpec(SIZING_SPEC);
+    const blob = new Blob([bytes], {type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+    triggerDownload(blob, base + '.pptx');
+  } catch(e) {
+    alert('PPTX export failed: ' + (e && e.message ? e.message : String(e)));
+  }
 }
 
 

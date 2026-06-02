@@ -1,5 +1,25 @@
 # snowflake-sizing changelog
 
+## [v2.13.1] — Fix PPTX "Serverless, AI & Other Compute" slide + export error handling
+
+### Fixed
+
+- **SPCS, OpenFlow, Data Transfer, and Collaboration costs always showed $0** on
+  the "Serverless, AI & Other Compute" PPTX slide. `computeYearData()` computed
+  these costs internally but only exposed their aggregate as `otherCost`;
+  `_pptxComputedTotals()` hardcoded all four breakout fields to zero. Fixed by
+  adding `spcsCost`, `openflowCost`, `transferCost`, and `collabCost` to the
+  `yearData` row objects and wiring them through `pick()` in
+  `_pptxComputedTotals()`. The Total row on that slide was also undercounting as
+  a result — now correct.
+
+- **Silent failure on PPTX export error.** `exportForPptx()` had no `try/catch`,
+  so any error (JSZip CDN unavailable, XML parse failure, etc.) produced no
+  user-visible feedback. Wrapped the build+download call in `try/catch` with an
+  `alert()` on failure, consistent with the existing save-failure pattern.
+
+---
+
 ## [v2.13.0] — Remove the automated `--pptx` path (PPTX is browser-only)
 
 ### Removed
