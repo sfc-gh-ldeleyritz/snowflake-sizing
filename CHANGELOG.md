@@ -1,5 +1,102 @@
 # snowflake-sizing changelog
 
+## [v2.12.0] — Browser-side PPTX generation (no local server required)
+
+**"Export to PPTX"** now generates a Snowflake-branded `.pptx` directly in the
+browser using JSZip — no local render bridge, no Python runtime, no
+`scripts/serve-pptx.py` running in a terminal. Any SE can open the
+self-contained HTML proposal, click the button, and download a ready-to-present
+deck. The compiled HTML is fully standalone: the base template is embedded as
+base64, JSZip is inlined, and all slide-building logic runs client-side.
+
+Seven OPC/OOXML correctness bugs in the initial implementation were identified
+by systematically diffing generated PPTXs against PowerPoint's repaired output
+and fixed in this release. The deck now opens in PowerPoint on Mac without any
+"found a problem with content" repair dialog.
+
+### Added
+
+- **`assets/templates/proposal-template.html` — browser-side PPTX generator.**
+  `pptxBuildFromSpec(spec)` is a new async function that loads the base64-embedded
+  `sizing-base-template.pptx` via JSZip, clones the 7 donor slides into 10
+  generated slides (title, safe harbor, agenda, understanding costs, cost detail,
+  year chart, donut chart, warehouse workloads, serverless/AI, closer), rewrites
+  `presentation.xml`, `_rels/presentation.xml.rels`, `[Content_Types].xml`, and
+  `docProps/app.xml`, then triggers a browser download. JSZip is inlined;
+  no network requests are made.
+
+- **`_fixZipVersionNeeded(bytes)` — ZIP spec compliance patch.**
+  JSZip 3.x emits `version_needed=10` (1.0) on all entries including
+  DEFLATE-compressed ones. The ZIP spec (and PowerPoint Mac) require
+  `version_needed=20` (2.0) for DEFLATE. This function scans both the local-file
+  headers (`PK\x03\x04`) and central-directory headers (`PK\x01\x02`) and patches
+  any entry where `compress_method=8` and `version_needed=10`.
+
+- **Slide builders** for each of the 10 output slides:
+  `_buildTitle`, `_buildStaticSlide`, `_buildAgenda`, `_buildCostDetail`,
+  `_buildYearChart`, `_buildDonut`, `_buildWorkloads`, `_buildServerlessAI`,
+  `_buildCloser`. Charts use inline `<c:numCache>` / `<c:strCache>` data — no
+  embedded Excel workbook required.
+
+### Fixed
+
+- **ZIP `version_needed` header (OPC compliance).** JSZip sets `version_needed=10`
+  for DEFLATE entries; PowerPoint Mac validates this and triggered the repair
+  dialog. Fixed by `_fixZipVersionNeeded` patching both header types after
+  `generateAsync`.
+
+- **Slide numbering and rId collision.** Generated slides started at `slide1.xml`,
+  overlapping with the 7 donor slides still in the ZIP during build. Fixed by
+  numbering generated slides from `slide8.xml` onward (`nextSlideNum =
+  Object.keys(_DONOR_IDX).length + 1`). Slide rIds now start at
+  `max(existing rIds) + 1` to avoid conflicts with slide-master and font rIds.
+
+- **`docProps/app.xml` slide count not updated.** The base template had
+  `<Slides>7</Slides>` (donor count). Fixed by replacing the `<Slides>` value,
+  the `<vt:i4>` count in `HeadingPairs`, and the `<TitlesOfParts>` slide-title
+  list with values derived from the generated slide set.
+
+- **Orphaned `ppt/media/image18.png` (OPC violation).** The content donor
+  (`slide5.xml.rels`) references `image18.png` via `rId2`. Both
+  `_buildYearChart` and `_buildDonut` call `_stripRel(relsStr, 'rId2')` to swap
+  in a chart relationship, removing the rels entry but leaving the image file in
+  the ZIP with no referencing relationship — an OPC violation that PowerPoint
+  repairs by deleting the file. Fixed by a general orphaned-media purge block
+  that runs after all slide rels are finalized: scans every `.rels` file in the
+  ZIP for `ppt/media/*` references and removes any media file not referenced.
+
+- **`&amp;amp;` double-escape in `docProps/app.xml` titles.** The title
+  extraction regex captured raw XML text (e.g. `Serverless, AI &amp; Other
+  Compute`) and re-encoded it with `.replace(/&/g,'&amp;')`, turning `&amp;`
+  into `&amp;amp;`. Fixed by decoding all five XML entities from the raw text
+  before re-encoding for `app.xml`.
+
+- **Duplicate `cNvPr id` in chart slides (OOXML schema violation).** `_injectChartFrame`
+  assigned chart-frame shape IDs as `300 + chartIndex`. The content donor already
+  has `<p:cNvPr id="302">` (`PlaceHolder 1`), so the second chart (donut,
+  `chartIndex=2`, `id=302`) produced two shapes with the same id on `slide14`.
+  Fixed by computing the shape ID dynamically: `max(existing cNvPr ids in xmlStr)
+  + 1` instead of a fixed offset.
+
+- **Empty `<p:txBody>` in chart slides (OOXML schema violation).** Chart slides
+  call `_setBodyParagraphs(bodies[0], [])` to clear the donor body text. This
+  removed all `<a:p>` elements and added none, leaving a `<p:txBody>` with no
+  paragraphs. `CT_TextBody` requires at least one `<a:p>`. Fixed in
+  `_setBodyParagraphs`: when `lines=[]` leaves the text body empty, a single
+  paragraph is appended (proto paragraph cloned with all runs stripped) so the
+  body satisfies the schema while remaining visually empty.
+
+### Removed
+
+- **`scripts/serve-pptx.py` — local render bridge** (deleted). The bridge is
+  superseded by the browser-side generator. The "Export to PPTX" button no
+  longer requires any local server.
+- **`scripts/render-pptx.py`, `scripts/render-all-fixtures-pptx.py`** (deleted).
+  CLI helpers for the now-removed Python PPTX path.
+- **`renderer/pptx/` package** (deleted). `build_pptx.py`, `slides.py`,
+  `charts.py`, `clone.py`, `inject.py`, `brand.py`. The browser-side generator
+  replaces this entire package.
+
 ## [v2.11.0] — Full compute-cost coverage in the PPTX deck (SPCS, OpenFlow, transfer, collaboration, replication)
 
 The generated deck now reports the **entire** compute stack from the JSON spec,
