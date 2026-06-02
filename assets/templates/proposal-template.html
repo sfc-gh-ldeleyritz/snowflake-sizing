@@ -205,12 +205,12 @@ body {
   cursor: pointer;
 }
 .print-btn {
-  background: var(--sf-navy);
-  color: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background: white;
+  color: var(--sf-navy);
+  border: 1px solid var(--sf-navy);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
-.print-btn:hover { background: var(--sf-navy-deep); }
+.print-btn:hover { background: var(--sf-navy); color: white; }
 
 .save-btn {
   background: white;
@@ -3610,8 +3610,8 @@ function _buildYearChart(ctx, ct) {
   const abbr = ct.years > 3;
   const acvLine = 'ACV by year:  ' + yt.map((v,i)=>`Y${i+1} ${_pFmt(v,abbr)}`).join('   |   ');
   if(sub) _setShapeText(sub, acvLine);
-  const bodies = _bodyShapes(doc);
-  if(bodies[0]) _setBodyParagraphs(bodies[0],[]);
+  // Remove the body placeholder entirely — chart graphicFrame replaces it
+  _bodyShapes(doc).forEach(sp => sp.parentNode && sp.parentNode.removeChild(sp));
   const categories = Array.from({length:ct.years},(_,i)=>`Year ${i+1}`);
   const series = [
     {name:'Compute',    color:'29B5E8', values:ct.compute_cost_per_year.map(v=>Math.round(v*100)/100)},
@@ -3637,8 +3637,8 @@ function _buildDonut(ctx, ct) {
   const {labels, values, mode} = _donutData(ct);
   if(title) _setShapeText(title, mode==='workload' ? 'Compute Mix by Workload' : 'Cost Mix by Category');
   if(sub)   _setShapeText(sub,   mode==='workload' ? 'Year-1 warehouse credits by workload' : 'Share of core spend across the contract term');
-  const bodies = _bodyShapes(doc);
-  if(bodies[0]) _setBodyParagraphs(bodies[0],[]);
+  // Remove the body placeholder entirely — chart graphicFrame replaces it
+  _bodyShapes(doc).forEach(sp => sp.parentNode && sp.parentNode.removeChild(sp));
   const colors = mode==='workload' ? _PB.DONUT_PALETTE : _PB.SERIES_COLORS;
   const chartXml = _doughnutChartXml(labels, values.map(v=>Math.round(v*100)/100), colors);
   const ci = _addChart(ctx, chartXml);

@@ -1,5 +1,22 @@
 # snowflake-sizing changelog
 
+## [v2.12.1] — Fix "Click to add text" red-X placeholder on chart slides
+
+### Fixed
+
+- **Empty body placeholder visible on chart slides (slides 6 & 7).** `_buildYearChart`
+  and `_buildDonut` clone the content donor slide, which carries a body content
+  placeholder (`<p:ph/>`, `idx=1`). The previous code called
+  `_setBodyParagraphs(bodies[0], [])` to clear its text, but the `<p:sp>` element
+  remained in the XML. PowerPoint renders empty content placeholders as a large
+  "Click to add text" box overlaid with a red X — covering the chart.
+  Fixed by replacing the clear call with
+  `_bodyShapes(doc).forEach(sp => sp.parentNode && sp.parentNode.removeChild(sp))`,
+  which removes the placeholder shape entirely from the DOM before serializing, so
+  only the injected `<p:graphicFrame>` (chart) occupies the body area.
+
+---
+
 ## [v2.12.0] — Browser-side PPTX generation (no local server required)
 
 **"Export to PPTX"** now generates a Snowflake-branded `.pptx` directly in the
