@@ -1,15 +1,17 @@
 # snowflake-sizing
 
-Generate accurate, defensible Snowflake consumption estimates and interactive customer-facing HTML proposals.
+Generate accurate, defensible Snowflake consumption estimates and interactive customer-facing HTML and PPTX proposals. 
+
+[Watch A Demo](https://drive.google.com/file/d/1033ygzN8EMsBgfkw3aFmfGW3UeiF15-0/view?usp=drive_link)
+
+![1780485549037](image/README/1780485549037.png)
 
 ## Prerequisites
 
 The skill performs mandatory live research against Glean and Gong. It will hard-fail at preflight if either is unavailable.
 
-- **Glean MCP** — `cortex mcp add glean https://snowflake-be.glean.com/mcp/default --transport http`
-- **SNOWHOUSE connection with `GONG_SHARE.GONG_DATA_CLOUD` access** — `cortex connections set snowhouse` (verify with `cortex connections list`)
-
-Reduced research is only allowed via the narrow exceptions clause in `skills/snowflake-sizing/SKILL.md` (Phase 2 EXCEPTIONS).
+- **Glean MCP:** `cortex mcp add glean https://snowflake-be.glean.com/mcp/default --transport http`
+- **SNOWHOUSE connection with `GONG_SHARE.GONG_DATA_CLOUD` access:** `cortex connections set snowhouse` (verify with `cortex connections list`)
 
 ## Usage
 
@@ -19,12 +21,12 @@ Reduced research is only allowed via the narrow exceptions clause in `skills/sno
 
 **Options:**
 
-| Option | Default | Description |
-|---|---|---|
-| `--customer "Name"` | (from context file) | Customer name for proposal |
-| `--years N` | `3` | Contract length in years |
-| `--edition X` | `Enterprise` | Standard / Enterprise / Business Critical / VPS |
-| `--region "X"` | `"AWS US East (Northern Virginia)"` | Full region string |
+| Option                | Default                               | Description                                     |
+| --------------------- | ------------------------------------- | ----------------------------------------------- |
+| `--customer "Name"` | (from context file)                   | Customer name for proposal                      |
+| `--years N`         | `3`                                 | Contract length in years                        |
+| `--edition X`       | `Enterprise`                        | Standard / Enterprise / Business Critical / VPS |
+| `--region "X"`      | `"AWS US East (Northern Virginia)"` | Full region string                              |
 
 ## Example
 
@@ -52,17 +54,17 @@ Open the HTML in any browser. The proposal is fully interactive — all configur
 
 ### Interactive tabs
 
-| Tab | What you can edit |
-|---|---|
-| **Global Settings** | Cloud / Region / Edition, contract years, annual growth %, default ramp curve, dev-start / go-live months, Platform Credit discount override |
-| **Warehouses** | Size (XS–6XL), warehouse type (Standard Gen1 / Gen2 / Snowpark-Optimized with memory config), hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards; edit / delete the per-warehouse sourcing note (the `SOURCED:` line) inline |
-| **Serverless** | Toggle and size each serverless feature (Snowpipe, Search Optimization, Materialized Views, Dynamic Tables, etc.) |
-| **AI / Cortex** | Cortex Complete, Cortex Agents, Snowflake Intelligence, Cortex Code (CLI / Snowsight / Desktop surfaces), Cortex Analyst, Cortex Search, Document AI, AI Functions |
-| **SPCS** | Instance type, generation (gen2 families sourced live: HIGHMEM_X64 / CPU_X64 / GPU), node count, hours/month; add / delete instances |
-| **OpenFlow** | Deployment (SPCS / BYOC), source connections, vCPU, hours/month; add / delete connectors |
-| **Storage** | Raw TB, compression ratio, annual growth %, Time Travel days, churn rate %; per-year breakdown table refreshes live |
-| **Collaboration** | Reader and Managed accounts with warehouse size, hours/day, days/month; add / delete accounts |
-| **Replication** | Source / target regions, initial TB, monthly change TB, credits/TB, replica storage rate, growth/YoY; enable / disable per relationship |
+| Tab                       | What you can edit                                                                                                                                                                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Global Settings** | Cloud / Region / Edition, contract years, annual growth %, default ramp curve, dev-start / go-live months, Platform Credit discount override                                                                                                                   |
+| **Warehouses**      | Size (XS–6XL), warehouse type (Standard Gen1 / Gen2 / Snowpark-Optimized with memory config), hours/day, days/month, cluster min/max, auto-suspend; add / delete workload cards; edit / delete the per-warehouse sourcing note (the `SOURCED:` line) inline |
+| **Serverless**      | Toggle and size each serverless feature (Snowpipe, Search Optimization, Materialized Views, Dynamic Tables, etc.)                                                                                                                                              |
+| **AI / Cortex**     | Cortex Complete, Cortex Agents, Snowflake Intelligence, Cortex Code (CLI / Snowsight / Desktop surfaces), Cortex Analyst, Cortex Search, Document AI, AI Functions                                                                                             |
+| **SPCS**            | Instance type, generation (gen2 families sourced live: HIGHMEM_X64 / CPU_X64 / GPU), node count, hours/month; add / delete instances                                                                                                                           |
+| **OpenFlow**        | Deployment (SPCS / BYOC), source connections, vCPU, hours/month; add / delete connectors                                                                                                                                                                       |
+| **Storage**         | Raw TB, compression ratio, annual growth %, Time Travel days, churn rate %; per-year breakdown table refreshes live                                                                                                                                            |
+| **Collaboration**   | Reader and Managed accounts with warehouse size, hours/day, days/month; add / delete accounts                                                                                                                                                                  |
+| **Replication**     | Source / target regions, initial TB, monthly change TB, credits/TB, replica storage rate, growth/YoY; enable / disable per relationship                                                                                                                        |
 
 ### Output sections (all update live)
 
@@ -102,23 +104,24 @@ python3 scripts/embed-pptx-assets.py
 
 ### Deck contents (up to 10 slides)
 
-| # | Slide |
-|---|---|
-| 1 | Title |
-| 2 | Safe Harbor *(toggle: `meta.include_safe_harbor`)* |
-| 3 | Agenda *(toggle: `meta.include_agenda`)* |
-| 4 | Understanding Your Snowflake Costs |
-| 5 | Cost Detail by Year |
-| 6 | Cost Mix by Workload / Category *(toggle: `meta.include_workload_donut`)* |
-| 7 | Year-by-Year chart |
-| 8 | Warehouse Workloads |
-| 9 | Serverless, AI & Other Compute |
-| 10 | Scenario Comparison *(toggle: `meta.include_scenarios`)* |
-| last | Thank You |
+| #    | Slide                                                                     |
+| ---- | ------------------------------------------------------------------------- |
+| 1    | Title                                                                     |
+| 2    | Safe Harbor*(toggle:`meta.include_safe_harbor`)*                        |
+| 3    | Agenda*(toggle:`meta.include_agenda`)*                                  |
+| 4    | Understanding Your Snowflake Costs                                        |
+| 5    | Cost Detail by Year                                                       |
+| 6    | Cost Mix by Workload / Category*(toggle:`meta.include_workload_donut`)* |
+| 7    | Year-by-Year chart                                                        |
+| 8    | Warehouse Workloads                                                       |
+| 9    | Serverless, AI & Other Compute                                            |
+| 10   | Scenario Comparison*(toggle:`meta.include_scenarios`)*                  |
+| last | Thank You                                                                 |
 
 ## Context File Format
 
 Any combination of:
+
 - Call transcripts (plain text or copied from Gong)
 - Completed sizing questionnaire (Word, PDF, or plain text)
 - Discovery notes
@@ -204,13 +207,3 @@ python3 scripts/check-pdf-freshness.py
 To update the static sections, edit `assets/snowflake_pricing_master.json` and its
 `metadata.effective_date` (the PDF detector flags when this is overdue); to refresh
 the live snapshot, run `scripts/refresh-seed.py` or `live_pricing.py --write-seed`.
-
-## Branding
-
-Snowflake brand colours (`#29B5E8`, `#11567F`) applied throughout. The generated HTML embeds the official Snowflake wordmark and uses the official Texta + Lato + Source Code Pro fonts (base64-inlined) — no font CDN, fully offline-capable.
-
-Brand assets are bundled under `assets/branding/`. To regenerate the inlinable font snippet after updating the source woff2 files:
-
-```bash
-bash assets/branding/build-snippets.sh
-```
