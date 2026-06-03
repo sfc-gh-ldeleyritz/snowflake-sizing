@@ -109,6 +109,12 @@ block (see `references/ai-feature-defaults.md` for scope rules - AI credits
 are not discounted) and seed `list_credit_rate` to the same value as
 `credit_rate`. Effective rate goes in `meta.credit_rate`.
 
+**Currency is always USD - never convert.** All rates and figures are USD. Do
+not convert to or quote GBP/EUR/JPY/etc., never use a non-USD symbol (£, €, ¥),
+and never compute an exchange rate. If the customer requires another billing
+currency, record it as a `confirm_required` item in USD (e.g. "Confirm GBP
+billing currency with deal desk"). The pre-write guard enforces this.
+
 ---
 
 ## Phase 1.7 - Glean pre-fetch (main agent)

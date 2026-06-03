@@ -37,6 +37,16 @@ source, ramp_curve, dev_start_month, go_live_month
 `clusters_max` (both equal to the original avg). The JS engine then
 computes `avg = (clusters_min + clusters_max) / 2`.
 
+## Optional growth fields
+
+| Field | Scope | Default when absent | Use |
+|---|---|---|---|
+| `meta.annual_growth_rate` | base for all categories | `0.20` | Account-wide YoY consumption growth. |
+| `workloads[].growth_rate` | one warehouse row | falls back to `meta.annual_growth_rate` | Per-workload growth (e.g. ML grows faster than ELT). |
+| `meta.ai_growth_rate` | AI / Cortex category | `null` -> falls back to `meta.annual_growth_rate` | Separate growth for AI consumption. |
+
+All three are optional numbers (0-5). Growth is applied as `(1 + growth) ^ (year - 1)` on top of the ramp factor, identically in `compute_totals.py` and the HTML JS, so the build-time TCV matches the rendered TCV.
+
 ## AI / Cortex field names
 
 | Feature | Correct path | Wrong (never use) | Auto-fixed? |

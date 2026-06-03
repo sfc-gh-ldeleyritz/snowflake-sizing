@@ -9,6 +9,10 @@ Every number in the estimate MUST be one of:
 
 Never guess silently. Never omit a category. Never fabricate data.
 
+## Currency: USD only, never convert
+
+Every figure in a sizing is in **US dollars (USD)**. Snowflake credit and storage rates are USD; do not convert any number into GBP, EUR, JPY, or any other currency, and do not include a non-USD currency symbol (£, €, ¥) or an FX/"exchange rate" calculation anywhere in the spec or HTML. If the customer requires billing in another currency, capture that as a `confirm_required` item (e.g. "Confirm GBP billing currency and FX handling with deal desk") — phrased in USD with no converted figure. The pre-write guard blocks non-USD symbols, conversion phrasing, and non-USD figures (a bare currency name in a confirm note is allowed).
+
 ---
 
 ## Warehouse Sizing Rules
@@ -301,6 +305,18 @@ These are **derived**, not configured — Phase 4 sums per-month factors directl
 ### Multi-year monthly model
 
 Phase 4 produces a per-month credit array, not a per-year multiplier. Year totals come from `sum(factor(m) × monthly_credits × growth_factor(year(m)))` where `growth_factor` applies the annual `growth_rate` from year 2 onwards.
+
+### Annual growth (per-workload, AI, and parity)
+
+Growth is applied as `(1 + growth) ^ (year − 1)`, layered on top of the ramp factor. Three knobs control which rate a category uses:
+
+- `meta.annual_growth_rate` — the base case for every warehouse, serverless, SPCS, OpenFlow, and collaboration line. Defaults to `0.20` when unset (matching the interactive render).
+- `workloads[].growth_rate` (optional) — overrides `annual_growth_rate` for a single warehouse row, so a fast-growing ML workload and a flat ELT workload can diverge in the same model.
+- `meta.ai_growth_rate` (optional, may be `null`) — growth for the AI/Cortex category. When `null`/absent it falls back to `annual_growth_rate`.
+
+Precedence in the interactive render is **scenario `growthOverride` > `workloads[].growth_rate` > `meta.annual_growth_rate`**; a scenario band replaces every per-workload rate so the Conservative/Expected/Aggressive cards stay clean.
+
+**Python/JS parity:** `framework/compute_totals.py` and the JS in `proposal-template.html` apply growth identically (year 1 = averaged ramp, years 2+ = full capacity × cumulative growth). The build-time `computed_totals` therefore equals the rendered headline TCV to the cent — there is no separate "static vs interactive" number. If you change one growth path, change the other and re-run the parity test.
 
 ---
 

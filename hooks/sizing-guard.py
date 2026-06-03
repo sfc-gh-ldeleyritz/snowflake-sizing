@@ -55,6 +55,55 @@ _spec_module_spec.loader.exec_module(spec_prepare)
 
 EM_DASH = chr(0x2014)
 
+# ── Currency enforcement (USD only, never convert) ────────────────────────── #
+# Sizings are always quoted in USD. We block (a) non-USD currency symbols, which
+# only appear when a figure has been converted/quoted in another currency, (b)
+# explicit conversion phrasing, and (c) a non-USD ISO code sitting next to a
+# number (e.g. "GBP 450,000", "450k EUR"). A bare currency name with no adjacent
+# figure is NOT blocked, so an SE can still record "customer requires GBP billing"
+# as a confirm_required item - in USD - without tripping the gate.
+_NON_USD_SYMBOLS = ("\u00a3", "\u20ac", "\u00a5")  # £ € ¥
+_CONVERSION_PHRASES = (
+    "convert to", "converted at", "converted to", "conversion rate",
+    "exchange rate", "fx rate", "indicative @", "indicative rate",
+)
+_NON_USD_CODES = "GBP|EUR|JPY|AUD|CAD|CHF|INR|SGD|CNY|HKD|NZD|SEK|NOK|DKK|ZAR|BRL|MXN|AED"
+# A non-USD ISO code immediately before or after a number = a figure in that currency.
+# The numeric side must contain a real digit (so a sentence-ending "GBP." does not match).
+_NON_USD_AMOUNT_RE = re.compile(
+    rf"(?:\b(?:{_NON_USD_CODES})\b\s*[\$£€¥]?\s*\d[\d.,]*)"
+    rf"|(?:\d[\d.,]*\s*[kKmMbB]?\s*\b(?:{_NON_USD_CODES})\b)"
+)
+_USD_GUIDANCE = (
+    "All figures must be in USD - never convert currency. Quote in USD and, if the "
+    "customer requires another billing currency, record that as a confirm_required "
+    "item (e.g. \"Confirm GBP billing currency with deal desk\") rather than "
+    "converting any figure."
+)
+
+
+def _currency_findings(content: str) -> list[str]:
+    out: list[str] = []
+    for sym in _NON_USD_SYMBOLS:
+        if sym in content:
+            out.append(
+                f"Non-USD currency symbol '{sym}' at line {_line_of(content, sym)}. {_USD_GUIDANCE}"
+            )
+    low = content.lower()
+    for phrase in _CONVERSION_PHRASES:
+        if phrase in low:
+            out.append(
+                f"Currency-conversion phrase '{phrase}' present. {_USD_GUIDANCE}"
+            )
+    m = _NON_USD_AMOUNT_RE.search(content)
+    if m:
+        line = content.count("\n", 0, m.start()) + 1
+        out.append(
+            f"Non-USD monetary figure '{m.group(0).strip()}' at line {line}. {_USD_GUIDANCE}"
+        )
+    return out
+
+
 # Forbidden tokens in customer-facing HTML (mirrors scripts/content-hygiene-check.py).
 # Citation prefixes are allowed in JSON `source` metadata; they're scanned only in HTML.
 _HYGIENE_TOKENS_HTML = (
@@ -117,6 +166,9 @@ def _check_json(content: str, file_path: str) -> list[str]:
     for hit in leak_hits:
         errors.append(f"Internal-marker field '{hit}' must not appear in sizing JSON.")
 
+    # Currency enforcement: no non-USD figures/conversions in narrative fields.
+    errors.extend(_currency_findings(content))
+
     # Schema validation last (other diagnostics are more actionable).
     errors.extend(spec_prepare.validate_spec(spec))
     return errors
@@ -177,6 +229,9 @@ def _check_html(content: str, file_path: str) -> list[str]:
 
     # 1. Em-dash scan (cheap).
     errors.extend(_emdash_findings(content))
+
+    # 1b. Currency enforcement (USD only).
+    errors.extend(_currency_findings(content))
 
     # 2. Content-hygiene tokens.
     for tok in _HYGIENE_TOKENS_HTML:
