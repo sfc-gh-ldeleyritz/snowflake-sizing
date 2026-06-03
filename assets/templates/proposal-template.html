@@ -548,6 +548,7 @@ li:hover .item-delete-btn { display: inline; }
   </div>
   <h1 id="hdr-customer">__CUSTOMER__</h1>
   <div class="header-subtitle"><span id="hdr-years">__YEARS__</span>-Year Snowflake Consumption Estimate</div>
+  <div class="header-subtitle" style="font-size: 13px; opacity: 0.8;">All figures in USD</div>
 </div>
 
 <!-- 2. KPI Tiles -->
@@ -713,6 +714,7 @@ fill="#29B5E8" stroke="none">
   <p>Prepared by Snowflake &middot; This estimate is based on stated requirements and industry benchmarks.
   Actual consumption may vary. All prices are list price on-demand rates.
   Credit rates effective __PDF_VERSION__.</p>
+  <p>All figures are expressed in US dollars (USD). No currency conversion is applied.</p>
   <p>Generated __DATE__</p>
 </div>
 
@@ -1127,9 +1129,10 @@ function rampFactorForMonth(devStart, goLive, curve, m) {
 function rampMultiplierForYear(row, year, growthOverride) {
   // year is 1-indexed. Returns the average per-month factor for the 12 months in that year,
   // multiplied by the cumulative annual-growth factor for years 2+.
-  // growthOverride (optional) replaces meta.annual_growth_rate for scenario sensitivity bands.
+  // Growth precedence: growthOverride (scenario band) > row.growth_rate (per-workload) > meta.annual_growth_rate.
   const m = SIZING_SPEC.meta;
   const annualGrowth = (growthOverride != null) ? growthOverride
+                      : (row && row.growth_rate != null) ? row.growth_rate
                       : (m.annual_growth_rate != null) ? m.annual_growth_rate : 0.20;
   const devStart = (row && row.dev_start_month != null) ? row.dev_start_month : (m.default_dev_start_month != null ? m.default_dev_start_month : 0);
   const goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   != null ? m.default_go_live_month   : 3);
@@ -1501,10 +1504,14 @@ function computeYearData(opts) {
     const whCredits = SIZING_SPEC.workloads.reduce((sum, w) => {
       return sum + whMonthlyCredits(w) * 12 * wRamp(w, y);
     }, 0);
-    // Serverless and AI use the meta-default ramp (no per-feature ramp data captured today).
+    // Serverless uses the meta-default ramp; AI uses its own ai_growth_rate (falling
+    // back to annual_growth_rate when unset). In a scenario band, the scenario growth
+    // override takes precedence for AI too, so the bands stay clean.
     const defRamp = dRamp(y);
+    const aiGrowthOv = (m.ai_growth_rate != null) ? m.ai_growth_rate : undefined;
+    const aiRamp = ov ? defRamp : defaultRampMultiplierForYear(y, aiGrowthOv);
     const slCredits = calcServerlessCredits() * 12 * defRamp;
-    const aiCredits = calcAICredits() * 12 * defRamp;
+    const aiCredits = calcAICredits() * 12 * aiRamp;
     const storageCost = storageForYear(y) * sr * 12;
     const spcsCost = calcSPCSCost() * 12 * defRamp * cr;
     const ofCost   = calcOpenflowCost(cr, defRamp);
@@ -3640,7 +3647,7 @@ function _buildYearChart(ctx, ct) {
   const abbr = ct.years > 3;
   const acvLine = 'ACV by year:  ' + yt.map((v,i)=>`Y${i+1} ${_pFmt(v,abbr)}`).join('   |   ');
   if(sub) _setShapeText(sub, acvLine);
-  // Remove the body placeholder entirely — chart graphicFrame replaces it
+  // Remove the body placeholder entirely - chart graphicFrame replaces it
   _bodyShapes(doc).forEach(sp => sp.parentNode && sp.parentNode.removeChild(sp));
   const categories = Array.from({length:ct.years},(_,i)=>`Year ${i+1}`);
   const series = [
@@ -3667,7 +3674,7 @@ function _buildDonut(ctx, ct) {
   const {labels, values, mode} = _donutData(ct);
   if(title) _setShapeText(title, mode==='workload' ? 'Compute Mix by Workload' : 'Cost Mix by Category');
   if(sub)   _setShapeText(sub,   mode==='workload' ? 'Year-1 warehouse credits by workload' : 'Share of core spend across the contract term');
-  // Remove the body placeholder entirely — chart graphicFrame replaces it
+  // Remove the body placeholder entirely - chart graphicFrame replaces it
   _bodyShapes(doc).forEach(sp => sp.parentNode && sp.parentNode.removeChild(sp));
   const colors = mode==='workload' ? _PB.DONUT_PALETTE : _PB.SERIES_COLORS;
   const chartXml = _doughnutChartXml(labels, values.map(v=>Math.round(v*100)/100), colors);

@@ -11,7 +11,8 @@
     "contract_years": 1,
     "generated_date": "",
     "default_ramp_curve": "linear",
-    "annual_growth_rate": 0
+    "annual_growth_rate": 0,
+    "ai_growth_rate": null
   },
   "workloads": [],
   "serverless": {

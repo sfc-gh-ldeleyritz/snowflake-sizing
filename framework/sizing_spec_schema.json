@@ -209,6 +209,11 @@
           "type": "number",
           "minimum": 0
         },
+        "ai_growth_rate": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Optional annual growth rate for AI/Cortex consumption. null (or absent) means AI ramps on meta.annual_growth_rate. Mirrors the JS rampMultiplierForYear AI path."
+        },
         "list_credit_rate": {
           "type": "number",
           "exclusiveMinimum": 0,
@@ -319,6 +324,12 @@
           "go_live_month": {
             "type": "integer",
             "minimum": 1
+          },
+          "growth_rate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Optional per-workload annual growth rate. When absent, this workload ramps on meta.annual_growth_rate. Precedence in the JS render is scenario growthOverride > workload growth_rate > meta.annual_growth_rate."
           },
           "gen": {
             "type": "integer",

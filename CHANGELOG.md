@@ -1,5 +1,81 @@
 # snowflake-sizing changelog
 
+## [v2.14.0] — Python/JS growth parity, per-workload + AI growth, USD-only enforcement
+
+### Fixed
+
+- **Build-time `computed_totals` omitted the annual-growth factor the interactive
+  render applied — the static TCV and the rendered headline disagreed.**
+  `compute_totals.py::ramp_multiplier_for_year()` averaged the ramp but never
+  multiplied by `(1 + growth) ^ (year − 1)`, while the template JS
+  `rampMultiplierForYear()` did. On the Travelodge sizing this surfaced as
+  `$394,565` in the JSON vs `$568,172` in the HTML. The Python helper now mirrors
+  the JS exactly (year 1 = averaged ramp, years 2+ = full capacity × cumulative
+  growth), so the embedded `computed_totals` equals the rendered TCV to the dollar.
+
+- **A valid `dev_start_month: 0` was silently coerced to `2`.** The warehouse and
+  default-window ramp lookups used `int(w.get("dev_start_month", default) or 2)`,
+  and `0 or 2` evaluates to `2`. The JS uses `!= null` semantics, so every fixture
+  with `dev_start = 0` (acme, feature-coverage, momentum, M&S, startup) had a
+  year-1 warehouse/AI/serverless ramp that diverged from the render. Resolution is
+  now centralised in `_resolve_ramp_window()` with the exact JS precedence
+  (row → meta default → `0` / `3` / `linear`, honouring a literal `0`).
+
+### Added
+
+- **Per-workload growth (`workloads[].growth_rate`)** — an optional annual growth
+  rate on a single warehouse row, overriding `meta.annual_growth_rate` (e.g. a
+  fast-growing ML workload alongside a flat ELT workload).
+
+- **AI growth (`meta.ai_growth_rate`)** — an optional, nullable growth rate for the
+  AI/Cortex category; falls back to `meta.annual_growth_rate` when absent. Wired
+  through both `compute_totals.py` and the template JS (`aiRamp`). Growth
+  precedence everywhere: scenario band > per-workload `growth_rate` >
+  `meta.annual_growth_rate` (default `0.20`).
+
+- **USD-only currency enforcement.** The pre-write guard
+  (`hooks/sizing-guard.py`) now rejects, on both the HTML and JSON write paths,
+  non-USD currency symbols (£/€/¥), converted figures (`GBP 450,000`, `1.2M EUR`),
+  and FX/conversion phrasing (`convert to`, `exchange rate`, `FX rate`,
+  `indicative @`, …). A `confirm_required` note that merely *names* a billing
+  currency is still allowed. A static "All figures in USD" caption was added to the
+  proposal header and footer.
+
+### Changed
+
+- **`framework/sizing_spec_schema.json`** — declared optional `workloads[].growth_rate`
+  (number 0–5) and `meta.ai_growth_rate` (nullable number); both schemas remain
+  `additionalProperties: false`. `framework/sizing_spec_skeleton.json` seeds
+  `meta.ai_growth_rate: null`.
+
+- **Docs** — USD rule and the growth model (per-workload / AI / parity guarantee)
+  documented in `SKILL.md`, `references/sizing-methodology.md`,
+  `references/content-hygiene.md`, and `references/field-names.md`; README
+  "Additional features" updated.
+
+### Tests
+
+- **New Python/JS growth-parity test** (`TestPythonJsGrowthParity` in
+  `test_scenario_consistency.py`) — renders a fixture with all three growth knobs
+  active (`annual_growth_rate`, `ai_growth_rate`, per-workload `growth_rate`), boots
+  the real embedded JS via the Node sidecar, and asserts the JS headline equals the
+  Python `core_tcv` to the dollar. Verified across all 12 fixtures: max divergence
+  $0.48 (whole-dollar rounding only).
+
+- **New `tests/test_sizing_guard.py`** — 16 tests covering the currency scanner and
+  both guard write paths (blocks symbols / converted figures / conversion phrasing;
+  allows USD figures and currency *names* in confirm notes).
+
+- **Updated pins** — `test_acme_fixture_known_tcv` 341,858 → 466,553 (growth now
+  applied); collaboration year-3 68,400 → 98,496 (growth on the full-ramp year);
+  `feature-coverage-ai-serverless` 175,223 → 179,002 (the old value was a
+  Python-only number from the `dev_start = 0` bug). Refreshed the M&S fixture's
+  embedded `computed_totals` and cleaned `£` figures out of the acme fixture.
+
+- Test count: 361 → 379 (all passing).
+
+---
+
 ## [v2.13.6] — Move OpenFlow runtime pricing into master spec; fix credits vs dollars
 
 ### Fixed

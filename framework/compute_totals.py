@@ -113,20 +113,63 @@ def ramp_factor_for_month(dev_start: int, go_live: int, curve: str, m: int) -> f
     return min(1.0, max(0.0, f))
 
 
-def ramp_multiplier_for_year(dev_start: int, go_live: int, curve: str, year: int) -> float:
-    """Average ramp factor across the 12 months in `year` (1-indexed)."""
-    offset = (year - 1) * 12
-    return sum(
-        ramp_factor_for_month(dev_start, go_live, curve, offset + m)
-        for m in range(1, 13)
-    ) / 12.0
+def ramp_multiplier_for_year(dev_start: int, go_live: int, curve: str, year: int, growth: float = 0.0) -> float:
+    """Average ramp factor across the 12 months in `year` (1-indexed), scaled by
+    the cumulative annual-growth factor for years 2+.
+
+    Mirrors the JS rampMultiplierForYear in assets/templates/proposal-template.html:
+    year 1 averages the 12 monthly ramp factors; years 2+ are treated as at full
+    capacity (avg = 1.0) and the result is multiplied by (1 + growth)**(year - 1).
+    Keeping this in lockstep with the JS guarantees the build-time computed_totals
+    equals the interactive render to the cent.
+    """
+    if year == 1:
+        avg = sum(
+            ramp_factor_for_month(dev_start, go_live, curve, m)
+            for m in range(1, 13)
+        ) / 12.0
+    else:
+        avg = 1.0
+    return avg * ((1.0 + growth) ** (year - 1))
 
 
-def default_ramp_multiplier_for_year(meta: dict, year: int) -> float:
-    dev = int(meta.get("default_dev_start_month", 2) or 2)
-    go = int(meta.get("default_go_live_month", 11) or 11)
-    curve = meta.get("default_ramp_curve", "linear") or "linear"
-    return ramp_multiplier_for_year(dev, go, curve, year)
+def default_ramp_multiplier_for_year(meta: dict, year: int, growth: Optional[float] = None) -> float:
+    dev, go, curve = _resolve_ramp_window({}, meta)
+    if growth is None:
+        growth = _annual_growth(meta)
+    return ramp_multiplier_for_year(dev, go, curve, year, growth)
+
+
+def _resolve_ramp_window(w: dict, meta: dict) -> tuple:
+    """Resolve (dev_start, go_live, curve) with the exact `!= null` precedence the
+    JS rampMultiplierForYear uses: row value, then meta default, then 0 / 3 / linear.
+    A literal 0 for dev_start is honoured (not treated as falsy), which is why this
+    uses `is not None` rather than `or`."""
+    dev = w.get("dev_start_month")
+    if dev is None:
+        dev = meta.get("default_dev_start_month")
+    if dev is None:
+        dev = 0
+    go = w.get("go_live_month")
+    if go is None:
+        go = meta.get("default_go_live_month")
+    if go is None:
+        go = 3
+    curve = w.get("ramp_curve") or meta.get("default_ramp_curve") or "linear"
+    return int(dev), int(go), curve
+
+
+def _annual_growth(meta: dict) -> float:
+    """Resolve meta.annual_growth_rate, defaulting to 0.20 when absent (matches the
+    JS default in proposal-template.html: `m.annual_growth_rate != null ? ... : 0.20`)."""
+    g = meta.get("annual_growth_rate")
+    return float(g) if g is not None else 0.20
+
+
+def _ai_growth(meta: dict) -> float:
+    """AI growth: meta.ai_growth_rate when set, else falls back to annual growth."""
+    g = meta.get("ai_growth_rate")
+    return float(g) if g is not None else _annual_growth(meta)
 
 
 def wh_credits_per_hour(w: dict, pricing: Optional[dict] = None, cloud: Optional[str] = None) -> float:
@@ -531,6 +574,8 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
     ai_cr = float(meta.get("ai_credit_rate", cr) or cr)
     sr = float(meta.get("storage_rate_per_tb", 0) or 0)
     workloads = spec.get("workloads", []) or []
+    ag = _annual_growth(meta)
+    ai_g = _ai_growth(meta)
 
     sl_monthly = serverless_monthly_credits(spec)
     ai_monthly = ai_monthly_credits(spec, pricing)
@@ -557,18 +602,22 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
     core_total_yr = []
 
     for y in range(1, years + 1):
-        wh_credits = sum(
-            wh_monthly_credits(w, pricing, meta.get("cloud")) * 12 * ramp_multiplier_for_year(
-                int(w.get("dev_start_month", meta.get("default_dev_start_month", 2)) or 2),
-                int(w.get("go_live_month", meta.get("default_go_live_month", 11)) or 11),
-                w.get("ramp_curve", meta.get("default_ramp_curve", "linear")) or "linear",
-                y,
+        wh_credits = 0.0
+        for w in workloads:
+            dev, go, curve = _resolve_ramp_window(w, meta)
+            g = float(w["growth_rate"]) if w.get("growth_rate") is not None else ag
+            wh_credits += (
+                wh_monthly_credits(w, pricing, meta.get("cloud")) * 12
+                * ramp_multiplier_for_year(dev, go, curve, y, g)
             )
-            for w in workloads
-        )
-        def_ramp = default_ramp_multiplier_for_year(meta, y)
+        # Default-window ramp for the non-workload categories. Serverless / SPCS /
+        # OpenFlow / collaboration grow on meta.annual_growth_rate; AI grows on its
+        # own ai_growth_rate (falling back to annual when unset). Mirrors the JS
+        # defRamp / aiRamp split in computeYearData.
+        def_ramp = default_ramp_multiplier_for_year(meta, y, ag)
+        ai_ramp = default_ramp_multiplier_for_year(meta, y, ai_g)
         sl_credits = sl_monthly * 12 * def_ramp
-        ai_credits = ai_monthly * 12 * def_ramp
+        ai_credits = ai_monthly * 12 * ai_ramp
         st_tb = storage_active_tb(spec, y)
 
         compute_cost = wh_credits * cr

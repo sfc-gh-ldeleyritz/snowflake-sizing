@@ -21,6 +21,12 @@ in `assumptions[]` or `confirm_required[].item`):
 - **Citation prefixes** in visible text: `SOURCED:`, `ASSUMPTION:`,
   `REQUIRES_CONFIRMATION:`.
 - References to internal tools, systems, or methodology artefacts.
+- **Non-USD currency**: currency symbols `£`, `€`, `¥`, any converted figure
+  (e.g. `GBP 450,000`, `450k EUR`), or conversion phrasing (`convert to`,
+  `exchange rate`, `FX rate`, `indicative @`). All figures are USD and are
+  never converted. A `confirm_required` item may *name* a billing currency in
+  prose (e.g. "Confirm GBP billing currency with deal desk") as long as it
+  carries no converted figure.
 
 ## Where citation prefixes ARE allowed
 
