@@ -1,6 +1,25 @@
-# snowflake-sizing changelog
+# Changelog
 
-## [v2.14.0] — Python/JS growth parity, per-workload + AI growth, USD-only enforcement
+All notable changes to this project are documented here.
+
+---
+
+## [2.15.0] - 2026-06-04
+
+Aligned to plugin-scaffolder 3.1.0 canonical patterns.
+
+### Changed
+
+- **`commands/snowflake-sizing.md`** — Migrated to `skills/snowflake-sizing/SKILL.md`; `commands/` directory removed. Plugin now invoked via `$snowflake-sizing`. Drops the `commands` field from `plugin.json`.
+- **`hooks/hooks.json` — hook matchers lowercased**: `"Write"` → `"write"` to match the canonical tool names the model emits.
+
+### Added
+
+- **`.cortex-plugin/plugin.json`** — Dual manifest so the plugin resolves under both the CoCo Desktop and SDK/CLI loaders.
+
+---
+
+## [2.14.0] - Python/JS growth parity, per-workload + AI growth, USD-only enforcement
 
 ### Fixed
 
@@ -76,7 +95,7 @@
 
 ---
 
-## [v2.13.6] — Move OpenFlow runtime pricing into master spec; fix credits vs dollars
+## [2.13.6] - Move OpenFlow runtime pricing into master spec; fix credits vs dollars
 
 ### Fixed
 
@@ -109,7 +128,7 @@
 
 ---
 
-## [v2.13.5] — Fix silent $0 billing for cortex_code and SPCS; expand test coverage
+## [2.13.5] - Fix silent $0 billing for cortex_code and SPCS; expand test coverage
 
 ### Fixed
 
@@ -137,7 +156,7 @@
 
 ---
 
-## [v2.13.4] — Fix OpenFlow Runtime size and nodes not affecting pricing
+## [2.13.4] - Fix OpenFlow Runtime size and nodes not affecting pricing
 
 ### Fixed
 
@@ -151,7 +170,7 @@
 
 ---
 
-## [v2.13.3] — Fix OpenFlow group header resetting to $0 on warehouse size change
+## [2.13.3] - Fix OpenFlow group header resetting to $0 on warehouse size change
 
 ### Fixed
 
@@ -166,7 +185,7 @@
 
 ---
 
-## [v2.13.2] — Fix SPCS, Collaboration, and OpenFlow tabs not updating pricing
+## [2.13.2] - Fix SPCS, Collaboration, and OpenFlow tabs not updating pricing
 
 ### Fixed
 
@@ -193,7 +212,7 @@
 
 ---
 
-## [v2.13.1] — Fix PPTX "Serverless, AI & Other Compute" slide + export error handling
+## [2.13.1] - Fix PPTX "Serverless, AI & Other Compute" slide + export error handling
 
 ### Fixed
 
@@ -213,7 +232,7 @@
 
 ---
 
-## [v2.13.0] — Remove the automated `--pptx` path (PPTX is browser-only)
+## [2.13.0] - Remove the automated `--pptx` path (PPTX is browser-only)
 
 ### Removed
 
@@ -247,7 +266,7 @@
 
 ---
 
-## [v2.12.2] — Slide 7 update + embed-pptx-assets script
+## [2.12.2] - Slide 7 update + embed-pptx-assets script
 
 ### Added
 
@@ -267,7 +286,7 @@
 
 ---
 
-## [v2.12.1] — Fix "Click to add text" red-X placeholder on chart slides
+## [2.12.1] - Fix "Click to add text" red-X placeholder on chart slides
 
 ### Fixed
 
@@ -284,7 +303,7 @@
 
 ---
 
-## [v2.12.0] — Browser-side PPTX generation (no local server required)
+## [2.12.0] - Browser-side PPTX generation (no local server required)
 
 **"Export to PPTX"** now generates a Snowflake-branded `.pptx` directly in the
 browser using JSZip — no local render bridge, no Python runtime, no
@@ -381,7 +400,9 @@ and fixed in this release. The deck now opens in PowerPoint on Mac without any
   `charts.py`, `clone.py`, `inject.py`, `brand.py`. The browser-side generator
   replaces this entire package.
 
-## [v2.11.0] — Full compute-cost coverage in the PPTX deck (SPCS, OpenFlow, transfer, collaboration, replication)
+---
+
+## [2.11.0] - Full compute-cost coverage in the PPTX deck (SPCS, OpenFlow, transfer, collaboration, replication)
 
 The generated deck now reports the **entire** compute stack from the JSON spec,
 not just warehouse / serverless / AI / storage. `framework/compute_totals.py`
@@ -442,7 +463,9 @@ categories so TCV reconciles end-to-end.
   diverge on multi-year specs across *all* core categories — not just the new ones.
   This is unchanged by this release and tracked separately.
 
-## [v2.10.1] — Hand-authored "Understanding Your Snowflake Costs" slide preserved across re-bakes
+---
+
+## [2.10.1] - Hand-authored "Understanding Your Snowflake Costs" slide preserved across re-bakes
 
 The **Understanding Your Snowflake Costs** donor is now a hand-authored *One
 Column Layout* content slide — a title, a "Pricing & sizing basis" subtitle, a
@@ -473,7 +496,9 @@ already duplicated the committed donor verbatim.
   template (duplicated verbatim), not a master-sourced section divider. Behavior
   unchanged.
 
-## [v2.10.0] — One-click PPTX export via a local render bridge
+---
+
+## [2.10.0] - One-click PPTX export via a local render bridge
 
 The proposal HTML's **"Export to PPTX"** button can now generate a real
 `.pptx` in one click. A new stdlib-only bridge server, `scripts/serve-pptx.py`,
@@ -520,7 +545,9 @@ or template-rebake change.
   `scripts/serve-pptx.py`, click the button for a direct `.pptx`, with the JSON
   fallback when the service is down.
 
-## [v2.9.1] — Vertical floating-button stack in the proposal HTML
+---
+
+## [2.9.1] - Vertical floating-button stack in the proposal HTML
 
 Cosmetic refinement to `assets/templates/proposal-template.html`: the three
 floating action buttons that v2.4.0 / v2.5.0 laid out as a horizontal top-right
@@ -549,7 +576,9 @@ change — the `onclick` handlers (`exportForPptx()`, `saveSnapshot()`,
   individual `.print-btn, .save-btn, .pptx-btn` classes, so the whole stack
   stays hidden in printed / exported PDF output.
 
-## [v2.9.0] — PPTX cost-mix doughnut, scenario comparison, and per-year ACV totals
+---
+
+## [2.9.0] - PPTX cost-mix doughnut, scenario comparison, and per-year ACV totals
 
 Adds two toggleable slides to the native PPTX deck and surfaces per-year ACV
 (annual contract value) on the year-by-year slide. Everything renders on the
@@ -603,7 +632,9 @@ both new slides default ON via a `meta` flag.
   doughnut modes, the per-year ACV subtitle, and the scenario-engine consistency
   invariant; the visual-QA checklist and expected slide count are refreshed.
 
-## [v2.8.0] — PPTX deck styling & layout refinements
+---
+
+## [2.8.0] - PPTX deck styling & layout refinements
 
 Polishes the native PPTX deck after design review: de-blues the styled tables to
 white data rows, reorders the content slides to lead with costs, and drops the
@@ -660,7 +691,9 @@ safe-harbor and agenda toggles off), down from 9.
   order, white rows + navy headers + bold totals, no Executive Summary, zero
   `29B5E8` data cells); LibreOffice PDF eyeball; full suite **351 passed**.
 
-## [v2.7.0] — pricing freshness automation & per-sizing pinning
+---
+
+## [2.7.0] - pricing freshness automation & per-sizing pinning
 
 Keeps pricing as fresh as possible for every service with a cache fallback, and
 makes each delivered sizing reproducible. Calculator-backed rates auto-refresh
@@ -723,7 +756,9 @@ them; every sizing pins the exact pricing it used.
   (in sync: master = PDF = 2026-05-29), `refresh-seed.py --dry-run` (guards pass, seed
   untouched); full non-pptx suite **322 passed**, including 21 new freshness tests.
 
-## [v2.6.1] — pricing data refresh (Service Consumption Table, May 29, 2026)
+---
+
+## [2.6.1] - pricing data refresh (Service Consumption Table, May 29, 2026)
 
 Refreshes `assets/snowflake_pricing_master.json` against the latest Snowflake
 Service Consumption Table (Effective May 29, 2026). Gap analysis in
@@ -761,7 +796,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
   at render time directly from the master.
 - Validated: `verify-pricing-json.py --offline` (0 warnings); full suite 315 passed.
 
-## [v2.6.0] — live pricing from the Snowflake calculator
+---
+
+## [2.6.0] - live pricing from the Snowflake calculator
 
 ### Added
 
@@ -833,7 +870,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
   more complete than the calculator's model lists), keeping the Python first-load
   KPIs and the in-page JS recalculation in lockstep.
 
-## [v2.5.0] — native PPTX export (Snowflake-branded deck)
+---
+
+## [2.5.0] - native PPTX export (Snowflake-branded deck)
 
 ### Added
 
@@ -850,7 +889,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
 - **`hooks/sizing-guard.py`** updated to allow the new pptx source/script paths.
 - **`skills/snowflake-sizing/SKILL.md` and `commands/snowflake-sizing.md`** updated to document and wire the render-pptx sub-skill and the `--pptx` flag.
 
-## [v2.4.0] — remove one-click Download PDF; native Print is the sole PDF path
+---
+
+## [2.4.0] - remove one-click Download PDF; native Print is the sole PDF path
 
 ### Removed
 
@@ -888,7 +929,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
   pushing the donut column off the page edge) and `overflow: hidden` (clips any
   residual canvas overflow to its own cell rather than the table).
 
-## [v2.3.0] — editable per-workload sourcing notes
+---
+
+## [2.3.0] - editable per-workload sourcing notes
 
 ### Added
 
@@ -916,7 +959,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
   affordance is hidden in `@media print`, so a deleted note leaves no empty
   bordered block in the printed/exported PDF.
 
-## [v2.2.1] — Expected scenario locked to Year-by-Year TCV
+---
+
+## [2.2.1] - Expected scenario locked to Year-by-Year TCV
 
 ### Fixed
 
@@ -953,7 +998,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
   through the Node render harness and asserts `expected_scenario_tcv == kpi_tcv`
   (skips automatically when Node is unavailable). Full suite: 236 passed (+30).
 
-## [v2.2.0] — one-click Download PDF
+---
+
+## [2.2.0] - one-click Download PDF
 
 ### Added
 
@@ -1008,7 +1055,9 @@ Service Consumption Table (Effective May 29, 2026). Gap analysis in
   `::before` heading also gets `page-break-after: avoid` to prevent orphaned
   section titles. The native `@media print` per-tab pagination is unchanged.
 
-## [v2.1.0] — ACV KPI, editable scenarios, Cortex token helper, Save HTML
+---
+
+## [2.1.0] - ACV KPI, editable scenarios, Cortex token helper, Save HTML
 
 Three rounds of feedback addressed in this release: two items from internal review
 (`temp/feedback.md`) and three from a Gong demo session with Joel Brunger.
@@ -1193,11 +1242,15 @@ The Marks & Spencer sizing run surfaced five distinct in-flight failures, all in
 
 - The em-dash hook scans HTML source bytes; em-dashes that land inside JSON-encoded strings in the embedded `SIZING_SPEC` are written as `\u2014` escapes by `json.dumps` (correct ASCII-safe encoding for JS embedding) and therefore are not visible to the byte-level scan. A literal em-dash in customer-facing prose still gets caught at the evidence-md stage (where transcripts are scanned pre-paste). This split is by existing design; no change in this release.
 
-## [v1.9.1] — Marks & Spencer retrospective: tool-name, Gong SQL, render-time hook bypass, doc-AI placeholder ergonomics
+---
+
+## [1.9.1] - Marks & Spencer retrospective: tool-name, Gong SQL, render-time hook bypass, doc-AI placeholder ergonomics
 
 The Marks & Spencer sizing run surfaced five distinct in-flight failures — see the original entry below for full detail. This release closed all five at the source.
 
-## [v1.9.0] — Speed, error-prevention, and hooks consolidation
+---
+
+## [1.9.0] - Speed, error-prevention, and hooks consolidation
 
 The previous-session retrospective on the Momentum Group sizing run identified four classes of in-flight correction, all traceable to four root causes: (1) hand-assembled JSON dicts with no skeleton, (2) post-write rather than pre-write validation, (3) HTML template hard-derefs of optional schema fields, and (4) JS-vs-Python TCV drift from divergent storage formulas. This release closes all four classes and additionally fans out the research phase into three parallel specialists.
 
@@ -1244,7 +1297,9 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 - `scripts/spec-validate.py`, `scripts/_schema_loader.py` docstrings, `framework/sizing_spec_schema.json` description string, and `references/content-hygiene.md` still reference the retired hook filenames in their prose. These are doc-only references; they do not affect runtime behaviour. Cleanup in a follow-up release.
 - The full TCV (including SPCS / OpenFlow / Replication / Transfer / Collab) is still JS-computed at render time; spec-prepare's `computed_totals` covers only the four "core" categories. Porting the remaining math to Python would let JS read the entire TCV from `computed_totals` directly. Tracked as a future enhancement.
 
-## [v1.8.0] — Pricing JSON verification and label fixes (May 2026 consumption table)
+---
+
+## [1.8.0] - Pricing JSON verification and label fixes (May 2026 consumption table)
 
 ### Fixed
 
@@ -1261,7 +1316,9 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 
 - **`assets/snowflake_pricing_master.json` metadata bumped.** `version` 2.2 → 2.3, `last_updated` updated to 2026-05-27 to reflect the May 12 2026 consumption table.
 
-## [v1.7.0] — Defense-in-depth fix for the silent `$0` AI-key bug
+---
+
+## [1.7.0] - Defense-in-depth fix for the silent `$0` AI-key bug
 
 ### Fixed
 
@@ -1280,7 +1337,9 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 - **`scripts/html-render-check.mjs`** — Node 18+ sidecar that runs the proposal HTML's inline `<script>` block in a stubbed-DOM `vm` context. Returns `{ok, kpi_tcv, error, stack}` JSON. Catches missing-template-required-key errors that the Python math gate cannot.
 - **Regression test confirming all four gates work for the same bug class.** Negative case: deliberately deleting `ai_cortex.document_ai` from a known-good spec / HTML now produces clear, named-key errors from `spec-validate.py`, the PostToolUse hook, AND the JS render check (with stack frame at `populateAIPanel`). Positive case: all four shipped specs (`gsmai`, `light-and-wonder`, `travelodge`, `examples/acme-financial`) continue to pass with zero false positives.
 
-## [v1.6.0] — Plugin layout aligned to monorepo conventions
+---
+
+## [1.6.0] - Plugin layout aligned to monorepo conventions
 
 ### Changed
 
@@ -1319,7 +1378,7 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 
 ---
 
-## [v1.5.0] — Default ramp window: dev_start=0, go_live=3
+## [1.5.0] - Default ramp window: dev_start=0, go_live=3
 
 ### Changed
 
@@ -1339,7 +1398,7 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 
 ---
 
-## [v1.4.0] — Canonical JSON Schema + PostToolUse validation hook
+## [1.4.0] - Canonical JSON Schema + PostToolUse validation hook
 
 ### Added
 
@@ -1353,7 +1412,7 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 
 ---
 
-## [v1.3.0] — Spec validator, HTML render-check, SKILL.md schema hardening
+## [1.3.0] - Spec validator, HTML render-check, SKILL.md schema hardening
 
 ### Added
 
@@ -1372,7 +1431,7 @@ The previous-session retrospective on the Momentum Group sizing run identified f
 
 ---
 
-## [v1.2.0] — GSMAi post-run fixes: correctness, hygiene, parallelism
+## [1.2.0] - GSMAi post-run fixes: correctness, hygiene, parallelism
 
 ### Fixed
 
