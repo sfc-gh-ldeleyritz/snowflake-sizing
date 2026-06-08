@@ -1,6 +1,6 @@
 # snowflake-sizing
 
-Generate accurate, defensible Snowflake consumption estimates and interactive customer-facing HTML and PPTX proposals. 
+Generate accurate, defensible Snowflake consumption estimates and interactive customer-facing HTML and PPTX proposals.
 
 [Watch A Demo](https://drive.google.com/file/d/1033ygzN8EMsBgfkw3aFmfGW3UeiF15-0/view?usp=drive_link)
 
@@ -33,6 +33,20 @@ The skill performs mandatory live research against Glean and Gong. It will hard-
 ```bash
 /snowflake-sizing temp/acme-discovery-notes.txt --customer "ACME Corp" --years 3 --edition Enterprise --region "AWS Europe (London)"
 ```
+
+## Sizing Questionnaire
+
+A pre-built questionnaire helps you gather the inputs needed for an accurate sizing.
+Two formats are available in Excel and Word
+
+| Format          | Local file                                            | Hosted version                                                                                                                                     |
+| --------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Excel** | [`questionnaire/snowflake-sizing-questionnaire.xlsx`](questionnaire/snowflake-sizing-questionnaire.xlsx) | [Google Sheets](https://docs.google.com/spreadsheets/d/1rkDlTq3SCz7Sd96IRNM88Dv4N3Ev4xgr/edit?gid=1057630272#gid=1057630272)                          |
+| **Word**  | [`questionnaire/snowflake-sizing-questionnaire.docx`](questionnaire/snowflake-sizing-questionnaire.docx) | [Google Docs](https://docs.google.com/document/d/1WWWymiDfp6kUJuHki3-qkiNcsPpWq4Ad/edit?usp=drive_link&ouid=100681408935362139529&rtpof=true&sd=true) |
+
+![Questionnaire screenshot](image/README/questionnaire.png)
+
+Fill out the questionnaire with the customer, export or copy the completed answers to a text file, and pass that file as the `<context-file>` argument to `/snowflake-sizing`.
 
 ## Output
 

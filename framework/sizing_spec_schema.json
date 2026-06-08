@@ -120,6 +120,31 @@
           "minimum": 0
         }
       }
+    },
+    "cortex_code_surface": {
+      "description": "One Cortex Code surface (CLI / Snowsight / Desktop).",
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "developers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queries_per_dev_per_day": {
+          "type": "number",
+          "minimum": 0
+        },
+        "avg_tokens_per_query": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
     }
   },
   "properties": {
@@ -806,14 +831,15 @@
           }
         },
         "cortex_code": {
+          "description": "Cortex Code. Two accepted shapes: three-surface {cli,snowsight,desktop} (canonical for new specs) and legacy flat {developers,queries_per_dev_per_day,avg_tokens_per_query} (auto-migrated onto `cli` by the template at render time). compute_totals.py reads surfaces first, then falls back to flat.",
           "type": "object",
-          "required": [
-            "enabled"
-          ],
           "additionalProperties": false,
           "properties": {
             "enabled": {
               "type": "boolean"
+            },
+            "model": {
+              "type": "string"
             },
             "developers": {
               "type": "integer",
@@ -826,6 +852,15 @@
             "avg_tokens_per_query": {
               "type": "number",
               "minimum": 0
+            },
+            "cli": {
+              "$ref": "#/definitions/cortex_code_surface"
+            },
+            "snowsight": {
+              "$ref": "#/definitions/cortex_code_surface"
+            },
+            "desktop": {
+              "$ref": "#/definitions/cortex_code_surface"
             }
           }
         },

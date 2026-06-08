@@ -4,6 +4,64 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.16.0] - 2026-06-08
+
+### Added
+
+- **Word (.docx) questionnaire generator** (`questionnaire/tools/build_questionnaire_docx.py`)
+  — a customer-facing Word version of the sizing questionnaire, complementing the
+  existing Excel generator (`build_questionnaire_xlsx.py`). Produces
+  `questionnaire/snowflake-sizing-questionnaire.docx` from the same 45-question,
+  11-category data set and the same Snowflake brand palette. Includes a branded
+  cover page (logo, title, "How to answer" guidance, plugin version read from this
+  CHANGELOG), then a single table with blue category-divider rows, a repeating
+  dark-blue header, alternating row tint, and empty blue-shaded **Answer** and
+  **Comments** cells. Since Word has no live dropdowns, enum and unit hints are
+  rendered as grey guidance text inside each Answer cell (e.g. "Options: AWS /
+  Azure / Google Cloud"). The internal Appendix A field mapping and the "Reason for
+  Impact" column are omitted from the customer-facing document. Requires
+  `python-docx`. Re-run with `python3 questionnaire/tools/build_questionnaire_docx.py`.
+
+---
+
+## [2.15.1] - 2026-06-08
+
+### Fixed
+
+- **Schema rejected the canonical three-surface `cortex_code` shape.**
+  `framework/sizing_spec_schema.json` defined `ai_cortex.cortex_code` with only
+  the legacy flat fields (`developers`, `queries_per_dev_per_day`,
+  `avg_tokens_per_query`), `required: ["enabled"]`, and
+  `additionalProperties: false`. But `compute_totals.py` (`cortex_code` →
+  iterates `cli`/`snowsight`/`desktop`) and the proposal template both consume
+  the three-surface form, and `references/ai-feature-defaults.md` instructs new
+  specs to emit it. As a result a three-surface spec **failed schema validation**
+  in `scripts/spec-prepare.py` and was blocked by the `hooks/sizing-guard.py`
+  PreToolUse hook — the documented workflow was un-runnable, and it only worked
+  in practice because every committed spec still used the flat form. The
+  `cortex_code` schema now accepts **both** shapes (plus an optional top-level
+  `model`), with `enabled` made optional so a pure three-surface spec validates;
+  it remains `additionalProperties: false` so typos are still caught. Added a
+  reusable `cortex_code_surface` definition for the per-surface objects.
+  Backward-compatible: all existing flat fixtures, the example, and the skeleton
+  placeholder (`{ "enabled": false }`) still validate.
+
+### Changed
+
+- **Docs** — `references/field-names.md` gains a "Cortex Code shape (two accepted
+  forms)" section documenting the canonical three-surface form (`cli` / `snowsight`
+  / `desktop` + optional `model`) and the legacy flat form (migrated onto `cli`
+  by the template at render time).
+
+### Tests
+
+- **New schema-conformance regression** (`TestCortexCodeShapes` in
+  `test_schema_conformance.py`) — locks in that the flat form, the three-surface
+  form, and the `{ "enabled": false }` skeleton placeholder all validate, while an
+  extra key on either the `cortex_code` object or a surface object is rejected.
+
+---
+
 ## [2.15.0] - 2026-06-04
 
 Aligned to plugin-scaffolder 3.1.0 canonical patterns.
