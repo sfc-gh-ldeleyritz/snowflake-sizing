@@ -86,6 +86,22 @@ ai_classify, ai_sentiment, ai_summarize,
 ai_translate, ai_extract, ai_transcribe
 ```
 
+## Cortex Code shape (two accepted forms)
+
+The schema accepts both shapes; the renderer and `compute_totals.py` read the
+three surfaces first and fall back to the flat fields.
+
+- **Three-surface (canonical — emit this for new specs):**
+  `cortex_code.{cli, snowsight, desktop}`, each
+  `{ enabled, developers, queries_per_dev_per_day, avg_tokens_per_query }`,
+  plus an optional top-level `cortex_code.model`.
+- **Legacy flat (still valid):** `cortex_code.{ enabled, developers,
+  queries_per_dev_per_day, avg_tokens_per_query }`. The template migrates these
+  onto `cli` at render time. Existing fixtures use this form.
+
+Both are closed objects (`additionalProperties: false`) — no other keys allowed.
+See `references/ai-feature-defaults.md` for the per-surface usage defaults.
+
 ## Warehouse size enums
 
 Workloads / collaboration accounts use abbreviations: `XS, S, M, L, XL, 2XL,
