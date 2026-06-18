@@ -1,0 +1,121 @@
+name: Pricing refresh
+
+# Keeps the committed pricing data fresh (Decisions 3, 4, 6):
+#   - seed-refresh : guarded auto-refresh + commit of the live-calculator seed.
+#   - pdf-freshness: detect-only staleness check of the legal PDF vs the master,
+#                    surfaced as a GitHub issue (alerting is CI-only — there are
+#                    no render-time staleness warnings).
+#
+# Runs weekly and on demand. Both jobs are independent so a failure in one does
+# not block the other.
+
+on:
+  schedule:
+    # Mondays 06:17 UTC (off-the-hour to dodge GitHub's top-of-hour load).
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Seed refresh: fetch + guard + diff but do not commit."
+        type: boolean
+        default: false
+
+# Avoid overlapping scheduled + manual runs racing on the same commit.
+concurrency:
+  group: pricing-refresh
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────── #
+  # Guarded auto-refresh of assets/live_pricing_seed.json (calculator-backed
+  # services). refresh-seed.py only writes when the fresh fetch PASSES the same
+  # structural+range guards as verify-pricing-json AND its content differs from
+  # the committed seed; otherwise the last-good seed is kept.
+  # ──────────────────────────────────────────────────────────────────────── #
+  seed-refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # commit the refreshed seed to the default branch
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh seed (guarded)
+        run: |
+          python3 scripts/refresh-seed.py ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+
+      - name: Commit refreshed seed if it changed
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          if git diff --quiet -- assets/live_pricing_seed.json; then
+            echo "seed unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/live_pricing_seed.json
+          git commit -m "chore(pricing): auto-refresh live calculator seed [skip ci]"
+          # Pushes to the branch the workflow ran on (the default branch for a
+          # schedule). If branch protection blocks bot pushes, switch this to a
+          # peter-evans/create-pull-request step instead.
+          git push origin HEAD:${{ github.ref_name }}
+
+  # ──────────────────────────────────────────────────────────────────────── #
+  # Detect-only freshness check of the legal Service Consumption Table PDF
+  # against assets/snowflake_pricing_master.json. NEVER edits the master.
+  # exit 0 = in sync, 1 = PDF newer (open/append issue), 2 = check skipped (warn).
+  # ──────────────────────────────────────────────────────────────────────── #
+  pdf-freshness:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write     # open / comment on the staleness tracking issue
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install poppler-utils (pdftotext)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+
+      - name: Check PDF freshness
+        id: pdfcheck
+        run: |
+          set +e
+          python3 scripts/check-pdf-freshness.py > pdf-report.txt 2>&1
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat pdf-report.txt
+          exit 0
+
+      - name: Open or update staleness issue
+        if: steps.pdfcheck.outputs.code == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Pricing master is stale vs the legal PDF"
+          {
+            echo "The scheduled pricing-freshness check found the legal *Service Consumption Table* PDF is **newer** than the committed \`assets/snowflake_pricing_master.json\`."
+            echo
+            echo '```'
+            cat pdf-report.txt
+            echo '```'
+            echo
+            echo "Detect-only: a human must hand-update the master (metadata.effective_date, ai_features token rates, serverless, etc.) from the new PDF."
+            echo "_Source: workflow \`${{ github.workflow }}\` run [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})._"
+          } > issue-body.md
+          NUM=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number --jq '.[0].number // empty')
+          if [ -n "$NUM" ]; then
+            echo "Appending to existing issue #$NUM"
+            gh issue comment "$NUM" --body-file issue-body.md
+          else
+            echo "Opening new staleness issue"
+            gh issue create --title "$TITLE" --body-file issue-body.md
+          fi
+
+      - name: Warn if the check could not run
+        if: steps.pdfcheck.outputs.code == '2'
+        run: echo "::warning title=PDF freshness::check-pdf-freshness.py could not complete (exit 2); see logs."

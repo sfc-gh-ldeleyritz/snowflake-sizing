@@ -1,0 +1,229 @@
+{
+  "meta": {
+    "customer": "",
+    "edition": "Enterprise",
+    "cloud": "AWS",
+    "region": "",
+    "credit_rate": 0,
+    "ai_credit_rate": 0,
+    "storage_rate_per_tb": 0,
+    "hybrid_tables_storage_rate_per_gb": 0,
+    "contract_years": 1,
+    "generated_date": "",
+    "default_ramp_curve": "linear",
+    "annual_growth_rate": 0,
+    "ai_growth_rate": null
+  },
+  "workloads": [],
+  "serverless": {
+    "snowpipe": {
+      "enabled": false
+    },
+    "snowpipe_streaming": {
+      "enabled": false
+    },
+    "snowpipe_streaming_classic": {
+      "enabled": false
+    },
+    "serverless_tasks": {
+      "enabled": false
+    },
+    "serverless_tasks_flex": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "serverless_alerts": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "clustered_tables": {
+      "enabled": false
+    },
+    "materialized_views": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "search_optimization": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "query_acceleration": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "replication": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "backup": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "failsafe_recovery": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "data_quality_monitoring": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "trust_center": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "table_optimization": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "storage_lifecycle_policy": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "hybrid_tables_requests": {
+      "enabled": false
+    },
+    "copy_files": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "automated_refresh": {
+      "enabled": false
+    },
+    "organization_usage": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "sensitive_data_classification": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "open_catalog": {
+      "enabled": false
+    },
+    "logging": {
+      "enabled": false
+    },
+    "telemetry_data_ingest": {
+      "enabled": false
+    },
+    "archive_storage_retrieval": {
+      "enabled": false
+    },
+    "archive_storage_write": {
+      "enabled": false
+    }
+  },
+  "ai_cortex": {
+    "cortex_complete": {
+      "enabled": false
+    },
+    "cortex_agents": {
+      "enabled": false
+    },
+    "snowflake_intelligence": {
+      "enabled": false
+    },
+    "cortex_code": {
+      "enabled": false
+    },
+    "cortex_analyst": {
+      "enabled": false
+    },
+    "cortex_search": {
+      "enabled": false
+    },
+    "cortex_fine_tuning": {
+      "enabled": false
+    },
+    "cortex_functions": {
+      "ai_classify": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_sentiment": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_summarize": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_translate": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_extract": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_transcribe": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      }
+    },
+    "embeddings": {
+      "enabled": false
+    },
+    "document_ai": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "ai_parse_document_layout": {
+      "enabled": false,
+      "pages_per_month": 0
+    },
+    "ai_parse_document_ocr": {
+      "enabled": false,
+      "pages_per_month": 0
+    }
+  },
+  "storage": {
+    "standard": {
+      "raw_tb_year1": 0,
+      "compression_ratio": 1,
+      "annual_growth_pct": 0,
+      "time_travel_days": 1,
+      "churn_rate_pct": 0
+    }
+  },
+  "assumptions": [],
+  "confirm_required": [],
+  "spcs": {
+    "enabled": false,
+    "instances": []
+  },
+  "openflow": {
+    "enabled": false,
+    "instances": []
+  },
+  "openflow_oracle": {
+    "enabled": false,
+    "licensed_cores": 0
+  },
+  "postgres": {
+    "enabled": false,
+    "instances": []
+  },
+  "data_transfer": {
+    "enabled": false,
+    "pattern": "same_region",
+    "tb_per_month": 0
+  },
+  "privatelink": {
+    "enabled": false,
+    "endpoints": 0,
+    "tb_processed_monthly": 0
+  },
+  "collaboration": {
+    "accounts": []
+  },
+  "replication": {
+    "enabled": false
+  },
+  "scenarios": {
+    "conservative": { "growth_pct": 10, "curve": "slow",   "go_live_shift":  1 },
+    "expected":     { "growth_pct": 20, "curve": "linear", "go_live_shift":  0 },
+    "aggressive":   { "growth_pct": 35, "curve": "fast",   "go_live_shift": -1 }
+  },
+  "_skeleton_marker": "Generated from framework/sizing_spec_schema.json by scripts/regen_skeleton.py. Do not edit by hand; rerun the script."
+}

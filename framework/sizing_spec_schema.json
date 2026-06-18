@@ -1,0 +1,1434 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SIZING_SPEC",
+  "description": "Canonical schema for the snowflake-sizing SIZING_SPEC JSON artifact produced by the snowflake-sizing skill. Consumed by hooks/sizing-guard.py on every Write to sizings/*.json.",
+  "type": "object",
+  "required": [
+    "meta",
+    "workloads",
+    "serverless",
+    "ai_cortex",
+    "storage",
+    "assumptions",
+    "confirm_required"
+  ],
+  "additionalProperties": true,
+  "definitions": {
+    "source_field": {
+      "type": "string",
+      "enum": [
+        "SOURCED",
+        "ASSUMPTION",
+        "ESTIMATED"
+      ]
+    },
+    "ramp_curve": {
+      "type": "string",
+      "enum": [
+        "fastest",
+        "fast",
+        "linear",
+        "slow",
+        "slowest"
+      ]
+    },
+    "wh_size_abbreviated": {
+      "description": "Abbreviated warehouse size used in workloads and collaboration.reader_accounts.",
+      "type": "string",
+      "enum": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        "2XL",
+        "3XL",
+        "4XL",
+        "5XL",
+        "6XL"
+      ]
+    },
+    "wh_size_full": {
+      "description": "Full warehouse size name required for OpenFlow instances (JS billing lookup uses full string).",
+      "type": "string",
+      "enum": [
+        "X-Small",
+        "Small",
+        "Medium",
+        "Large",
+        "X-Large",
+        "2X-Large",
+        "3X-Large",
+        "4X-Large"
+      ]
+    },
+    "serverless_compute": {
+      "description": "Basic serverless feature with enabled flag and compute hours.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "compute_hours_monthly"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "compute_hours_monthly": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "serverless_compute_sourced": {
+      "description": "Serverless feature with sourcing metadata.",
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "compute_hours_monthly": {
+          "type": "number",
+          "minimum": 0
+        },
+        "source": {
+          "$ref": "#/definitions/source_field"
+        },
+        "justification": {
+          "type": "string"
+        }
+      }
+    },
+    "cortex_function": {
+      "description": "AI_ SQL function under ai_cortex.cortex_functions.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "tokens_M_monthly"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "tokens_M_monthly": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "cortex_code_surface": {
+      "description": "One Cortex Code surface (CLI / Snowsight / Desktop).",
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "developers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queries_per_dev_per_day": {
+          "type": "number",
+          "minimum": 0
+        },
+        "avg_tokens_per_query": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "description": "Deal metadata: customer identity, Snowflake configuration, pricing rates, and contract terms.",
+      "type": "object",
+      "required": [
+        "customer",
+        "edition",
+        "cloud",
+        "region",
+        "credit_rate",
+        "ai_credit_rate",
+        "storage_rate_per_tb",
+        "hybrid_tables_storage_rate_per_gb",
+        "contract_years",
+        "generated_date",
+        "default_ramp_curve",
+        "annual_growth_rate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "type": "string"
+        },
+        "edition": {
+          "type": "string",
+          "enum": [
+            "Standard",
+            "Enterprise",
+            "Business Critical",
+            "VPS"
+          ]
+        },
+        "cloud": {
+          "type": "string",
+          "enum": [
+            "AWS",
+            "Azure",
+            "GCP"
+          ]
+        },
+        "region": {
+          "type": "string"
+        },
+        "credit_rate": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "ai_credit_rate": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "storage_rate_per_tb": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "hybrid_tables_storage_rate_per_gb": {
+          "type": "number",
+          "minimum": 0
+        },
+        "contract_years": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "generated_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "ISO 8601 date string YYYY-MM-DD."
+        },
+        "pdf_version": {
+          "type": "string"
+        },
+        "default_ramp_curve": {
+          "$ref": "#/definitions/ramp_curve"
+        },
+        "default_dev_start_month": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "default_go_live_month": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "annual_growth_rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ai_growth_rate": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Optional annual growth rate for AI/Cortex consumption. null (or absent) means AI ramps on meta.annual_growth_rate. Mirrors the JS rampMultiplierForYear AI path."
+        },
+        "list_credit_rate": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Pre-discount credit rate; present when discount block is active."
+        },
+        "version_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "discount": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "mode"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "percent",
+                "rate"
+              ]
+            },
+            "percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "rate": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "workloads": {
+      "description": "Virtual warehouse workloads. MUST be 'workloads' \u2014 never 'warehouses'.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "size",
+          "hours_per_day",
+          "days_per_month",
+          "clusters_min",
+          "clusters_max",
+          "auto_suspend_seconds",
+          "source",
+          "ramp_curve",
+          "dev_start_month",
+          "go_live_month"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "size": {
+            "$ref": "#/definitions/wh_size_abbreviated"
+          },
+          "hours_per_day": {
+            "type": "number",
+            "minimum": 0
+          },
+          "days_per_month": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 31
+          },
+          "clusters_min": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clusters_max": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "auto_suspend_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source": {
+            "$ref": "#/definitions/source_field"
+          },
+          "justification": {
+            "type": "string"
+          },
+          "ramp_curve": {
+            "$ref": "#/definitions/ramp_curve"
+          },
+          "dev_start_month": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "go_live_month": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "growth_rate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Optional per-workload annual growth rate. When absent, this workload ramps on meta.annual_growth_rate. Precedence in the JS render is scenario growthOverride > workload growth_rate > meta.annual_growth_rate."
+          },
+          "gen": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "Standard-warehouse generation: 1 = Gen1 (default), 2 = Gen2 (per-cloud rates). Ignored for snowpark warehouses."
+          },
+          "warehouse_type": {
+            "type": "string",
+            "enum": ["standard", "snowpark"],
+            "description": "Warehouse type: 'standard' (default) or 'snowpark' (Snowpark-Optimized)."
+          },
+          "memory_config": {
+            "type": "string",
+            "description": "Snowpark-Optimized memory configuration (e.g. MEMORY_1X, MEMORY_1X_x86, MEMORY_16X). Only used when warehouse_type='snowpark'."
+          }
+        }
+      }
+    },
+    "serverless": {
+      "description": "Snowflake serverless features. Each sub-key must be present (set enabled:false if not used).",
+      "type": "object",
+      "required": [
+        "snowpipe",
+        "snowpipe_streaming",
+        "snowpipe_streaming_classic",
+        "serverless_tasks",
+        "serverless_tasks_flex",
+        "serverless_alerts",
+        "clustered_tables",
+        "materialized_views",
+        "search_optimization",
+        "query_acceleration",
+        "replication",
+        "backup",
+        "failsafe_recovery",
+        "data_quality_monitoring",
+        "trust_center",
+        "table_optimization",
+        "storage_lifecycle_policy",
+        "hybrid_tables_requests",
+        "copy_files",
+        "automated_refresh",
+        "organization_usage",
+        "sensitive_data_classification",
+        "open_catalog",
+        "logging",
+        "telemetry_data_ingest",
+        "archive_storage_retrieval",
+        "archive_storage_write"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "snowpipe": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "files_per_month": {
+              "type": "number",
+              "minimum": 0
+            },
+            "gb_per_month": {
+              "type": "number",
+              "minimum": 0
+            },
+            "source": {
+              "$ref": "#/definitions/source_field"
+            },
+            "justification": {
+              "type": "string"
+            }
+          }
+        },
+        "snowpipe_streaming": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "uncompressed_gb_per_month": {
+              "type": "number",
+              "minimum": 0
+            },
+            "source": {
+              "$ref": "#/definitions/source_field"
+            },
+            "justification": {
+              "type": "string"
+            }
+          }
+        },
+        "snowpipe_streaming_classic": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "client_instances": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "serverless_tasks": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "compute_hours_monthly": {
+              "type": "number",
+              "minimum": 0
+            },
+            "source": {
+              "$ref": "#/definitions/source_field"
+            },
+            "justification": {
+              "type": "string"
+            }
+          }
+        },
+        "serverless_tasks_flex": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "serverless_alerts": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "clustered_tables": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "compute_hours_monthly": {
+              "type": "number",
+              "minimum": 0
+            },
+            "source": {
+              "$ref": "#/definitions/source_field"
+            },
+            "justification": {
+              "type": "string"
+            }
+          }
+        },
+        "materialized_views": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "search_optimization": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "query_acceleration": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "replication": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "backup": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "failsafe_recovery": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "data_quality_monitoring": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "trust_center": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "table_optimization": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "storage_lifecycle_policy": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "hybrid_tables_requests": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "reads_gb_monthly": {
+              "type": "number",
+              "minimum": 0
+            },
+            "writes_gb_monthly": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "copy_files": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "automated_refresh": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "files_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "organization_usage": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "sensitive_data_classification": {
+          "$ref": "#/definitions/serverless_compute"
+        },
+        "open_catalog": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "requests_per_month_M": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "file_batches_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "telemetry_data_ingest": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "gb_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "archive_storage_retrieval": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "files_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "archive_storage_write": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "files_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "ai_cortex": {
+      "description": "Snowflake Cortex AI features.",
+      "type": "object",
+      "required": [
+        "cortex_complete",
+        "cortex_agents",
+        "snowflake_intelligence",
+        "cortex_code",
+        "cortex_analyst",
+        "cortex_search",
+        "cortex_fine_tuning",
+        "cortex_functions",
+        "embeddings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cortex_complete": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "model": {
+              "type": "string"
+            },
+            "monthly_input_tokens_M": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Value in millions of tokens. WRONG: 'monthly_tokens_input'."
+            },
+            "monthly_output_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "cortex_agents": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "monthly_input_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            },
+            "monthly_output_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            },
+            "monthly_users": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sessions_per_user_per_day": {
+              "type": "number",
+              "minimum": 0
+            },
+            "messages_per_session": {
+              "type": "number",
+              "minimum": 0
+            },
+            "avg_input_tokens_per_message": {
+              "type": "number",
+              "minimum": 0
+            },
+            "avg_output_tokens_per_message": {
+              "type": "number",
+              "minimum": 0
+            },
+            "working_days_per_month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "model": {
+              "type": "string"
+            },
+            "monthly_cache_write_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            },
+            "monthly_cache_read_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "snowflake_intelligence": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "monthly_input_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            },
+            "monthly_output_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            },
+            "monthly_users": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sessions_per_user_per_day": {
+              "type": "number",
+              "minimum": 0
+            },
+            "messages_per_session": {
+              "type": "number",
+              "minimum": 0
+            },
+            "avg_input_tokens_per_message": {
+              "type": "number",
+              "minimum": 0
+            },
+            "avg_output_tokens_per_message": {
+              "type": "number",
+              "minimum": 0
+            },
+            "working_days_per_month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "model": {
+              "type": "string"
+            },
+            "monthly_cache_write_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            },
+            "monthly_cache_read_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "cortex_code": {
+          "description": "Cortex Code. Two accepted shapes: three-surface {cli,snowsight,desktop} (canonical for new specs) and legacy flat {developers,queries_per_dev_per_day,avg_tokens_per_query} (auto-migrated onto `cli` by the template at render time). compute_totals.py reads surfaces first, then falls back to flat.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "model": {
+              "type": "string"
+            },
+            "developers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "queries_per_dev_per_day": {
+              "type": "number",
+              "minimum": 0
+            },
+            "avg_tokens_per_query": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cli": {
+              "$ref": "#/definitions/cortex_code_surface"
+            },
+            "snowsight": {
+              "$ref": "#/definitions/cortex_code_surface"
+            },
+            "desktop": {
+              "$ref": "#/definitions/cortex_code_surface"
+            }
+          }
+        },
+        "cortex_analyst": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "monthly_messages": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "cortex_search": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "indexed_data_gb": {
+              "type": "number",
+              "minimum": 0,
+              "description": "WRONG field name: 'indexed_gb'. Must be 'indexed_data_gb'."
+            }
+          }
+        },
+        "document_ai": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "compute_hours_monthly": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "ai_parse_document_layout": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "pages_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "ai_parse_document_ocr": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "pages_per_month": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "cortex_fine_tuning": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "training_tokens_M": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "cortex_functions": {
+          "description": "AI_ SQL functions (ai_classify, ai_sentiment, etc.). WRONG: placing these directly under ai_cortex.",
+          "type": "object",
+          "required": [
+            "ai_classify",
+            "ai_sentiment",
+            "ai_summarize",
+            "ai_translate",
+            "ai_extract",
+            "ai_transcribe"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "ai_classify": {
+              "$ref": "#/definitions/cortex_function"
+            },
+            "ai_sentiment": {
+              "$ref": "#/definitions/cortex_function"
+            },
+            "ai_summarize": {
+              "$ref": "#/definitions/cortex_function"
+            },
+            "ai_translate": {
+              "$ref": "#/definitions/cortex_function"
+            },
+            "ai_extract": {
+              "$ref": "#/definitions/cortex_function"
+            },
+            "ai_transcribe": {
+              "$ref": "#/definitions/cortex_function"
+            }
+          }
+        },
+        "embeddings": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "tokens_M_monthly": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "spcs": {
+      "description": "Snowpark Container Services compute pools.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "instances"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "openflow": {
+      "description": "Snowflake Open Catalog / Openflow CDC pipelines. warehouse_size MUST use full names (X-Small, Small, \u2026), not abbreviations.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "instances"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "warehouse_size"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "warehouse_size": {
+                "$ref": "#/definitions/wh_size_full"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "openflow_oracle": {
+      "description": "Openflow Oracle CDC licensing.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "licensed_cores"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "licensed_cores": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "postgres": {
+      "description": "Postgres CDC / replication instances.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "instances"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "storage": {
+      "description": "Storage tiers. WRONG path: storage.raw_tb \u2014 must be storage.standard.raw_tb_year1.",
+      "type": "object",
+      "required": [
+        "standard"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "standard": {
+          "type": "object",
+          "required": [
+            "raw_tb_year1",
+            "compression_ratio",
+            "annual_growth_pct",
+            "time_travel_days",
+            "churn_rate_pct"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "raw_tb_year1": {
+              "type": "number",
+              "minimum": 0
+            },
+            "compression_ratio": {
+              "type": "number",
+              "minimum": 1
+            },
+            "annual_growth_pct": {
+              "type": "number",
+              "minimum": 0
+            },
+            "time_travel_days": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 90,
+              "description": "0\u20131 for Standard; up to 90 for Enterprise/Business Critical."
+            },
+            "churn_rate_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "source": {
+              "$ref": "#/definitions/source_field"
+            },
+            "justification": {
+              "type": "string"
+            }
+          }
+        },
+        "hybrid_tables": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "gb_year1"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "gb_year1": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "archive": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "tb_year1"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "tb_year1": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "data_transfer": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "tb_per_month": {
+          "type": "number",
+          "minimum": 0
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Transfer pattern, e.g. 'same_region', 'cross_region', 'cross_cloud'."
+        }
+      }
+    },
+    "privatelink": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "endpoints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tb_processed_monthly": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "collaboration": {
+      "type": "object",
+      "required": [
+        "reader_accounts",
+        "native_apps",
+        "marketplace"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reader_accounts": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "warehouse_size": {
+              "$ref": "#/definitions/wh_size_abbreviated"
+            },
+            "hours_per_day": {
+              "type": "number",
+              "minimum": 0
+            },
+            "days_per_month": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 31
+            }
+          }
+        },
+        "native_apps": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "monthly_subscription": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "marketplace": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "monthly_subscription": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "assumptions": {
+      "description": "Human-readable assumptions list surfaced in the proposal.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confirm_required": {
+      "description": "Items requiring customer confirmation before the estimate is finalised.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item",
+          "impact_pct"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "type": "string"
+          },
+          "impact_pct": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Fractional cost impact if assumption is wrong, e.g. 0.15 = 15%."
+          }
+        }
+      }
+    },
+    "replication": {
+      "description": "Top-level cross-region replication config (optional). Distinct from serverless.replication compute hours.",
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "source_region": {
+          "type": "string"
+        },
+        "target_region": {
+          "type": "string"
+        },
+        "initial_TB": {
+          "type": "number",
+          "minimum": 0
+        },
+        "monthly_change_TB": {
+          "type": "number",
+          "minimum": 0
+        },
+        "replication_frequency": {
+          "type": "string",
+          "description": "Snowflake replication schedule, e.g. 'ONE_HOUR', 'FOUR_HOURS', 'ONE_DAY'."
+        },
+        "storage_growth_pct": {
+          "type": "number",
+          "description": "Whole-number annual percent, e.g. 25 = 25%.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "yoy_pct": {
+          "type": "number",
+          "description": "Whole-number annual percent, e.g. 25 = 25%.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "compute_credits_per_TB": {
+          "type": "number",
+          "minimum": 0
+        },
+        "replica_storage_per_tb_per_month": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ramp_curve": {
+          "$ref": "#/definitions/ramp_curve"
+        },
+        "dev_start_month": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "go_live_month": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "computed_totals": {
+      "description": "Authoritative full-stack TCV totals stamped by scripts/spec-prepare.py (framework/compute_totals.py): per-year cost arrays for warehouse compute, serverless, AI/Cortex, storage, and the other categories (SPCS, OpenFlow + OpenFlow-Oracle, data-transfer + PrivateLink, collaboration, replication), plus other_cost_per_year and core_year_total. The renderer recomputes these at render time from the pricing it loads; the renderer value is authoritative.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "pricing_snapshot": {
+      "description": "Provenance of the pricing data this sizing was built against, stamped by scripts/spec-prepare.py. The full rates live in a gitignored sidecar (<slug>.pricing.json, named by pinned_pricing_file); render-html.py auto-loads that sidecar so a re-render reproduces identical numbers. Use render-html.py --latest (one-off fresh) or --repin (re-pin) to rebuild against fresh live pricing.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "integer" },
+        "generated_at": { "type": "string" },
+        "master_effective_date": { "type": ["string", "null"] },
+        "master_version": { "type": ["string", "null"] },
+        "calc_schema": { "type": ["string", "null"] },
+        "calc_fetched_at": { "type": ["string", "null"] },
+        "calc_container_id": { "type": ["string", "null"] },
+        "calc_source_urls": { "type": "object", "additionalProperties": true },
+        "pricing_sha256": { "type": "string" },
+        "pinned_pricing_file": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

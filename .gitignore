@@ -1,0 +1,22 @@
+temp/
+docs/
+.DS_Store
+**/.DS_Store
+.claude/settings.local.json
+sizings/*.json
+sizings/*.html
+!sizings/.gitkeep
+__pycache__/
+**/__pycache__/
+*.pyc
+tests/
+sizings/
+.cortex/
+.pytest_cache/
+__pycache__
+pytest.ini
+
+# Runtime live-pricing cache (refreshed on each successful fetch; seed is committed)
+assets/live_pricing_cache.json
+CLAUDE.md
+pytest.ini

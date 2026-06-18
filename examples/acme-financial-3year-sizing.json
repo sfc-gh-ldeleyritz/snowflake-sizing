@@ -1,0 +1,432 @@
+{
+  "meta": {
+    "customer": "Acme Financial",
+    "edition": "Enterprise",
+    "cloud": "AWS",
+    "region": "Europe (London)",
+    "credit_rate": 4.0,
+    "ai_credit_rate": 2.0,
+    "storage_rate_per_tb": 24.0,
+    "hybrid_tables_storage_rate_per_gb": 0.34,
+    "contract_years": 3,
+    "generated_date": "2026-05-25",
+    "pdf_version": "2026-05-12",
+    "default_ramp_curve": "linear",
+    "default_dev_start_month": 0,
+    "default_go_live_month": 3,
+    "annual_growth_rate": 0.3,
+    "list_credit_rate": 4.0,
+    "discount": {
+      "enabled": false,
+      "mode": "percent",
+      "percent": 0,
+      "rate": null
+    }
+  },
+  "workloads": [
+    {
+      "id": "ingestion",
+      "label": "Data Ingestion (Fivetran -> Snowflake)",
+      "size": "S",
+      "hours_per_day": 2.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 60,
+      "source": "SOURCED",
+      "justification": "50GB daily batch loads from 3 SQL Server DBs via Fivetran. S warehouse handles <100GB daily loads; 2hr/day batch window assumed.",
+      "ramp_curve": "fast",
+      "dev_start_month": 1,
+      "go_live_month": 4
+    },
+    {
+      "id": "transformation",
+      "label": "dbt Transformations (200 models)",
+      "size": "M",
+      "hours_per_day": 1.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 60,
+      "source": "SOURCED",
+      "justification": "200 dbt models, ~45min nightly run. M warehouse for moderate ELT (50-200 models). Includes buffer for ad-hoc dbt runs.",
+      "ramp_curve": "linear",
+      "dev_start_month": 2,
+      "go_live_month": 11
+    },
+    {
+      "id": "powerbi",
+      "label": "Power BI DirectQuery (40 concurrent users)",
+      "size": "M",
+      "hours_per_day": 10.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 3,
+      "auto_suspend_seconds": 60,
+      "source": "SOURCED",
+      "justification": "40 concurrent users on Power BI DirectQuery 8am-6pm weekdays. >30 users triggers MCW. M size for standard BI; max 3 clusters handles peak concurrency.",
+      "ramp_curve": "slow",
+      "dev_start_month": 3,
+      "go_live_month": 11
+    },
+    {
+      "id": "snowpark",
+      "label": "Data Science / Snowpark (5 users)",
+      "size": "S",
+      "hours_per_day": 12.5,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 300,
+      "source": "SOURCED",
+      "justification": "5 data scientists x 2.5 hrs/day avg = 12.5 warehouse-hours/day. S warehouse for Python notebooks + Snowpark exploration.",
+      "ramp_curve": "linear",
+      "dev_start_month": 2,
+      "go_live_month": 11
+    },
+    {
+      "id": "dev",
+      "label": "Development / Sandbox (8 engineers)",
+      "size": "XS",
+      "hours_per_day": 4.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 300,
+      "source": "ASSUMPTION",
+      "justification": "ASSUMPTION: 8 engineers x ~30min/day average warehouse usage = 4hr/day shared XS dev warehouse. Standard dev sandbox pattern.",
+      "ramp_curve": "fastest",
+      "dev_start_month": 1,
+      "go_live_month": 2
+    }
+  ],
+  "serverless": {
+    "snowpipe": {
+      "enabled": true,
+      "files_per_month": 13500,
+      "gb_per_month": 1100,
+      "source": "SOURCED",
+      "justification": "Fivetran uses Snowpipe for file-based ingestion. 50GB/day x 22 days = 1100GB/mo."
+    },
+    "snowpipe_streaming": {
+      "enabled": false,
+      "uncompressed_gb_per_month": 0,
+      "source": "ASSUMPTION",
+      "justification": "ASSUMPTION: Year 1 batch only. Real-time fraud pipeline planned for Year 2."
+    },
+    "snowpipe_streaming_classic": {
+      "enabled": false,
+      "client_instances": 0
+    },
+    "serverless_tasks": {
+      "enabled": true,
+      "compute_hours_monthly": 30,
+      "source": "SOURCED",
+      "justification": "dbt Cloud orchestrates via Serverless Tasks. ~1hr/day x 30 days = 30 compute-hours/mo."
+    },
+    "serverless_tasks_flex": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "serverless_alerts": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "clustered_tables": {
+      "enabled": true,
+      "compute_hours_monthly": 8,
+      "source": "ASSUMPTION",
+      "justification": "ASSUMPTION: Auto-clustering on largest fact tables to maintain query latency. ~8hr/mo background reclustering."
+    },
+    "materialized_views": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "search_optimization": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "query_acceleration": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "replication": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "backup": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "failsafe_recovery": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "data_quality_monitoring": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "trust_center": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "table_optimization": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "storage_lifecycle_policy": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "hybrid_tables_requests": {
+      "enabled": false,
+      "reads_gb_monthly": 0,
+      "writes_gb_monthly": 0
+    },
+    "copy_files": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "automated_refresh": {
+      "enabled": false,
+      "files_per_month": 0
+    },
+    "organization_usage": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "sensitive_data_classification": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "open_catalog": {
+      "enabled": false,
+      "requests_per_month_M": 0
+    },
+    "logging": {
+      "enabled": false,
+      "file_batches_per_month": 0
+    },
+    "telemetry_data_ingest": {
+      "enabled": false,
+      "gb_per_month": 0
+    },
+    "archive_storage_retrieval": {
+      "enabled": false,
+      "files_per_month": 0
+    },
+    "archive_storage_write": {
+      "enabled": false,
+      "files_per_month": 0
+    }
+  },
+  "ai_cortex": {
+    "cortex_complete": {
+      "enabled": false,
+      "model": "claude-4-sonnet",
+      "monthly_input_tokens_M": 0,
+      "monthly_output_tokens_M": 0
+    },
+    "cortex_agents": {
+      "enabled": false,
+      "monthly_input_tokens_M": 0,
+      "monthly_output_tokens_M": 0
+    },
+    "snowflake_intelligence": {
+      "enabled": false,
+      "monthly_input_tokens_M": 0,
+      "monthly_output_tokens_M": 0
+    },
+    "cortex_code": {
+      "enabled": false,
+      "developers": 0,
+      "queries_per_dev_per_day": 20,
+      "avg_tokens_per_query": 2000
+    },
+    "cortex_analyst": {
+      "enabled": false,
+      "monthly_messages": 0
+    },
+    "cortex_search": {
+      "enabled": false,
+      "indexed_data_gb": 0
+    },
+    "document_ai": {
+      "enabled": false,
+      "compute_hours_monthly": 0
+    },
+    "ai_parse_document_layout": {
+      "enabled": false,
+      "pages_per_month": 0
+    },
+    "ai_parse_document_ocr": {
+      "enabled": false,
+      "pages_per_month": 0
+    },
+    "cortex_fine_tuning": {
+      "enabled": false,
+      "training_tokens_M": 0
+    },
+    "cortex_functions": {
+      "ai_classify": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_sentiment": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_summarize": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_translate": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_extract": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      },
+      "ai_transcribe": {
+        "enabled": false,
+        "tokens_M_monthly": 0
+      }
+    },
+    "embeddings": {
+      "enabled": false,
+      "tokens_M_monthly": 0
+    }
+  },
+  "spcs": {
+    "enabled": false,
+    "instances": []
+  },
+  "openflow": {
+    "enabled": false,
+    "instances": []
+  },
+  "openflow_oracle": {
+    "enabled": false,
+    "licensed_cores": 0
+  },
+  "postgres": {
+    "enabled": false,
+    "instances": []
+  },
+  "storage": {
+    "standard": {
+      "raw_tb_year1": 5.0,
+      "compression_ratio": 3,
+      "annual_growth_pct": 30,
+      "time_travel_days": 1,
+      "churn_rate_pct": 10,
+      "source": "SOURCED",
+      "justification": "5TB raw data stated, 30% annual growth. 3x compression (default for structured relational). 1-day time travel (Enterprise default)."
+    },
+    "hybrid_tables": {
+      "enabled": false,
+      "gb_year1": 0
+    },
+    "archive": {
+      "enabled": false,
+      "tb_year1": 0
+    }
+  },
+  "data_transfer": {
+    "enabled": false,
+    "tb_per_month": 0,
+    "pattern": "same_region"
+  },
+  "privatelink": {
+    "enabled": false,
+    "endpoints": 0,
+    "tb_processed_monthly": 0
+  },
+  "collaboration": {
+    "reader_accounts": {
+      "enabled": false,
+      "warehouse_size": "S",
+      "hours_per_day": 0,
+      "days_per_month": 0
+    },
+    "native_apps": {
+      "enabled": false,
+      "monthly_subscription": 0
+    },
+    "marketplace": {
+      "enabled": false,
+      "monthly_subscription": 0
+    }
+  },
+  "assumptions": [
+    "Edition: Enterprise on AWS Europe (London) at $4.00/credit (SOURCED: stated requirement).",
+    "Operating model: Weekday-only (22 days/month). No evidence of weekend processing in context.",
+    "Data Ingestion: S warehouse, 2hr/day batch window for 50GB daily Fivetran load.",
+    "Transformations: M warehouse, 1hr/day for 200 dbt models running ~45 min nightly + buffer.",
+    "Power BI: M warehouse with MCW (1-3 clusters) for 40 concurrent DirectQuery users 8am-6pm.",
+    "Data Science: S warehouse, 12.5hr/day for 5 data scientists at 2.5hr each.",
+    "Development: 8 engineers share XS dev warehouse, ~4hr/day total active time (assumption).",
+    "Snowpipe enabled for Fivetran file ingestion, 1100 GB/month (50GB x 22 days).",
+    "Serverless Tasks enabled for dbt Cloud orchestration, 30 compute-hours/month.",
+    "Auto-clustering enabled on largest fact tables, 8 compute-hours/month estimate.",
+    "Storage compression: 3x (default for structured relational data from SQL Server).",
+    "Storage growth: 30% annually (SOURCED: stated requirement).",
+    "Time travel: 1 day (Enterprise default), 10% churn rate.",
+    "AWS Europe (London) on-demand storage rate per pricing table ($24.00/TB/month).",
+    "AI/Cortex features: NOT enabled (SOURCED: 'No Snowflake AI features planned initially').",
+    "SPCS, Openflow, Postgres, Hybrid Tables: NOT enabled (no evidence in context).",
+    "Replication / Multi-region: NOT enabled (no DR or multi-region requirement stated).",
+    "Ramp curve: Linear (70% Year 1) reflecting standard new deployment.",
+    "Growth model: 30% annual growth applied uniformly Year 2 onwards.",
+    "Real-time fraud detection (Year 2 initiative): NOT yet sized; will require Snowpipe Streaming + dedicated warehouse.",
+    "Reader accounts, Native Apps, Marketplace: NOT enabled (no collaboration requirements stated).",
+    "Data transfer / Privatelink: NOT enabled (single-region deployment assumed)."
+  ],
+  "confirm_required": [
+    {
+      "item": "Power BI concurrency: confirm 40 concurrent users is peak, not total. If peak is higher, MCW max may need to increase to 5 (impact: +30-50% on Power BI compute, ~+£40-80k Year 1).",
+      "impact_pct": 0.15
+    },
+    {
+      "item": "Weekend operation: confirm no batch processing on weekends. 7-day operation would add ~36% to compute cost (~+£100k Year 1).",
+      "impact_pct": 0.36
+    },
+    {
+      "item": "Year 2 real-time fraud detection: needs separate sizing. Snowpipe Streaming + dedicated S/M warehouse 24/7 could add ~£150-250k/yr starting Year 2.",
+      "impact_pct": 0.2
+    },
+    {
+      "item": "Compression ratio: confirm 3x assumption with sample data. Range 2x-5x = +/-40% on storage cost (~+/-£3-5k/yr).",
+      "impact_pct": 0.05
+    },
+    {
+      "item": "Snowpark workload pattern: confirm 12.5 warehouse-hours/day is correct. If sustained heavier (e.g. M size or 24-hour notebooks), could be 2-4x.",
+      "impact_pct": 0.1
+    },
+    {
+      "item": "Data Science peak: confirm whether ML training will require larger warehouse (L/XL) periodically. Could add £20-40k/yr.",
+      "impact_pct": 0.05
+    },
+    {
+      "item": "Dev environment usage: confirm 8 engineers x 4hr/day shared XS is sufficient. Heavier dev usage may need S warehouse.",
+      "impact_pct": 0.03
+    }
+  ],
+  "replication": {
+    "enabled": true,
+    "source_region": "AWS-US East1 (N. Virginia)",
+    "target_region": "AWS-US West2 (Oregon)",
+    "initial_TB": 25,
+    "monthly_change_TB": 2.0,
+    "replication_frequency": "ONE_HOUR",
+    "storage_growth_pct": 0.15,
+    "yoy_pct": 0.1,
+    "compute_credits_per_TB": 4,
+    "replica_storage_per_tb_per_month": 23.0,
+    "ramp_curve": "fastest",
+    "dev_start_month": 1,
+    "go_live_month": 2,
+    "notes": "ASSUMPTION: cross-region DR replica from N. Virginia to Oregon. Initial 25 TB primary, 2 TB monthly change rate. Confirm change rate via SYSTEM$ESTIMATE_REPLICATION_COST."
+  }
+}
