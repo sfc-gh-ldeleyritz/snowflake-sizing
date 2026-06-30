@@ -12,6 +12,7 @@ missing; this hook just gives a faster, clearer signal up front.
 """
 
 import json
+import pathlib
 import sys
 
 DOMAIN_TRIGGERS = [
@@ -24,6 +25,21 @@ KEYWORD_PAIRS = [
     ("snowflake", "consumption estimate"),
     ("snowflake", "pricing proposal"),
 ]
+
+
+_CWD_BOOTSTRAP_DIRS = ("temp", "sizings")
+
+
+def ensure_cwd_dirs() -> None:
+    """Create `temp/` and `sizings/` in CWD if missing."""
+    cwd = pathlib.Path.cwd()
+    for name in _CWD_BOOTSTRAP_DIRS:
+        target = cwd / name
+        if not target.exists():
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
 
 
 def is_relevant_prompt(prompt: str) -> bool:
@@ -72,6 +88,8 @@ def main():
     prompt = data.get("prompt", "")
     if not is_relevant_prompt(prompt):
         sys.exit(0)
+
+    ensure_cwd_dirs()
 
     output = {
         "hookSpecificOutput": {

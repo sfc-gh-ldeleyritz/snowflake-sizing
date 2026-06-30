@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.16.1] - 2026-06-30
+
+### Changed
+
+- **`temp/` and `sizings/` are now created on skill invocation, not session start.**
+  `hooks/session.py` (a `SessionStart` hook) was creating these directories in the
+  working directory on every new session — even in projects unrelated to
+  snowflake-sizing. The `SessionStart` registration has been removed from
+  `hooks/hooks.json` and `session.py` deleted. The directory-bootstrap logic
+  (`ensure_cwd_dirs`) has moved into `hooks/preflight.py` and is called only when
+  `is_relevant_prompt()` returns `True` — i.e., when the user actually invokes the
+  skill. Stale-evidence cleanup (files older than 30 days in `temp/`) is dropped;
+  it was a side effect of the session hook with no natural new home. Applies to both
+  the source copy (`hooks/`) and the installed copy
+  (`sizings/snowflake-sizing/hooks/`).
+
+---
+
 ## [2.16.0] - 2026-06-08
 
 ### Added

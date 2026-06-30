@@ -21,16 +21,5 @@
         }
       ]
     }
-  ],
-  "SessionStart": [
-    {
-      "hooks": [
-        {
-          "type": "command",
-          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/session.py",
-          "timeout": 10
-        }
-      ]
-    }
   ]
 }
