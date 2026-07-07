@@ -70,10 +70,20 @@ WH_CREDITS = {
     "2X-Large": 32, "3X-Large": 64, "4X-Large": 128,
 }
 
-RAMP_EXPONENTS = {
+_RAMP_EXPONENTS_FALLBACK = {
     "slowest": 4.0, "slow": 2.0, "linear": 1.0,
     "fast": 0.5, "fastest": 0.25, "manual": 0.0,
 }
+RAMP_EXPONENTS = _RAMP_EXPONENTS_FALLBACK  # overridden at runtime by _load_ramp_exponents
+
+
+def _load_ramp_exponents(pricing: dict) -> dict:
+    """Read ramp exponents from pricing JSON (SSOT); fall back to hardcoded defaults."""
+    rc = (pricing or {}).get("ramp_curves") or {}
+    exps = rc.get("exponents")
+    if isinstance(exps, dict) and exps:
+        return {k: float(v) for k, v in exps.items()}
+    return _RAMP_EXPONENTS_FALLBACK
 
 # Mirrors JS computeMultipliers map in calcServerlessCredits().
 _SERVERLESS_COMPUTE_MULTIPLIERS = {
@@ -318,7 +328,10 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
     cco = ai.get("cortex_code") or {}
     if cco:
         cc_model = cco.get("model") or "claude-4-sonnet"
-        cc_in_rate = si_rate(cc_model, "input")
+        # Use Table 6(e) cortex_code rates (not 6(d) intelligence_agents)
+        cco_models = ((feats.get("cortex_code") or {}).get("data") or [])
+        cco_row = _by_key(cco_models, "model", cc_model) or {}
+        cc_in_rate = float(cco_row.get("input", 0) or 0) or si_rate(cc_model, "input")
         surface_hit = False
         for surface in ("cli", "snowsight", "desktop"):
             s = cco.get(surface)
@@ -377,9 +390,15 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
 
     em = ai.get("embeddings") or {}
     if em.get("enabled"):
-        # Hard-coded JS rate for embeddings (line 1068) - intentionally
-        # not in pricing JSON; kept as constant to mirror exactly.
-        total += (em.get("tokens_M_monthly", 0) or 0) * 0.05
+        em_model = em.get("model")
+        em_rate = 0.05  # default fallback
+        if em_model:
+            em_data = (feats.get("embeddings") or {}).get("data") or []
+            for row in em_data:
+                if row.get("model") == em_model:
+                    em_rate = float(row.get("rate", 0.05) or 0.05)
+                    break
+        total += (em.get("tokens_M_monthly", 0) or 0) * em_rate
 
     return total
 
@@ -404,22 +423,25 @@ def _wh_credits_for_size(size: str, pricing: Optional[dict] = None, cloud: Optio
 
 
 def spcs_monthly_credits(spec: dict, pricing: dict) -> float:
-    """SPCS compute pool credits/month, summed across instances (schema-keyed)."""
+    """SPCS compute pool credits/month, summed across instances (schema-keyed).
+
+    Accepts both legacy (instance_family/num_instances/hours_per_day*days_per_month)
+    and new (instance_type/count/hours_monthly) field names for parity with the JS engine.
+    """
     s = spec.get("spcs") or {}
     if not s.get("enabled"):
         return 0.0
     total = 0.0
     for inst in s.get("instances") or []:
-        fam = inst.get("instance_family")
+        fam = inst.get("instance_type") or inst.get("instance_family")
         rate = calc_access.spcs_credit(pricing, fam)
         if rate is None:
             rate = _spcs_credit_fallback(pricing, fam)
-        total += (
-            (rate or 0.0)
-            * (inst.get("num_instances", 0) or 0)
-            * (inst.get("hours_per_day", 0) or 0)
-            * (inst.get("days_per_month", 0) or 0)
-        )
+        count = inst.get("count") if inst.get("count") is not None else (inst.get("num_instances", 0) or 0)
+        hours = inst.get("hours_monthly")
+        if hours is None:
+            hours = (inst.get("hours_per_day", 0) or 0) * (inst.get("days_per_month", 0) or 0)
+        total += (rate or 0.0) * (count or 0) * (hours or 0)
     return total
 
 
@@ -491,15 +513,28 @@ def openflow_oracle_cost_for_year(spec: dict, year: int) -> float:
     return cores * rate * 12
 
 
-def transfer_monthly_cost(spec: dict) -> float:
-    """Data-transfer + PrivateLink $/month (already dollars; mirrors calcTransferCost)."""
+def transfer_monthly_cost(spec: dict, pricing: Optional[dict] = None) -> float:
+    """Data-transfer + PrivateLink $/month (already dollars; mirrors calcTransferCost).
+
+    Cloud-aware: looks up $/TB from pricing['data_transfer'] keyed by meta.cloud + meta.region.
+    Falls back to hardcoded rates only when pricing is unavailable.
+    """
+    meta = spec.get("meta") or {}
+    cloud = meta.get("cloud")
+    region = meta.get("region")
     dt = spec.get("data_transfer") or {}
     pl = spec.get("privatelink") or {}
     total = 0.0
     if dt.get("enabled"):
         pattern = dt.get("pattern")
-        rate = 0.0 if pattern == "same_region" else (0.08 if pattern == "cross_region" else 0.154)
-        total += (dt.get("tb_per_month", 0) or 0) * 1024 * rate
+        tb = dt.get("tb_per_month", 0) or 0
+        rate = None
+        if pricing:
+            rate = calc_access.data_transfer_rate(pricing, cloud, region, pattern)
+        if rate is None:
+            # Hardcoded fallback ($/TB) when pricing data unavailable
+            rate = 0.0 if pattern == "same_region" else (20.0 if pattern == "cross_region" else 90.0)
+        total += tb * rate
     if pl.get("enabled"):
         total += (pl.get("endpoints", 0) or 0) * 7.30
         total += (pl.get("tb_processed_monthly", 0) or 0) * 1024 * 0.01
@@ -507,13 +542,27 @@ def transfer_monthly_cost(spec: dict) -> float:
 
 
 def collaboration_monthly_cost(spec: dict, pricing: dict, cr: float, cloud: Optional[str] = None) -> float:
-    """Collaboration $/month: reader-account credits*cr + native-app/marketplace subscriptions."""
+    """Collaboration $/month: reader-account credits*cr + native-app/marketplace subscriptions.
+
+    Supports both the new accounts[] array (JS parity) and legacy reader_accounts fallback.
+    """
     c = spec.get("collaboration") or {}
     total = 0.0
-    ra = c.get("reader_accounts") or {}
-    if ra.get("enabled"):
-        rate = _wh_credits_for_size(ra.get("warehouse_size", "XS"), pricing, cloud)
-        total += rate * (ra.get("hours_per_day", 0) or 0) * (ra.get("days_per_month", 0) or 0) * cr
+    # New accounts[] array (JS parity: iterates collaboration.accounts[])
+    accounts = c.get("accounts") or []
+    if accounts:
+        for acct in accounts:
+            if not (isinstance(acct, dict) and acct.get("enabled", True)):
+                continue
+            wh_size = acct.get("warehouse_size", "XS")
+            rate = _wh_credits_for_size(wh_size, pricing, cloud)
+            total += rate * (acct.get("hours_per_day", 0) or 0) * (acct.get("days_per_month", 0) or 0) * cr
+    else:
+        # Legacy reader_accounts fallback
+        ra = c.get("reader_accounts") or {}
+        if ra.get("enabled"):
+            rate = _wh_credits_for_size(ra.get("warehouse_size", "XS"), pricing, cloud)
+            total += rate * (ra.get("hours_per_day", 0) or 0) * (ra.get("days_per_month", 0) or 0) * cr
     na = c.get("native_apps") or {}
     if na.get("enabled"):
         total += na.get("monthly_subscription", 0) or 0
@@ -548,8 +597,25 @@ def replication_for_year(spec: dict, pricing: dict, year: int) -> dict:
     matrix = (pricing.get("replication") or {}).get("egress_matrix") or {}
     egress_rate = 0.0
     src, tgt = rep.get("source_region"), rep.get("target_region")
-    if src and tgt and isinstance(matrix.get(src), dict) and isinstance(matrix[src].get(tgt), (int, float)):
-        egress_rate = matrix[src][tgt]
+    if src and tgt:
+        # Normalize: try exact match first, then case-insensitive lookup
+        src_row = matrix.get(src)
+        if src_row is None:
+            src_lower = src.strip().lower()
+            for k, v in matrix.items():
+                if k.strip().lower() == src_lower:
+                    src_row = v
+                    break
+        if isinstance(src_row, dict):
+            rate_val = src_row.get(tgt)
+            if rate_val is None:
+                tgt_lower = tgt.strip().lower()
+                for k, v in src_row.items():
+                    if k.strip().lower() == tgt_lower:
+                        rate_val = v
+                        break
+            if isinstance(rate_val, (int, float)):
+                egress_rate = rate_val
 
     basis_tb = (active_tb + growth_tb + change_tb) if year == 1 else (growth_tb + change_tb)
     compute_credits = basis_tb * cred_per_tb
@@ -565,9 +631,75 @@ def replication_for_year(spec: dict, pricing: dict, year: int) -> dict:
     }
 
 
+# ── Postgres compute ──────────────────────────────────────────────────────── #
+
+def postgres_monthly_credits(spec: dict, pricing: dict, cloud: Optional[str] = None) -> float:
+    """Postgres compute credits/month from pricing['postgres'] (Table 1(i)).
+
+    GCP is not supported (returns 0). Each instance: credits_per_hour * count * hours_monthly.
+    """
+    pg = spec.get("postgres") or {}
+    if not pg.get("enabled"):
+        return 0.0
+    cloud_key = (cloud or "aws").strip().lower()
+    total = 0.0
+    for inst in pg.get("instances") or []:
+        family = inst.get("family")
+        ha = bool(inst.get("ha"))
+        rate = calc_access.postgres_credit(pricing, family, cloud_key, ha=ha)
+        if rate is None:
+            rate = 0.0
+        count = inst.get("count", 1) or 1
+        hours = inst.get("hours_monthly")
+        if hours is None:
+            hours = (inst.get("hours_per_day", 0) or 0) * (inst.get("days_per_month", 0) or 0)
+        if not hours:
+            hours = 730  # default full-time
+        total += (rate or 0.0) * count * hours
+    return total
+
+
+# ── Hybrid + Archive storage helpers ─────────────────────────────────────── #
+
+def hybrid_storage_cost_for_year(spec: dict, pricing: dict, year: int) -> float:
+    """Hybrid-table storage $/year: gb_year1 * rate_per_gb * 12 * growth^(y-1)."""
+    ht = (spec.get("storage") or {}).get("hybrid_tables") or {}
+    if not ht.get("enabled"):
+        return 0.0
+    gb = ht.get("gb_year1", 0) or 0
+    growth = (ht.get("annual_growth_pct", 0) or 0) / 100.0
+    meta = spec.get("meta") or {}
+    cloud = meta.get("cloud")
+    region = meta.get("region")
+    rate = calc_access.hybrid_storage_rate(pricing, cloud, region)
+    if rate is None:
+        rate = float(meta.get("hybrid_tables_storage_rate_per_gb", 0) or 0)
+    return gb * rate * 12 * ((1 + growth) ** (year - 1))
+
+
+def archive_storage_cost_for_year(spec: dict, pricing: dict, year: int) -> float:
+    """Archive (cold) storage $/year: tb_year1 * cold_rate * 12 * growth^(y-1)."""
+    ar = (spec.get("storage") or {}).get("archive") or {}
+    if not ar.get("enabled"):
+        return 0.0
+    tb = ar.get("tb_year1", 0) or 0
+    growth = (ar.get("annual_growth_pct", 0) or 0) / 100.0
+    meta = spec.get("meta") or {}
+    cloud = meta.get("cloud")
+    region = meta.get("region")
+    tier = ar.get("tier", "cold") or "cold"
+    rate = calc_access.archive_storage_rate(pricing, cloud, region, tier)
+    if rate is None:
+        rate = 1.0  # fallback cold $/TB/mo
+    return tb * rate * 12 * ((1 + growth) ** (year - 1))
+
+
 # ── Public entry point ────────────────────────────────────────────────────── #
 
 def compute_core_totals(spec: dict, pricing: dict) -> dict:
+    global RAMP_EXPONENTS
+    RAMP_EXPONENTS = _load_ramp_exponents(pricing)
+
     meta = spec.get("meta", {}) or {}
     years = int(meta.get("contract_years", 3) or 3)
     cr = float(meta.get("credit_rate", 0) or 0)
@@ -582,8 +714,9 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
     cloud = meta.get("cloud")
     spcs_monthly = spcs_monthly_credits(spec, pricing)
     of_conn_monthly = openflow_connector_monthly_credits(spec, pricing, cloud)
-    transfer_monthly = transfer_monthly_cost(spec)
+    transfer_monthly = transfer_monthly_cost(spec, pricing)
     collab_monthly = collaboration_monthly_cost(spec, pricing, cr, cloud)
+    pg_monthly = postgres_monthly_credits(spec, pricing, cloud)
 
     wh_credits_yr = []
     sl_credits_yr = []
@@ -598,6 +731,9 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
     transfer_cost_yr = []
     collab_cost_yr = []
     repl_cost_yr = []
+    pg_cost_yr = []
+    hybrid_st_cost_yr = []
+    archive_cost_yr = []
     other_cost_yr = []
     core_total_yr = []
 
@@ -625,6 +761,10 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         ai_cost = ai_credits * ai_cr
         st_cost = st_tb * sr * 12
 
+        # Hybrid + archive storage (grow independently, not ramped)
+        hybrid_st_cost = hybrid_storage_cost_for_year(spec, pricing, y)
+        archive_cost = archive_storage_cost_for_year(spec, pricing, y)
+
         # Other compute categories (ramped on the meta-default window where
         # adoption-sensitive; transfer + Oracle licensing are not ramped).
         spcs_cost = spcs_monthly * 12 * def_ramp * cr
@@ -632,9 +772,10 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         transfer_cost = transfer_monthly * 12
         collab_cost = collab_monthly * 12 * def_ramp
         repl_cost = replication_for_year(spec, pricing, y)["total_cost"]
-        other_cost = spcs_cost + of_cost + transfer_cost + collab_cost + repl_cost
+        pg_cost = pg_monthly * 12 * def_ramp * cr
+        other_cost = spcs_cost + of_cost + transfer_cost + collab_cost + repl_cost + pg_cost
 
-        core_total = compute_cost + sl_cost + ai_cost + st_cost + other_cost
+        core_total = compute_cost + sl_cost + ai_cost + st_cost + hybrid_st_cost + archive_cost + other_cost
 
         wh_credits_yr.append(round(wh_credits, 2))
         sl_credits_yr.append(round(sl_credits, 2))
@@ -649,6 +790,9 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         transfer_cost_yr.append(round(transfer_cost, 2))
         collab_cost_yr.append(round(collab_cost, 2))
         repl_cost_yr.append(round(repl_cost, 2))
+        pg_cost_yr.append(round(pg_cost, 2))
+        hybrid_st_cost_yr.append(round(hybrid_st_cost, 2))
+        archive_cost_yr.append(round(archive_cost, 2))
         other_cost_yr.append(round(other_cost, 2))
         core_total_yr.append(round(core_total, 2))
 
@@ -656,7 +800,7 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         "schema_version": 1,
         "computed_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "computed_by": "framework/compute_totals.py",
-        "scope": "warehouse | serverless | ai | storage | spcs | openflow | transfer | collab | replication (full compute stack)",
+        "scope": "warehouse | serverless | ai | storage | spcs | openflow | transfer | collab | replication | postgres (full compute stack)",
         "warehouse_credits_per_year": wh_credits_yr,
         "serverless_credits_per_year": sl_credits_yr,
         "ai_credits_per_year": ai_credits_yr,
@@ -665,11 +809,14 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         "serverless_cost_per_year": sl_cost_yr,
         "ai_cost_per_year": ai_cost_yr,
         "storage_cost_per_year": st_cost_yr,
+        "hybrid_storage_cost_per_year": hybrid_st_cost_yr,
+        "archive_cost_per_year": archive_cost_yr,
         "spcs_cost_per_year": spcs_cost_yr,
         "openflow_cost_per_year": of_cost_yr,
         "data_transfer_cost_per_year": transfer_cost_yr,
         "collaboration_cost_per_year": collab_cost_yr,
         "replication_cost_per_year": repl_cost_yr,
+        "postgres_cost_per_year": pg_cost_yr,
         "other_cost_per_year": other_cost_yr,
         "core_year_total": core_total_yr,
         "core_tcv": round(sum(core_total_yr), 2),

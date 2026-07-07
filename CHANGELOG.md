@@ -4,6 +4,72 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.17.0] - 2026-07-07
+
+Remediation of the 8 confirmed issues from the v2 calculator audit
+(`temp/calculator-audit-v2-2026-07-07.md`), applied to BOTH the JS engine
+(`assets/templates/proposal-template.html`) and the Python engine
+(`framework/compute_totals.py`) so on-screen totals and the stamped
+`computed_totals` stay in parity. The v1 audit's 10 false positives
+(already-correct code) were intentionally left untouched.
+
+### Fixed
+
+- **Data-transfer overcharge (both engines).** Replaced the hardcoded
+  `0.08`/`0.154` $/GB rates with a cloud- and region-aware `$/TB` lookup from
+  `data_transfer` (AWS `different_region`/`internet`, Azure
+  `same_continent`/`different_continent`, GCP nested; lowercase cloud keys,
+  array lookup by region). A cross-region AWS US-East 1 TB/mo transfer now
+  prices at ~$240/yr instead of ~$983/yr (a ~4x correction). New
+  `calc_access.data_transfer_rate()` accessor; fixes `calcTransferCost`
+  (proposal-template.html) and `transfer_monthly_cost` (compute_totals.py).
+- **Per-line serverless $0 display.** `updateWorkloadCalcs` showed $0 per-line
+  for the 8 unit-charge serverless features (aggregate totals were always
+  correct). Per-feature formulas were refactored into a shared
+  `serverlessFeatureMonthlyCredits()` helper so per-line costs now render
+  non-zero and can never drift from `calcServerlessCredits`.
+- **Python SPCS field parity.** `spcs_monthly_credits` now accepts the current
+  UI fields (`instance_type`/`count`/`hours_monthly`) with fallback to legacy
+  `instance_family`/`num_instances`/`hours_per_day * days_per_month`, fixing
+  $0 SPCS in `computed_totals` on new-field specs.
+- **Python collaboration parity.** `collaboration_monthly_cost` now iterates
+  `collaboration.accounts[]` (with `reader_accounts` fallback), fixing $0
+  collaboration in `computed_totals` on array-shaped specs.
+- **Embeddings rate (both engines).** Replaced the hardcoded `0.05` with a
+  model-aware lookup from the pricing data.
+- **Cortex Code pricing table.** Both engines now price Cortex Code from
+  Table 6(e) instead of the Agents Table 6(d).
+- **Replication egress region keys.** Case-insensitive normalization before the
+  egress-matrix lookup, preventing silent $0 egress on region-name mismatches.
+- **Python ramp exponents** now read from the pricing JSON (single source of
+  truth shared with the JS engine) rather than a hardcoded dict.
+
+### Added
+
+- **Hybrid-table storage pricing (both engines).**
+  `gb_year1 * meta.hybrid_tables_storage_rate_per_gb * 12 * growth`, surfaced as
+  a line in the storage breakdown and a new `hybrid_storage_cost_per_year`
+  in `computed_totals`. Schema gains `storage.hybrid_tables`
+  `{enabled, gb_year1, annual_growth_pct}`.
+- **Archive / cold-storage pricing (both engines).**
+  `tb_year1 * cold_storage_per_tb_month * 12 * growth` with a cool-tier fallback
+  where the cold rate is null (e.g. Azure). New `archive_cost_per_year` in
+  `computed_totals` and a `storage.archive.tier` (`cool`/`cold`) schema field.
+- **Snowflake Postgres pricing path (both engines).** New
+  `postgres_monthly_credits` / `calcPostgresCost` reading Table 1(i)
+  (`aws`/`azure` + HA columns; GCP unpriced, recorded as a `confirm_required`
+  item), a Postgres UI panel mirroring SPCS, a `postgres_cost_per_year`
+  computed-totals field, and a tightened `postgres.instances[]` schema
+  (`instance_family`, `count`, `hours_monthly`, `ha`).
+- **Parity + regression test harness.** New `scripts/test-parity.py` and
+  `tests/fixtures/kitchen-sink-aws-us-east.json` covering rate-unit checks,
+  JS-vs-Python parity (category-by-category + TCV tolerance), and a render
+  smoke test (no $0/NaN, per-line serverless non-zero, storage panel shows
+  hybrid + archive, Postgres panel renders). Verified JS TCV equals Python
+  `core_tcv` to the penny with SPCS, collaboration, and Postgres all populated.
+
+---
+
 ## [2.16.2] - 2026-07-07
 
 ### Changed

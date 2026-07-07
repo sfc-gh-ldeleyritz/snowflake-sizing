@@ -600,8 +600,9 @@ li:hover .item-delete-btn { display: inline; }
     <button class="tab-btn" data-tab="warehouses">Warehouses</button>
     <button class="tab-btn" data-tab="serverless">Serverless</button>
     <button class="tab-btn" data-tab="ai">AI / Cortex</button>
-    <button class="tab-btn" data-tab="spcs">SPCS</button>
-    <button class="tab-btn" data-tab="openflow">Openflow</button>
+<button class="tab-btn" data-tab="spcs">SPCS</button>
+<button class="tab-btn" data-tab="postgres">Postgres</button>
+<button class="tab-btn" data-tab="openflow">Openflow</button>
     <button class="tab-btn" data-tab="storage">Storage</button>
     <button class="tab-btn" data-tab="collab">Collaboration</button>
     <button class="tab-btn" data-tab="replication">Replication</button>
@@ -627,6 +628,11 @@ li:hover .item-delete-btn { display: inline; }
   <div class="tab-content" id="tab-spcs" data-print-title="Snowpark Container Services (SPCS)">
     <div id="spcs-container"></div>
     <button class="add-btn" onclick="addSPCSInstance()">+ Add SPCS Instance</button>
+  </div>
+
+  <div class="tab-content" id="tab-postgres" data-print-title="Snowflake Postgres (Preview)">
+    <div id="postgres-container"></div>
+    <button class="add-btn" onclick="addPostgresInstance()">+ Add Postgres Instance</button>
   </div>
 
   <div class="tab-content" id="tab-openflow" data-print-title="OpenFlow">
@@ -1164,38 +1170,10 @@ function storageForYear(year) {
 function calcServerlessCredits() {
   const sl = SIZING_SPEC.serverless;
   let total = 0;
-  if (sl.snowpipe && sl.snowpipe.enabled)
-    total += (sl.snowpipe.gb_per_month || 0) * 0.0037;
-  if (sl.snowpipe_streaming && sl.snowpipe_streaming.enabled)
-    total += (sl.snowpipe_streaming.uncompressed_gb_per_month || 0) * 0.0037;
-  if (sl.snowpipe_streaming_classic && sl.snowpipe_streaming_classic.enabled)
-    total += (sl.snowpipe_streaming_classic.client_instances || 0) * 0.01 * 730;
-  if (sl.open_catalog && sl.open_catalog.enabled)
-    total += (sl.open_catalog.requests_per_month_M || 0) * 0.5;
-  if (sl.telemetry_data_ingest && sl.telemetry_data_ingest.enabled)
-    total += (sl.telemetry_data_ingest.gb_per_month || 0) * 0.0212;
-  if (sl.archive_storage_retrieval && sl.archive_storage_retrieval.enabled)
-    total += (sl.archive_storage_retrieval.files_per_month || 0) / 1000 * 0.05;
-  if (sl.archive_storage_write && sl.archive_storage_write.enabled)
-    total += (sl.archive_storage_write.files_per_month || 0) / 1000 * 0.05;
-  if (sl.logging && sl.logging.enabled)
-    total += (sl.logging.file_batches_per_month || 0) / 1000 * 0.28;
-  if (sl.automated_refresh && sl.automated_refresh.enabled)
-    total += (sl.automated_refresh.files_per_month || 0) / 1000 * 0.06;
-  if (sl.hybrid_tables_requests && sl.hybrid_tables_requests.enabled)
-    total += ((sl.hybrid_tables_requests.reads_gb_monthly || 0) / 30) +
-             ((sl.hybrid_tables_requests.writes_gb_monthly || 0) / 7.5);
-  const computeMultipliers = {
-    serverless_tasks: 0.9, serverless_tasks_flex: 0.5, serverless_alerts: 0.9,
-    clustered_tables: 2.0, materialized_views: 2.0, search_optimization: 2.0,
-    query_acceleration: 1.0, replication: 2.0, backup: 2.0, failsafe_recovery: 0.9,
-    data_quality_monitoring: 2.0, trust_center: 1.0, table_optimization: 0.75,
-    storage_lifecycle_policy: 0.5, copy_files: 2.0, organization_usage: 1.0,
-    sensitive_data_classification: 0.9
-  };
-  for (const [key, mult] of Object.entries(computeMultipliers)) {
-    const f = sl[key];
-    if (f && f.enabled) total += (f.compute_hours_monthly || 0) * mult;
+  for (const key in sl) {
+    if (sl[key] && typeof sl[key] === 'object' && sl[key].enabled) {
+      total += serverlessFeatureMonthlyCredits(key);
+    }
   }
   return total;
 }
@@ -1251,9 +1229,14 @@ function calcAICredits() {
              (ai.snowflake_intelligence.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
   }
   if (ai.cortex_code) {
-    // Cortex Code bills at the SI/Agents rate. Default model is claude-4-sonnet (or override per-surface).
+    // Cortex Code uses Table 6(e) rates, not SI/Agents Table 6(d).
+    const ccModels = ((PRICING_DATA.ai_features || {}).cortex_code || {}).data || [];
+    const getCCRate = (model, type) => {
+      const m = ccModels.find(x => x.model === model);
+      return m ? (m[type] || 0) : 0;
+    };
     const ccDefaultModel = ai.cortex_code.model || 'claude-4-sonnet';
-    const ccRate = getSIRate(ccDefaultModel, 'input');  // input rate as blended approximation
+    const ccRate = getCCRate(ccDefaultModel, 'input') || getSIRate(ccDefaultModel, 'input');
     ['cli', 'snowsight', 'desktop'].forEach(surface => {
       const cc = ai.cortex_code[surface];
       if (cc && cc.enabled) {
@@ -1291,7 +1274,13 @@ function calcAICredits() {
       if (f && f.enabled) total += (f.tokens_M_monthly || 0) * getUtilRate(featName);
     }
   }
-  if (ai.embeddings && ai.embeddings.enabled) total += (ai.embeddings.tokens_M_monthly || 0) * 0.05;
+  if (ai.embeddings && ai.embeddings.enabled) {
+    const embModel = ai.embeddings.model || 'snowflake-arctic-embed-l-v2.0';
+    const embData = ((PRICING_DATA.ai_features || {}).embeddings || {}).data || [];
+    const embRow = embData.find(r => r.model === embModel);
+    const embRate = embRow ? embRow.rate : 0.05;
+    total += (ai.embeddings.tokens_M_monthly || 0) * embRate;
+  }
   return total;
 }
 
@@ -1321,13 +1310,45 @@ function calcSPCSCost() {
   }, 0);
 }
 
+function getDataTransferRate(pattern) {
+  const cloud = (SIZING_SPEC.meta.cloud || '').toLowerCase();
+  const region = SIZING_SPEC.meta.region || '';
+  const dtSection = (PRICING_DATA.data_transfer || {})[cloud];
+  if (!dtSection || !Array.isArray(dtSection.data)) {
+    // Fallback to prior hardcoded behavior for unmapped cloud/region
+    if (pattern === 'same_region') return 0;
+    if (pattern === 'cross_region') return 20; // ~0.02/GB * 1024 ≈ 20/TB
+    return 90; // internet fallback
+  }
+  const row = dtSection.data.find(r => r.region === region);
+  if (!row) {
+    if (pattern === 'same_region') return 0;
+    if (pattern === 'cross_region') return 20;
+    return 90;
+  }
+  if (pattern === 'same_region') return row.same_region || 0;
+  if (cloud === 'aws') {
+    return pattern === 'cross_region' ? (row.different_region || 20) : (row.internet || 90);
+  }
+  if (cloud === 'azure') {
+    return pattern === 'cross_region' ? (row.same_continent || 20) : (row.different_continent || row.internet || 50);
+  }
+  if (cloud === 'gcp') {
+    if (pattern === 'cross_region') {
+      return (row.same_cloud && row.same_cloud.north_america) || 20;
+    }
+    return (row.different_cloud_or_internet && row.different_cloud_or_internet.north_america) || 120;
+  }
+  return pattern === 'cross_region' ? 20 : 90;
+}
+
 function calcTransferCost() {
   const dt = SIZING_SPEC.data_transfer;
   const pl = SIZING_SPEC.privatelink;
   let total = 0;
   if (dt && dt.enabled) {
-    const rate = dt.pattern === 'same_region' ? 0 : (dt.pattern === 'cross_region' ? 0.08 : 0.154);
-    total += (dt.tb_per_month || 0) * 1024 * rate;
+    const rate = getDataTransferRate(dt.pattern || 'cross_region');
+    total += (dt.tb_per_month || 0) * rate;
   }
   if (pl && pl.enabled) {
     total += (pl.endpoints || 0) * 7.30;
@@ -1429,13 +1450,27 @@ function calcReplicationForYear(year) {
   }
   const avgTB = activeTB + (growthTB / 2);
 
-  // Egress lookup
+  // Egress lookup with region-key normalization (egress_matrix uses "AWS-US East1 (N. Virginia)" format)
   const egressMatrix = (PRICING_DATA.replication && PRICING_DATA.replication.egress_matrix) || {};
   let egressRate = 0;
   if (rep.source_region && rep.target_region) {
-    const row = egressMatrix[rep.source_region];
-    if (row && typeof row[rep.target_region] === 'number') {
-      egressRate = row[rep.target_region];
+    const normKey = (k) => String(k || '').trim().toLowerCase();
+    const findKey = (want) => {
+      const n = normKey(want);
+      if (egressMatrix[want] !== undefined) return want;
+      for (const k of Object.keys(egressMatrix)) { if (normKey(k) === n) return k; }
+      for (const k of Object.keys(egressMatrix)) { if (normKey(k).includes(n) || n.includes(normKey(k))) return k; }
+      return null;
+    };
+    const srcKey = findKey(rep.source_region);
+    if (srcKey && egressMatrix[srcKey]) {
+      const row = egressMatrix[srcKey];
+      const tgtKey = normKey(rep.target_region);
+      let found = row[rep.target_region];
+      if (found == null) {
+        for (const k of Object.keys(row)) { if (normKey(k) === tgtKey || normKey(k).includes(tgtKey) || tgtKey.includes(normKey(k))) { found = row[k]; break; } }
+      }
+      if (typeof found === 'number') egressRate = found;
     }
   }
 
@@ -1457,6 +1492,65 @@ function calcReplicationForYear(year) {
   return { compute_credits: computeCredits, compute_cost: computeCost,
            egress_cost: egressCost, storage_cost: storageCost, total_cost: totalCost,
            active_TB: activeTB, change_TB: changeTB, egress_rate: egressRate, avg_TB: avgTB };
+}
+
+function getHybridStorageRate() {
+  const cloud = SIZING_SPEC.meta.cloud || '';
+  const region = SIZING_SPEC.meta.region || '';
+  const data = ((PRICING_DATA.hybrid_tables || {}).data) || [];
+  const row = data.find(r => r.cloud === cloud && r.region === region);
+  return row ? row.rate_per_gb_month : 0.34; // fallback to base rate
+}
+
+function hybridStorageCostForYear(year) {
+  const h = (SIZING_SPEC.storage || {}).hybrid_tables || (SIZING_SPEC.storage || {}).hybrid;
+  if (!h || !h.enabled) return 0;
+  const gb = h.gb_year1 || 0;
+  const growth = (h.annual_growth_pct != null ? h.annual_growth_pct : 20) / 100;
+  const rate = getHybridStorageRate();
+  return gb * rate * 12 * Math.pow(1 + growth, year - 1);
+}
+
+function getArchiveStorageRate() {
+  const cloud = SIZING_SPEC.meta.cloud || '';
+  const region = SIZING_SPEC.meta.region || '';
+  const tier = ((SIZING_SPEC.storage || {}).archive || {}).tier || 'cold';
+  const data = ((PRICING_DATA.archive || {}).data) || [];
+  const row = data.find(r => r.cloud === cloud && r.region === region);
+  if (!row) return tier === 'cold' ? 1.0 : 4.0; // fallback defaults
+  if (tier === 'cold') {
+    // Azure cold=null -> fallback to cool
+    return row.cold_storage_per_tb_month != null ? row.cold_storage_per_tb_month : (row.cool_storage_per_tb_month || 4.0);
+  }
+  return row.cool_storage_per_tb_month || 4.0;
+}
+
+function archiveStorageCostForYear(year) {
+  const a = (SIZING_SPEC.storage || {}).archive;
+  if (!a || !a.enabled) return 0;
+  const tb = a.tb_year1 || 0;
+  const growth = (a.annual_growth_pct != null ? a.annual_growth_pct : 10) / 100;
+  const rate = getArchiveStorageRate();
+  return tb * rate * 12 * Math.pow(1 + growth, year - 1);
+}
+
+function calcPostgresCost() {
+  const pg = SIZING_SPEC.postgres;
+  if (!pg || !pg.enabled || !Array.isArray(pg.instances)) return 0;
+  const cloud = (SIZING_SPEC.meta.cloud || '').toLowerCase();
+  if (cloud === 'gcp') return 0; // Postgres not available on GCP
+  const pgData = ((PRICING_DATA.postgres || {}).data) || [];
+  return pg.instances.reduce((sum, inst) => {
+    const family = (inst.family || '').toUpperCase();
+    const count = inst.count || 1;
+    const hours = inst.hours_monthly || 730;
+    const ha = inst.ha || false;
+    const row = pgData.find(r => r.family === family);
+    if (!row) return sum;
+    const rateKey = ha ? (cloud + '_ha') : cloud;
+    const rate = row[rateKey] || 0;
+    return sum + rate * count * hours;
+  }, 0);
 }
 
 // Build the per-year cost breakdown for the whole stack.
@@ -1512,8 +1606,9 @@ function computeYearData(opts) {
     const aiRamp = ov ? defRamp : defaultRampMultiplierForYear(y, aiGrowthOv);
     const slCredits = calcServerlessCredits() * 12 * defRamp;
     const aiCredits = calcAICredits() * 12 * aiRamp;
-    const storageCost = storageForYear(y) * sr * 12;
+    const storageCost = storageForYear(y) * sr * 12 + hybridStorageCostForYear(y) + archiveStorageCostForYear(y);
     const spcsCost = calcSPCSCost() * 12 * defRamp * cr;
+    const pgCost   = calcPostgresCost() * 12 * defRamp * cr;
     const ofCost   = calcOpenflowCost(cr, defRamp);
     const oracleCost = (SIZING_SPEC.openflow_oracle && SIZING_SPEC.openflow_oracle.enabled)
       ? (SIZING_SPEC.openflow_oracle.licensed_cores || 0) * (y <= 3 ? 110 : 40) * 12
@@ -1524,13 +1619,13 @@ function computeYearData(opts) {
     const computeCost    = whCredits  * cr;
     const serverlessCost = slCredits * cr;
     const aiCost         = aiCredits  * aiCr;
-    const otherCost      = spcsCost + ofCost + oracleCost + transferCost + collabCost + replication.total_cost;
+    const otherCost      = spcsCost + pgCost + ofCost + oracleCost + transferCost + collabCost + replication.total_cost;
     const yearTotal      = computeCost + serverlessCost + aiCost + storageCost + otherCost;
     yearData.push({ y, whCredits, slCredits, aiCredits,
                     computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal,
                     replicationCost: replication.total_cost,
                     replicationDetail: replication,
-                    spcsCost,
+                    spcsCost, pgCost,
                     openflowCost: ofCost + oracleCost,
                     transferCost,
                     collabCost });
@@ -1883,6 +1978,34 @@ function updateHeaderInfo() {
   if (m.customer) document.title = m.customer + ' - Snowflake Consumption Estimate';
 }
 
+function serverlessFeatureMonthlyCredits(key) {
+  const sl = SIZING_SPEC.serverless;
+  const f = sl[key];
+  if (!f || !f.enabled) return 0;
+  if (key === 'snowpipe') return (f.gb_per_month || 0) * 0.0037;
+  if (key === 'snowpipe_streaming') return (f.uncompressed_gb_per_month || 0) * 0.0037;
+  if (key === 'snowpipe_streaming_classic') return (f.client_instances || 0) * 0.01 * 730;
+  if (key === 'open_catalog') return (f.requests_per_month_M || 0) * 0.5;
+  if (key === 'telemetry_data_ingest') return (f.gb_per_month || 0) * 0.0212;
+  if (key === 'archive_storage_retrieval') return (f.files_per_month || 0) / 1000 * 0.05;
+  if (key === 'archive_storage_write') return (f.files_per_month || 0) / 1000 * 0.05;
+  if (key === 'logging') return (f.file_batches_per_month || 0) / 1000 * 0.28;
+  if (key === 'automated_refresh') return (f.files_per_month || 0) / 1000 * 0.06;
+  if (key === 'hybrid_tables_requests')
+    return ((f.reads_gb_monthly || 0) / 30) + ((f.writes_gb_monthly || 0) / 7.5);
+  const computeMultipliers = {
+    serverless_tasks: 0.9, serverless_tasks_flex: 0.5, serverless_alerts: 0.9,
+    clustered_tables: 2.0, materialized_views: 2.0, search_optimization: 2.0,
+    query_acceleration: 1.0, replication: 2.0, backup: 2.0, failsafe_recovery: 0.9,
+    data_quality_monitoring: 2.0, trust_center: 1.0, table_optimization: 0.75,
+    storage_lifecycle_policy: 0.5, copy_files: 2.0, organization_usage: 1.0,
+    sensitive_data_classification: 0.9
+  };
+  const mult = computeMultipliers[key];
+  if (mult) return (f.compute_hours_monthly || 0) * mult;
+  return 0;
+}
+
 function updateWorkloadCalcs() {
   SIZING_SPEC.workloads.forEach(w => {
     const calcEl = document.getElementById('calc-' + w.id);
@@ -1899,19 +2022,8 @@ function updateWorkloadCalcs() {
   for (const key in sl) {
     const costEl = document.getElementById('sl-cost-' + key);
     if (!costEl) continue;
-    if (!sl[key].enabled) { costEl.textContent = '$0'; continue; }
-    let monthly = 0;
-    if (key === 'snowpipe') monthly = (sl[key].gb_per_month || 0) * 0.0037;
-    else if (key === 'snowpipe_streaming') monthly = (sl[key].uncompressed_gb_per_month || 0) * 0.0037;
-    else {
-      const mult = { serverless_tasks: 0.9, serverless_tasks_flex: 0.5, serverless_alerts: 0.9,
-        clustered_tables: 2.0, materialized_views: 2.0, search_optimization: 2.0,
-        query_acceleration: 1.0, replication: 2.0, backup: 2.0, failsafe_recovery: 0.9,
-        data_quality_monitoring: 2.0, trust_center: 1.0, table_optimization: 0.75,
-        storage_lifecycle_policy: 0.5, copy_files: 2.0, organization_usage: 1.0,
-        sensitive_data_classification: 0.9 }[key];
-      if (mult) monthly = (sl[key].compute_hours_monthly || 0) * mult;
-    }
+    if (!sl[key] || !sl[key].enabled) { costEl.textContent = '$0'; continue; }
+    const monthly = serverlessFeatureMonthlyCredits(key);
     costEl.textContent = '$' + fmt(monthly * SIZING_SPEC.meta.credit_rate);
   }
 }
@@ -2433,6 +2545,85 @@ function updateSPCSInstance(id, field, value) {
   recalculate();
 }
 
+function populatePostgresPanel() {
+  const pg = SIZING_SPEC.postgres;
+  const header = groupHeaderRow('Instance', 'Family / Count / Hours / HA', 'gh-cr-pg', 'gh-d-pg');
+  const cloud = (SIZING_SPEC.meta.cloud || '').toLowerCase();
+  if (cloud === 'gcp') {
+    document.getElementById('postgres-container').innerHTML = header +
+      '<p style="color: var(--gray-600); font-style: italic;">Snowflake Postgres is not available on GCP (Preview: AWS and Azure only).</p>';
+    return;
+  }
+  if (!pg || !Array.isArray(pg.instances) || pg.instances.length === 0) {
+    document.getElementById('postgres-container').innerHTML = header +
+      '<p style="color: var(--gray-600); font-style: italic;">No Postgres instances configured. Click + Add Postgres Instance to create one.</p>';
+    return;
+  }
+  const pgData = ((PRICING_DATA.postgres || {}).data) || [];
+  const families = pgData.map(r => r.family);
+  const html = pg.instances.map(inst => {
+    const familyOpts = families.map(f => `<option value="${f}" ${f===inst.family?'selected':''}>${f}</option>`).join('');
+    return `<div class="workload-card" data-id="${inst.id}">
+      <div class="workload-header">
+        <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
+               onchange="updatePostgresInstance('${inst.id}', 'label', this.value)" aria-label="Postgres instance label">
+        <button class="delete-btn" onclick="removePostgresInstance('${inst.id}')" title="Delete this Postgres instance">Delete</button>
+      </div>
+      <div class="controls-grid">
+        <label>Family
+          <select onchange="updatePostgresInstance('${inst.id}', 'family', this.value)">${familyOpts}</select>
+        </label>
+        <label>Count
+          <input type="number" value="${inst.count || 1}" min="1" step="1"
+                 onchange="updatePostgresInstance('${inst.id}', 'count', +this.value)">
+        </label>
+        <label>Hours/month
+          <input type="number" value="${inst.hours_monthly || 730}" min="0" max="744" step="1"
+                 onchange="updatePostgresInstance('${inst.id}', 'hours_monthly', +this.value)">
+        </label>
+        <label>High Availability
+          <input type="checkbox" ${inst.ha ? 'checked' : ''}
+                 onchange="updatePostgresInstance('${inst.id}', 'ha', this.checked)">
+        </label>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('postgres-container').innerHTML = header + html;
+}
+
+function addPostgresInstance() {
+  if (!SIZING_SPEC.postgres) SIZING_SPEC.postgres = { enabled: true, instances: [] };
+  if (!Array.isArray(SIZING_SPEC.postgres.instances)) SIZING_SPEC.postgres.instances = [];
+  SIZING_SPEC.postgres.enabled = true;
+  SIZING_SPEC.postgres.instances.push({
+    id: nextId('pg'),
+    label: 'New Postgres instance',
+    family: 'STANDARD_M',
+    count: 1,
+    hours_monthly: 730,
+    ha: false
+  });
+  populatePostgresPanel();
+  recalculate();
+}
+
+function removePostgresInstance(id) {
+  const pg = SIZING_SPEC.postgres;
+  if (pg && Array.isArray(pg.instances)) {
+    pg.instances = pg.instances.filter(x => x.id !== id);
+    if (pg.instances.length === 0) pg.enabled = false;
+  }
+  populatePostgresPanel();
+  recalculate();
+}
+
+function updatePostgresInstance(id, field, value) {
+  const inst = SIZING_SPEC.postgres.instances.find(x => x.id === id);
+  if (!inst) return;
+  inst[field] = value;
+  recalculate();
+}
+
 function populateOpenflowPanel() {
   const of = SIZING_SPEC.openflow;
   const instances = (of && Array.isArray(of.instances)) ? of.instances : [];
@@ -2600,12 +2791,25 @@ function updateStorageBreakdown() {
     const tt = grown * (s.churn_rate_pct / 100) * (s.time_travel_days / 30);
     const fs = grown * (s.churn_rate_pct / 100) * (7 / 30);
     const total = grown + tt + fs;
-    rows += `<tr><td>Year ${y}</td><td>${grown.toFixed(2)}</td><td>${tt.toFixed(3)}</td><td>${fs.toFixed(3)}</td><td>${total.toFixed(2)}</td><td>$${fmt(total * sr)}</td><td>$${fmt(total * sr * 12)}</td></tr>`;
+    const hybridCost = hybridStorageCostForYear(y);
+    const archiveCost = archiveStorageCostForYear(y);
+    const stdAnnual = total * sr * 12;
+    const totalAnnual = stdAnnual + hybridCost + archiveCost;
+    rows += `<tr><td>Year ${y}</td><td>${grown.toFixed(2)}</td><td>${tt.toFixed(3)}</td><td>${fs.toFixed(3)}</td><td>${total.toFixed(2)}</td><td>$${fmt(stdAnnual / 12)}</td><td>$${fmt(totalAnnual)}</td></tr>`;
+  }
+  const h = (SIZING_SPEC.storage || {}).hybrid_tables || (SIZING_SPEC.storage || {}).hybrid;
+  const a = (SIZING_SPEC.storage || {}).archive;
+  let extraRows = '';
+  if (h && h.enabled && h.gb_year1) {
+    extraRows += `<tr><td colspan="5" style="text-align:right;font-style:italic;">Hybrid Tables Storage (${h.gb_year1} GB)</td><td></td><td>$${fmt(hybridStorageCostForYear(1))}/yr1</td></tr>`;
+  }
+  if (a && a.enabled && a.tb_year1) {
+    extraRows += `<tr><td colspan="5" style="text-align:right;font-style:italic;">Archive Storage (${a.tb_year1} TB, ${a.tier || 'cold'})</td><td></td><td>$${fmt(archiveStorageCostForYear(1))}/yr1</td></tr>`;
   }
   el.innerHTML = `
     <table class="year-table">
-      <thead><tr><th>Year</th><th>Compressed TB</th><th>Time Travel TB</th><th>Failsafe TB</th><th>Total TB</th><th>Monthly $</th><th>Annual $</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <thead><tr><th>Year</th><th>Compressed TB</th><th>Time Travel TB</th><th>Failsafe TB</th><th>Total TB</th><th>Monthly $</th><th>Annual $ (all)</th></tr></thead>
+      <tbody>${rows}${extraRows}</tbody>
     </table>`;
 }
 
@@ -3018,6 +3222,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populateServerlessPanel();
   populateAIPanel();
   populateSPCSPanel();
+  populatePostgresPanel();
   populateOpenflowPanel();
   populateStoragePanel();
   populateCollabPanel();

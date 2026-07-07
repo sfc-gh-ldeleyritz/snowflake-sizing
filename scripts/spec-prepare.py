@@ -160,6 +160,16 @@ def _rename_legacy_fields(spec: dict, warnings: list[str]) -> None:
                 f"split avg_clusters -> clusters_min/clusters_max"
             )
 
+    # Postgres instances: rename legacy 'family' -> 'instance_family'.
+    pg = spec.get("postgres")
+    if isinstance(pg, dict):
+        for inst in pg.get("instances", []) or []:
+            if isinstance(inst, dict) and "family" in inst and "instance_family" not in inst:
+                inst["instance_family"] = inst.pop("family")
+                warnings.append(
+                    f"postgres instance: renamed 'family' -> 'instance_family'"
+                )
+
 
 def _strip_leakage(spec: dict) -> int:
     """Remove forbidden internal/marker fields anywhere in the tree. Returns count."""

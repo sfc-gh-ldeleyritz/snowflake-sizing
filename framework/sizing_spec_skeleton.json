@@ -184,6 +184,16 @@
       "annual_growth_pct": 0,
       "time_travel_days": 1,
       "churn_rate_pct": 0
+    },
+    "hybrid_tables": {
+      "enabled": false,
+      "gb_year1": 0,
+      "annual_growth_pct": 0
+    },
+    "archive": {
+      "enabled": false,
+      "tb_year1": 0,
+      "tier": "cool"
     }
   },
   "assumptions": [],

@@ -355,3 +355,127 @@ def region_product_families(pricing: dict, cloud: str, region: str) -> Optional[
                 if _region_match(region, r.get("region")):
                     return (r.get("data") or {}).get("product_families")
     return None
+
+
+# ── Data Transfer rate ─────────────────────────────────────────────────────── #
+
+def data_transfer_rate(pricing: dict, cloud: str, region: str, pattern: str) -> Optional[float]:
+    """$/TB rate for data transfer given cloud, region, and traffic pattern.
+
+    Pattern values: 'same_region', 'cross_region', 'internet'.
+    Cloud-specific mapping:
+      AWS:   cross_region -> different_region, internet -> internet
+      Azure: cross_region -> same_continent, internet -> internet
+      GCP:   cross_region -> same_cloud (north_america default), internet -> different_cloud_or_internet (north_america default)
+    Returns None if pricing data is unavailable.
+    """
+    if not pattern or pattern == "same_region":
+        return 0.0
+    dt = (pricing or {}).get("data_transfer") or {}
+    cloud_key = (cloud or "aws").strip().lower()
+    cloud_block = dt.get(cloud_key) or {}
+    data = cloud_block.get("data") or []
+    # Find the region row
+    row = None
+    for entry in data:
+        if _region_match(region, entry.get("region")):
+            row = entry
+            break
+    if row is None and data:
+        row = data[0]  # fallback to first region
+    if row is None:
+        return None
+    if cloud_key == "aws":
+        if pattern == "cross_region":
+            return float(row.get("different_region", 0) or 0)
+        return float(row.get("internet", 0) or 0)
+    elif cloud_key == "azure":
+        if pattern == "cross_region":
+            return float(row.get("same_continent", 0) or 0)
+        return float(row.get("internet", 0) or 0)
+    else:  # gcp
+        if pattern == "cross_region":
+            nested = row.get("same_cloud") or {}
+            return float(nested.get("north_america", 0) or 0)
+        nested = row.get("different_cloud_or_internet") or {}
+        return float(nested.get("north_america", 0) or 0)
+
+
+# ── Hybrid Tables storage rate ─────────────────────────────────────────────── #
+
+def hybrid_storage_rate(pricing: dict, cloud: str, region: str) -> Optional[float]:
+    """$/GB/month for Hybrid Tables storage from pricing['storage']['hybrid_tables']."""
+    ht = ((pricing or {}).get("storage") or {}).get("hybrid_tables") or {}
+    data = ht.get("data") or []
+    cloud_n = norm_cloud(cloud)
+    for row in data:
+        if row.get("cloud") == cloud_n and _region_match(region, row.get("region")):
+            v = row.get("rate_per_gb_month")
+            return float(v) if v is not None else None
+    # fallback: first row matching cloud
+    for row in data:
+        if row.get("cloud") == cloud_n:
+            v = row.get("rate_per_gb_month")
+            return float(v) if v is not None else None
+    # last fallback: first row
+    if data:
+        v = data[0].get("rate_per_gb_month")
+        return float(v) if v is not None else None
+    return None
+
+
+# ── Archive storage rate ───────────────────────────────────────────────────── #
+
+def archive_storage_rate(pricing: dict, cloud: str, region: str, tier: str = "cold") -> Optional[float]:
+    """$/TB/month for archive storage (cold or cool tier).
+
+    Azure has no cold tier (cold fields are null) — falls back to cool.
+    """
+    ar = ((pricing or {}).get("storage") or {}).get("archive") or {}
+    data = ar.get("data") or []
+    cloud_n = norm_cloud(cloud)
+    row = None
+    for entry in data:
+        if entry.get("cloud") == cloud_n and _region_match(region, entry.get("region")):
+            row = entry
+            break
+    if row is None:
+        for entry in data:
+            if entry.get("cloud") == cloud_n:
+                row = entry
+                break
+    if row is None:
+        return None
+    t = (tier or "cold").strip().lower()
+    key = f"{t}_storage_per_tb_month"
+    v = row.get(key)
+    if v is not None:
+        return float(v)
+    # Azure cold fallback to cool
+    if t == "cold":
+        v = row.get("cool_storage_per_tb_month")
+        return float(v) if v is not None else None
+    return None
+
+
+# ── Postgres credit rate ───────────────────────────────────────────────────── #
+
+def postgres_credit(pricing: dict, family: str, cloud: str, ha: bool = False) -> Optional[float]:
+    """Credits/hour for a Postgres instance family on a given cloud (with optional HA).
+
+    Reads from pricing['postgres']['data']. GCP is not listed — returns 0.0 for GCP.
+    """
+    if not family:
+        return None
+    cloud_key = (cloud or "aws").strip().lower()
+    if cloud_key == "gcp":
+        return 0.0  # GCP not supported for Postgres (not in pricing PDF)
+    pg = (pricing or {}).get("postgres") or {}
+    data = pg.get("data") or []
+    want = family.strip().upper()
+    col = f"{cloud_key}_ha" if ha else cloud_key
+    for row in data:
+        if (row.get("family") or "").strip().upper() == want:
+            v = row.get(col)
+            return float(v) if v is not None else None
+    return None

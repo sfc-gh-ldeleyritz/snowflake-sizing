@@ -1093,7 +1093,7 @@
       }
     },
     "postgres": {
-      "description": "Postgres CDC / replication instances.",
+      "description": "Snowflake Postgres instances.",
       "type": "object",
       "required": [
         "enabled",
@@ -1109,14 +1109,31 @@
           "items": {
             "type": "object",
             "required": [
-              "id"
+              "instance_family",
+              "count",
+              "hours_monthly",
+              "ha"
             ],
+            "additionalProperties": false,
             "properties": {
-              "id": {
-                "type": "string"
+              "instance_family": {
+                "type": "string",
+                "description": "Postgres instance family/size (e.g. 'memory4.xlarge', 'cpu4.2xlarge')."
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "hours_monthly": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Hours per month each instance runs."
+              },
+              "ha": {
+                "type": "boolean",
+                "description": "Whether high-availability (HA) is enabled for this instance."
               }
-            },
-            "additionalProperties": true
+            }
           }
         }
       }
@@ -1175,7 +1192,8 @@
           "type": "object",
           "required": [
             "enabled",
-            "gb_year1"
+            "gb_year1",
+            "annual_growth_pct"
           ],
           "additionalProperties": false,
           "properties": {
@@ -1185,6 +1203,10 @@
             "gb_year1": {
               "type": "number",
               "minimum": 0
+            },
+            "annual_growth_pct": {
+              "type": "number",
+              "minimum": 0
             }
           }
         },
@@ -1192,7 +1214,8 @@
           "type": "object",
           "required": [
             "enabled",
-            "tb_year1"
+            "tb_year1",
+            "tier"
           ],
           "additionalProperties": false,
           "properties": {
@@ -1202,6 +1225,11 @@
             "tb_year1": {
               "type": "number",
               "minimum": 0
+            },
+            "tier": {
+              "type": "string",
+              "enum": ["cool", "cold"],
+              "default": "cool"
             }
           }
         }
@@ -1411,7 +1439,24 @@
     "computed_totals": {
       "description": "Authoritative full-stack TCV totals stamped by scripts/spec-prepare.py (framework/compute_totals.py): per-year cost arrays for warehouse compute, serverless, AI/Cortex, storage, and the other categories (SPCS, OpenFlow + OpenFlow-Oracle, data-transfer + PrivateLink, collaboration, replication), plus other_cost_per_year and core_year_total. The renderer recomputes these at render time from the pricing it loads; the renderer value is authoritative.",
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "properties": {
+        "hybrid_storage_cost_per_year": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Per-year hybrid table storage cost array."
+        },
+        "archive_cost_per_year": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Per-year archive/cold storage cost array."
+        },
+        "postgres_cost_per_year": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Per-year Postgres instance cost array."
+        }
+      }
     },
     "pricing_snapshot": {
       "description": "Provenance of the pricing data this sizing was built against, stamped by scripts/spec-prepare.py. The full rates live in a gitignored sidecar (<slug>.pricing.json, named by pinned_pricing_file); render-html.py auto-loads that sidecar so a re-render reproduces identical numbers. Use render-html.py --latest (one-off fresh) or --repin (re-pin) to rebuild against fresh live pricing.",
