@@ -1826,14 +1826,13 @@ function updateWorkloadType(id, value) {
 }
 
 function updateServerless(key, field, value) {
-  if (SIZING_SPEC.serverless[key]) {
-    SIZING_SPEC.serverless[key][field] = value;
-    if (field === 'enabled') {
-      const volInput = document.getElementById('sl-vol-' + key);
-      if (volInput) volInput.disabled = !value;
-    }
-    recalculate();
+  if (!SIZING_SPEC.serverless[key]) SIZING_SPEC.serverless[key] = { enabled: false };
+  SIZING_SPEC.serverless[key][field] = value;
+  if (field === 'enabled') {
+    const volInput = document.getElementById('sl-vol-' + key);
+    if (volInput) volInput.disabled = !value;
   }
+  recalculate();
 }
 
 function updateAI(path, field, value) {

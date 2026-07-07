@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.17.1] - 2026-07-07
+
+### Fixed
+
+- **Serverless feature toggles were inert for features absent from the spec.**
+  `updateServerless` was guarded by `if (SIZING_SPEC.serverless[key])`, so
+  ticking the checkbox for any serverless feature not already present in the
+  spec (the majority when a spec enables only a few) was a no-op: `enabled`
+  never got set, the volume input stayed `disabled`, and no recalculation ran,
+  leaving the field permanently uneditable. The handler now lazily creates the
+  config object (`SIZING_SPEC.serverless[key] ||= { enabled: false }`) so every
+  feature can be enabled and edited in the rendered proposal. Re-rendered the
+  kitchen-sink example (`examples/kitchen-sink-aws-us-east.html`); TCV and
+  JS/Python parity unchanged ($169,470).
+
+---
+
 ## [2.17.0] - 2026-07-07
 
 Remediation of the 8 confirmed issues from the v2 calculator audit
