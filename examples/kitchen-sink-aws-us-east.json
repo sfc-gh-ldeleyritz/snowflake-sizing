@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "customer": "Kitchen Sink Test",
+    "edition": "Enterprise",
+    "cloud": "AWS",
+    "region": "US East (Northern Virginia)",
+    "credit_rate": 3.0,
+    "ai_credit_rate": 2.0,
+    "storage_rate_per_tb": 23.0,
+    "hybrid_tables_storage_rate_per_gb": 0.34,
+    "contract_years": 3,
+    "generated_date": "2026-07-07",
+    "default_ramp_curve": "linear",
+    "annual_growth_rate": 0.20,
+    "ai_growth_rate": null,
+    "default_dev_start_month": 0,
+    "default_go_live_month": 1,
+    "version_number": 1
+  },
+  "workloads": [
+    {
+      "id": "wh-main",
+      "label": "Main Warehouse",
+      "size": "M",
+      "hours_per_day": 8,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 60,
+      "dev_start_month": 0,
+      "go_live_month": 1,
+      "ramp_curve": "linear",
+      "source": "TEST",
+      "justification": "Test workload"
+    }
+  ],
+  "serverless": {
+    "snowpipe": { "enabled": true, "gb_per_month": 100 },
+    "snowpipe_streaming": { "enabled": true, "uncompressed_gb_per_month": 50 },
+    "serverless_tasks": { "enabled": true, "compute_hours_monthly": 20 },
+    "clustered_tables": { "enabled": true, "compute_hours_monthly": 10 },
+    "materialized_views": { "enabled": true, "compute_hours_monthly": 5 },
+    "search_optimization": { "enabled": true, "compute_hours_monthly": 8 },
+    "query_acceleration": { "enabled": true, "compute_hours_monthly": 15 },
+    "replication": { "enabled": true, "compute_hours_monthly": 6 }
+  },
+  "ai_cortex": {
+    "cortex_complete": { "enabled": false, "model": "claude-4-sonnet", "monthly_input_tokens_M": 0, "monthly_output_tokens_M": 0 },
+    "cortex_agents": { "enabled": false, "model": "claude-4-sonnet", "monthly_input_tokens_M": 0, "monthly_output_tokens_M": 0, "monthly_cache_write_tokens_M": 0, "monthly_cache_read_tokens_M": 0 },
+    "snowflake_intelligence": { "enabled": false, "model": "claude-4-sonnet", "monthly_input_tokens_M": 0, "monthly_output_tokens_M": 0, "monthly_cache_write_tokens_M": 0, "monthly_cache_read_tokens_M": 0 },
+    "cortex_code": {
+      "model": "claude-4-sonnet",
+      "cli": { "enabled": true, "developers": 5, "queries_per_dev_per_day": 20, "avg_tokens_per_query": 5000 }
+    },
+    "cortex_analyst": { "enabled": false, "monthly_messages": 0 },
+    "cortex_search": { "enabled": false, "indexed_data_gb": 0 },
+    "document_ai": { "enabled": false, "compute_hours_monthly": 0 },
+    "ai_parse_document_layout": { "enabled": false, "pages_per_month": 0 },
+    "ai_parse_document_ocr": { "enabled": false, "pages_per_month": 0 },
+    "cortex_fine_tuning": { "enabled": false },
+    "cortex_functions": {
+      "ai_classify": { "enabled": false, "tokens_M_monthly": 0 },
+      "ai_sentiment": { "enabled": false, "tokens_M_monthly": 0 },
+      "ai_summarize": { "enabled": false, "tokens_M_monthly": 0 },
+      "ai_translate": { "enabled": false, "tokens_M_monthly": 0 },
+      "ai_extract": { "enabled": false, "tokens_M_monthly": 0 },
+      "ai_transcribe": { "enabled": false, "tokens_M_monthly": 0 }
+    },
+    "embeddings": { "enabled": true, "tokens_M_monthly": 10, "model": "snowflake-arctic-embed-l-v2.0" }
+  },
+  "spcs": {
+    "enabled": true,
+    "instances": [
+      {
+        "id": "sp-1",
+        "label": "ML Inference",
+        "generation": "gen1",
+        "instance_type": "CPU_X64_M",
+        "count": 2,
+        "hours_monthly": 500
+      }
+    ]
+  },
+  "postgres": {
+    "enabled": true,
+    "instances": [
+      {
+        "id": "pg-1",
+        "label": "App DB",
+        "family": "STANDARD_M",
+        "count": 2,
+        "hours_monthly": 730,
+        "ha": false
+      }
+    ]
+  },
+  "data_transfer": {
+    "enabled": true,
+    "pattern": "cross_region",
+    "tb_per_month": 1.0
+  },
+  "privatelink": {
+    "enabled": false
+  },
+  "collaboration": {
+    "accounts": [
+      {
+        "id": "acct-1",
+        "label": "Partner Reader Account",
+        "type": "reader",
+        "warehouse_size": "S",
+        "hours_per_day": 4,
+        "days_per_month": 22
+      }
+    ]
+  },
+  "storage": {
+    "standard": {
+      "raw_tb_year1": 10,
+      "compression_ratio": 4,
+      "annual_growth_pct": 20,
+      "time_travel_days": 7,
+      "churn_rate_pct": 10
+    },
+    "hybrid_tables": {
+      "enabled": true,
+      "gb_year1": 100,
+      "annual_growth_pct": 20
+    },
+    "archive": {
+      "enabled": true,
+      "tb_year1": 5,
+      "annual_growth_pct": 10,
+      "tier": "cold"
+    }
+  },
+  "openflow": {
+    "enabled": false,
+    "instances": []
+  },
+  "scenarios": {
+    "conservative": { "growth_pct": 10, "curve": "conservative", "go_live_shift": 2 },
+    "aggressive": { "growth_pct": 30, "curve": "aggressive", "go_live_shift": -1 }
+  },
+  "replication": {
+    "enabled": false
+  },
+  "assumptions": [],
+  "confirm_required": []
+}
