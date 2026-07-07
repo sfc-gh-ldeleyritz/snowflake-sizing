@@ -4,6 +4,57 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.16.2] - 2026-07-07
+
+### Changed
+
+- **Pricing refreshed to the July 1, 2026 Snowflake Service Consumption Table.**
+  `assets/snowflake_pricing_master.json` `metadata` bumped (`effective_date`
+  2026-05-29 → 2026-07-01, `version` 2.4 → 2.5, `regions_covered` 56 → 55) and
+  `assets/live_pricing_seed.json` re-fetched from the live calculator via
+  `scripts/refresh-seed.py` (guards pass). Verified with
+  `scripts/check-pdf-freshness.py` (now in sync), `scripts/verify-pricing-json.py`,
+  and the full test suite (384 passing).
+- **Cortex AI Functions (Table 6a) rates increased.** 33 `AI_COMPLETE` models
+  went up, e.g. `claude-opus-4-5/6/7` 2.75/13.75 → 3.00/15.00,
+  `claude-sonnet-4-5/4-6` 1.65/8.25 → 1.80/9.00, `llama3.1-405b` 1.2 → 1.44,
+  `openai-gpt-5.x` families, `deepseek-r1` 0.68/2.7 → 0.81/3.24,
+  `snowflake-llama-3.3-70b` 0.29 → 0.432. Utility functions also changed
+  (`AI_AGG`/`AI_SUMMARIZE_AGG` 1.6 → 1.85, `AI_CLASSIFY`/`AI_FILTER` 1.39 → 1.62,
+  `AI_EXTRACT` 5.0 → 5.55, `AI_TRANSLATE` 1.5 → 1.63, `AI_TRANSCRIBE` 1.3 → 0.97,
+  `AI_REDACT` 0.63 → 0.69, `Extract Answer`/`Sentiment`/`Summarize`), Parse
+  Document (Layout 3.33 → 3.66, OCR 0.5 → 0.68), and fine-tuning
+  (`arctic-extract-finetuned` inference 10 → 9.14). Tables 6b–6e (Inference /
+  Agents / CoCo) were unchanged for existing models.
+- **SPCS Gen2 `MEM_X64_G2_64` Azure corrected** 2.486 → 2.488 to match the PDF.
+
+### Added
+
+- **10 new `AI_COMPLETE` models** (Table 6a, all preview): `claude-fable-5`,
+  `claude-sonnet-5`, `gemini-3.1-flash-lite`, `grok-4.20`,
+  `grok-4.20-long-context`, `grok-4.3`, `grok-4.3-long-context`,
+  `mistral-large3`, `openai-gpt-5.4-mini`, `openai-gpt-5.4-nano`.
+  `claude-fable-5` and `claude-sonnet-5` were also added to Cortex Agents (6d,
+  direct PDF values) and CoCo (6e, direct PDF values), and to the REST-API
+  prompt-caching table (6b) using the master's established derivation
+  (Global = 2× SCT-6b, Regional = 2.2×; `openai-gpt-5.4-mini`/`-nano` added on
+  the Azure side).
+
+### Removed
+
+- **AWS "Middle East (UAE)" delisted.** The July 1, 2026 Consumption Table
+  removed AWS Middle East (UAE) from all 9 pricing tables due to a **temporary
+  decommission** of the region (ref ETEGA-9157/9158; the region is still listed
+  as supported in product docs). Removed from all PDF-derived master sections
+  (`credit_pricing`, `storage.*`, `data_transfer.aws`, `privatelink`); the
+  internal `replication` egress matrix is left intact (separate source, and
+  removing one node would break matrix symmetry). Re-add when Snowflake
+  re-lists the region.
+- **`claude-sonnet-4-5-long-context`** removed from `cortex_complete` and
+  `rest_api_with_caching` — no longer present in the July 1 PDF.
+
+---
+
 ## [2.16.1] - 2026-06-30
 
 ### Changed
