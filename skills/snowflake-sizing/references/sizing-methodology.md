@@ -169,8 +169,9 @@ AI credits are priced separately from compute credits. Default on-demand rate: *
 
 | Model | Input | Output | Notes |
 |---|---|---|---|
-| claude-sonnet-4-6 | 1.65 | 8.25 | **← DEFAULT for cortex_complete** |
-| claude-4-sonnet | 1.50 | 7.50 | Legacy — prefer claude-sonnet-4-6 |
+| claude-sonnet-5 | 1.20 | 6.00 | **← DEFAULT for cortex_complete** |
+| claude-sonnet-4-6 | 1.65 | 8.25 | Alternative |
+| claude-4-sonnet | 1.50 | 7.50 | Legacy — prefer claude-sonnet-5 |
 | claude-4-opus | 7.50 | 37.50 | Complex reasoning only |
 | claude-haiku-4-5 | 0.55 | 2.75 | High-volume / low-cost |
 | llama4-maverick | 0.12 | 0.49 | |

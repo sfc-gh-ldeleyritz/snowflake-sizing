@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.18.0] - 2026-07-07
+
+### Changed
+
+- **Default AI/Cortex model is now `claude-sonnet-5`** (was `claude-4-sonnet`).
+  Applied to every runtime fallback used when a spec omits a model: JS
+  `calcAICredits` for Cortex Agents, Snowflake Intelligence, Cortex Code, and
+  the Cortex Complete model dropdown (`proposal-template.html`), and the Python
+  engine's Agents/SI and Cortex Code fallbacks (`compute_totals.py`).
+  `claude-sonnet-5` resolves in all relevant pricing tables (Complete 1.2/6.0,
+  Agents/SI 1.3/6.5, Cortex Code 1.1/5.5 AI cr per 1M tokens). Also updated the
+  skill authoring guidance (`references/ai-feature-defaults.md`,
+  `references/sizing-methodology.md`, `sub-skills/build-spec/SKILL.md`) so newly
+  built specs default to `claude-sonnet-5`; `claude-sonnet-4-6` is retained as
+  an alternative and `claude-4-sonnet` demoted to legacy.
+
+---
+
 ## [2.17.2] - 2026-07-07
 
 ### Fixed

@@ -89,7 +89,7 @@ Example patch:
   },
   "ai_cortex": {
     "cortex_complete": {
-      "enabled": true, "model": "claude-sonnet-4-6",
+      "enabled": true, "model": "claude-sonnet-5",
       "monthly_input_tokens_M": 100,
       "monthly_output_tokens_M": 30
     }

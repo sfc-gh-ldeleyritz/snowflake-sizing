@@ -1215,14 +1215,14 @@ function calcAICredits() {
     total += (ai.cortex_complete.monthly_input_tokens_M || 0)  * getRate(ai.cortex_complete.model, 'input') +
              (ai.cortex_complete.monthly_output_tokens_M || 0) * getRate(ai.cortex_complete.model, 'output');
   if (ai.cortex_agents && ai.cortex_agents.enabled) {
-    const model = ai.cortex_agents.model || 'claude-4-sonnet';
+    const model = ai.cortex_agents.model || 'claude-sonnet-5';
     total += (ai.cortex_agents.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
              (ai.cortex_agents.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
              (ai.cortex_agents.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
              (ai.cortex_agents.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
   }
   if (ai.snowflake_intelligence && ai.snowflake_intelligence.enabled) {
-    const model = ai.snowflake_intelligence.model || 'claude-4-sonnet';
+    const model = ai.snowflake_intelligence.model || 'claude-sonnet-5';
     total += (ai.snowflake_intelligence.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
              (ai.snowflake_intelligence.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
              (ai.snowflake_intelligence.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
@@ -1235,7 +1235,7 @@ function calcAICredits() {
       const m = ccModels.find(x => x.model === model);
       return m ? (m[type] || 0) : 0;
     };
-    const ccDefaultModel = ai.cortex_code.model || 'claude-4-sonnet';
+    const ccDefaultModel = ai.cortex_code.model || 'claude-sonnet-5';
     const ccRate = getCCRate(ccDefaultModel, 'input') || getSIRate(ccDefaultModel, 'input');
     ['cli', 'snowsight', 'desktop'].forEach(surface => {
       const cc = ai.cortex_code[surface];
@@ -2285,7 +2285,7 @@ function populateServerlessPanel() {
 function populateAIPanel() {
   const ai = SIZING_SPEC.ai_cortex;
   const models = PRICING_DATA.ai_features.cortex_complete.data.map(m => m.model);
-  const modelOpts = models.map(m => `<option value="${m}" ${m === (ai.cortex_complete.model || 'claude-4-sonnet') ? 'selected' : ''}>${m}</option>`).join('');
+  const modelOpts = models.map(m => `<option value="${m}" ${m === (ai.cortex_complete.model || 'claude-sonnet-5') ? 'selected' : ''}>${m}</option>`).join('');
   const html = `
     <div class="ai-section">
       <h4>Cortex Complete</h4>

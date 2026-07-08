@@ -319,7 +319,7 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
     for feat_key in ("cortex_agents", "snowflake_intelligence"):
         f = ai.get(feat_key) or {}
         if f.get("enabled"):
-            model = f.get("model") or "claude-4-sonnet"
+            model = f.get("model") or "claude-sonnet-5"
             total += (f.get("monthly_input_tokens_M", 0) or 0) * si_rate(model, "input")
             total += (f.get("monthly_output_tokens_M", 0) or 0) * si_rate(model, "output")
             total += (f.get("monthly_cache_write_tokens_M", 0) or 0) * si_rate(model, "cache_write")
@@ -327,7 +327,7 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
 
     cco = ai.get("cortex_code") or {}
     if cco:
-        cc_model = cco.get("model") or "claude-4-sonnet"
+        cc_model = cco.get("model") or "claude-sonnet-5"
         # Use Table 6(e) cortex_code rates (not 6(d) intelligence_agents)
         cco_models = ((feats.get("cortex_code") or {}).get("data") or [])
         cco_row = _by_key(cco_models, "model", cc_model) or {}

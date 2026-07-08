@@ -38,7 +38,7 @@ the canonical required list (also enforced by `scripts/_schema_loader.py`).
 
 ## Default model for cortex_complete
 
-Always specify `claude-sonnet-4-6` (input: 1.65 AI cr/M, output: 8.25 AI cr/M).
+Always specify `claude-sonnet-5` (input: 1.2 AI cr/M, output: 6.0 AI cr/M).
 Do not use unlisted, older, or smaller models as defaults.
 
 ## Cortex Code surfaces (3-surface form)
@@ -94,7 +94,7 @@ Example:
 ```json
 "cortex_agents": {
   "enabled": true,
-  "model": "claude-4-sonnet",
+  "model": "claude-sonnet-5",
   "monthly_users": 200,
   "sessions_per_user_per_day": 3,
   "messages_per_session": 6,

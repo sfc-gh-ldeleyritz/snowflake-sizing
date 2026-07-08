@@ -810,23 +810,23 @@ function calcAICredits() {
              ai.cortex_complete.monthly_output_tokens_M * getRate(ai.cortex_complete.model, 'output');
 
   // SI/Agents/Cortex Analyst-via-SI now use cache_write and cache_read tokens too (Table 6d/6e have these columns).
-  // Default model claude-4-sonnet if SIZING_SPEC omits it.
+  // Default model claude-sonnet-5 if SIZING_SPEC omits it.
   if (ai.cortex_agents.enabled) {
-    const model = ai.cortex_agents.model || 'claude-4-sonnet';
+    const model = ai.cortex_agents.model || 'claude-sonnet-5';
     total += (ai.cortex_agents.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
              (ai.cortex_agents.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
              (ai.cortex_agents.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
              (ai.cortex_agents.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
   }
   if (ai.snowflake_intelligence.enabled) {
-    const model = ai.snowflake_intelligence.model || 'claude-4-sonnet';
+    const model = ai.snowflake_intelligence.model || 'claude-sonnet-5';
     total += (ai.snowflake_intelligence.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
              (ai.snowflake_intelligence.monthly_output_tokens_M || 0) * getSIRate(model, 'output') +
              (ai.snowflake_intelligence.monthly_cache_write_tokens_M || 0) * getSIRate(model, 'cache_write') +
              (ai.snowflake_intelligence.monthly_cache_read_tokens_M  || 0) * getSIRate(model, 'cache_read');
   }
   if (ai.cortex_code) {
-    const ccModel = ai.cortex_code.model || 'claude-4-sonnet';
+    const ccModel = ai.cortex_code.model || 'claude-sonnet-5';
     const ccRate = getSIRate(ccModel, 'input');  // blended approximation
     ['cli', 'snowsight', 'desktop'].forEach(surface => {
       const cc = ai.cortex_code[surface];
