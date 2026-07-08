@@ -4,6 +4,106 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.19.1] - 2026-07-08
+
+Follow-up schema/fixture drift fixes. The 2.18.0 hybrid_tables/archive
+remediation had masked two pre-existing `test_schema_conformance` failures
+(`enterprise-gcp-fullstack-3year`, `kitchen-sink-aws-us-east`) that sorted
+after the fixed violations in the same test IDs. This session fixes the
+underlying 4 issues so `pytest tests/` is fully green (396/396).
+
+### Fixed
+
+- **`postgres.instances[]` 3-way field-name drift (schema vs. engine vs.
+  fixtures).** `framework/compute_totals.py::postgres_monthly_credits()` read
+  `inst.get("family")`, silently returning $0 credits, while the schema
+  required `instance_family` and `scripts/spec-prepare.py` already had an
+  auto-rename rule for `family` → `instance_family`. Canonicalized on
+  `instance_family` (matching the schema and spec-prepare convention): fixed
+  the engine to read `instance_family`, added optional `id`/`label` string
+  properties to the schema so fixtures can keep human-readable metadata, and
+  renamed `family` → `instance_family` in `tests/fixtures/kitchen-sink-aws-us-east.json`.
+  `tests/fixtures/enterprise-gcp-fullstack-3year.json`'s `postgres` block was a
+  stale duplicate of the OMS Postgres CDC source already correctly modeled
+  under `openflow.instances[]` (`id: "postgres-oms"`) — it had no
+  `instance_family`/`count`/`hours_monthly`/`ha` and no engine linkage, so it
+  was set to `{"enabled": false, "instances": []}` instead of fabricating
+  compute numbers.
+- **`collaboration` schema rejected the `accounts[]` shape the engine already
+  supports.** `compute_totals.py::collaboration_monthly_cost()` has supported
+  both the legacy `reader_accounts`/`native_apps`/`marketplace` shape and a
+  JS-parity `accounts[]` array for a while, but the schema only declared the
+  legacy shape valid. Changed `collaboration` to a `oneOf` of both shapes so
+  `tests/fixtures/kitchen-sink-aws-us-east.json`'s `accounts[]` usage now
+  validates.
+- **`serverless` block incomplete in `kitchen-sink-aws-us-east.json`.**
+  Fixture only set 8 of the ~26 required keys. Backfilled the 15 missing
+  keys (`snowpipe_streaming_classic`, `serverless_tasks_flex`,
+  `serverless_alerts`, `backup`, `failsafe_recovery`,
+  `data_quality_monitoring`, `trust_center`, `table_optimization`,
+  `storage_lifecycle_policy`, `hybrid_tables_requests`, `copy_files`,
+  `automated_refresh`, `organization_usage`, `sensitive_data_classification`,
+  `open_catalog`, `logging`, `telemetry_data_ingest`,
+  `archive_storage_retrieval`, `archive_storage_write`) as disabled/zeroed,
+  using `tests/fixtures/acme-financial-3year-sizing.json` as the reference
+  shape.
+- **Two invalid values in `kitchen-sink-aws-us-east.json`.** Added the
+  optional `model` string property to the `ai_cortex.ai_embed` schema
+  (consistent with every other Cortex feature already accepting `model`),
+  and fixed `workloads[0].source: "TEST"` — not a valid enum value — to
+  `"ASSUMPTION"`.
+
+## [2.19.0] - 2026-07-08
+
+Proposal-template UI fixes: aligned the AI Functions naming convention with
+Snowflake's actual function names and repaired a silently-broken tooltip, then
+closed the tooltip-coverage gap across every configuration tab.
+
+### Fixed
+
+- **`embeddings` field renamed to `ai_embed`.** The AI Functions row previously
+  called `tt('embeddings')`, but `FEATURE_TOOLTIPS` only had a key named
+  `embed_text` — the mismatch meant the Embeddings tooltip silently rendered
+  nothing. Renamed the field end-to-end to `ai_embed` (matching Snowflake's
+  `AI_EMBED` function, https://docs.snowflake.com/en/sql-reference/functions/ai_embed)
+  so it now (a) displays as `ai_embed` in the UI, consistent with its siblings
+  `ai_classify`, `ai_sentiment`, `ai_summarize`, `ai_translate`, `ai_extract`,
+  `ai_transcribe`, and (b) resolves a real, rewritten tooltip that references
+  `AI_EMBED`/`AI_MULTI_EMBED`. Updated in both engines
+  (`assets/templates/proposal-template.html`, `framework/compute_totals.py`),
+  the schema and skeleton (`framework/sizing_spec_schema.json`,
+  `framework/sizing_spec_skeleton.json`), all 13 test fixtures
+  (`tests/fixtures/*.json`), `tests/test_compute_totals.py`
+  (`test_ai_embed_hardcoded_rate`), `scripts/test-parity.py`, and the skill
+  reference docs (`references/field-names.md`, `references/ai-feature-defaults.md`,
+  `references/html-spec.md`). Pre-existing generated sizings under `sizings/`,
+  `examples/`, and `temp/` were intentionally left untouched (point-in-time
+  customer artifacts, not template source).
+
+### Added
+
+- **Information tooltips on every remaining tab.** Serverless and AI/Cortex
+  already had a `tt(key)` info-icon on every line item; the other 7 tabs had
+  none. Added `FEATURE_TOOLTIPS` entries and wired `${tt('key')}` next to every
+  control on:
+  - **Warehouses** — size, type, memory config, hours/day, days/month, clusters
+  - **SPCS** — generation, instance type, count, hours/month
+  - **Postgres** — family, count, hours/month, high availability
+  - **OpenFlow** — connector type, deployment, runtime size/nodes, AWS region,
+    monthly data volume, MERGE warehouse size/hours
+  - **Storage** — raw TB, compression, annual growth %, time-travel days, churn %
+  - **Collaboration** — account type, warehouse size, hours/day, days/month
+  - **Replication** — source/target region, initial/monthly-change TB,
+    replication frequency, compute credits/TB, replica storage rate, storage
+    growth %, YoY change %
+
+  Verified every `tt(...)` call (literal and dynamic) resolves to a
+  `FEATURE_TOOLTIPS` key with no unmatched references, re-ran
+  `pytest tests/` and `scripts/test-parity.py` (no new failures; the
+  embeddings→ai_embed rename actually fixed several pre-existing
+  `test_schema_conformance` failures that stemmed from the stale `embeddings`
+  key).
+
 ## [2.18.0] - 2026-07-07
 
 Calculator audit remediation plus follow-on UI fixes and a default-model

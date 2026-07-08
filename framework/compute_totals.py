@@ -388,7 +388,7 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
             if isinstance(f, dict) and f.get("enabled"):
                 total += (f.get("tokens_M_monthly", 0) or 0) * util_rate(feat_name)
 
-    em = ai.get("embeddings") or {}
+    em = ai.get("ai_embed") or {}
     if em.get("enabled"):
         em_model = em.get("model")
         em_rate = 0.05  # default fallback
@@ -644,7 +644,7 @@ def postgres_monthly_credits(spec: dict, pricing: dict, cloud: Optional[str] = N
     cloud_key = (cloud or "aws").strip().lower()
     total = 0.0
     for inst in pg.get("instances") or []:
-        family = inst.get("family")
+        family = inst.get("instance_family")
         ha = bool(inst.get("ha"))
         rate = calc_access.postgres_credit(pricing, family, cloud_key, ha=ha)
         if rate is None:

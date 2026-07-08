@@ -30,7 +30,7 @@ patch:
 
 Required `ai_cortex` keys are 9 (per the schema): `cortex_complete`,
 `cortex_agents`, `snowflake_intelligence`, `cortex_code`, `cortex_analyst`,
-`cortex_search`, `cortex_fine_tuning`, `cortex_functions`, `embeddings`.
+`cortex_search`, `cortex_fine_tuning`, `cortex_functions`, `ai_embed`.
 The skeleton also ships the 3 optional Document AI siblings as disabled
 placeholders, so the assembled spec has 12 `ai_cortex` keys total. See
 `framework/sizing_spec_schema.json` `properties.ai_cortex.required` for

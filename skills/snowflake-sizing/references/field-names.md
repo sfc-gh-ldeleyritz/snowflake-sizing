@@ -68,7 +68,7 @@ one trips the schema validator and the PreToolUse hook.
 ```
 cortex_complete, cortex_agents, snowflake_intelligence,
 cortex_code, cortex_analyst, cortex_search,
-cortex_fine_tuning, cortex_functions, embeddings
+cortex_fine_tuning, cortex_functions, ai_embed
 ```
 
 The previously-required `document_ai`, `ai_parse_document_layout`, and

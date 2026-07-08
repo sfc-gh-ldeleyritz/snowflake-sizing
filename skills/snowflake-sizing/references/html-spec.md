@@ -874,7 +874,7 @@ function calcAICredits() {
     const f = ai.cortex_functions[key];
     if (f && f.enabled) total += f.tokens_M_monthly * getUtilRate(featName);
   }
-  if (ai.embeddings.enabled) total += ai.embeddings.tokens_M_monthly * 0.05;
+  if (ai.ai_embed.enabled) total += ai.ai_embed.tokens_M_monthly * 0.05;
   return total;
 }
 ```

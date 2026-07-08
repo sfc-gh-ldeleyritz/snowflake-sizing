@@ -750,7 +750,7 @@ fill="#29B5E8" stroke="none">
       <li><strong>Global Settings</strong> :  Cloud/region, edition, credit rate, contract years, growth rate, discount override, and ramp-curve defaults.</li>
       <li><strong>Warehouses</strong> :  Add and configure virtual warehouse workloads: size, hours/day, cluster count, warehouse type (Gen 1/2/Snowpark), and per-workload ramp schedule.</li>
       <li><strong>Serverless</strong> :  Toggle features (Snowpipe, Tasks, Auto-clustering, Search Optimization, etc.) and enter monthly volumes.</li>
-      <li><strong>AI / Cortex</strong> :  Cortex Complete, Agents, Search, Analyst, Document AI, Cortex Code surfaces, and embeddings.</li>
+      <li><strong>AI / Cortex</strong> :  Cortex Complete, Agents, Search, Analyst, Document AI, Cortex Code surfaces, AI Functions, and AI_EMBED.</li>
       <li><strong>SPCS</strong> :  Snowpark Container Services compute pools by instance family and hours.</li>
       <li><strong>OpenFlow</strong> :  OpenFlow connector instances: warehouse MERGE hours and Snowpipe Streaming row volumes.</li>
       <li><strong>Storage</strong> :  Raw TB, compression ratio, time-travel days, churn rate, and annual growth.</li>
@@ -909,13 +909,67 @@ const FEATURE_TOOLTIPS = {
   ai_translate: 'AI_TRANSLATE function. Billed per million tokens.',
   ai_extract: 'AI_EXTRACT function. Billed per million tokens.',
   ai_transcribe: 'AI_TRANSCRIBE function. Billed per million tokens.',
-  embed_text: 'EMBED_TEXT and related embedding functions. Billed per million tokens.',
+  ai_embed: 'AI_EMBED (and AI_MULTI_EMBED for batch) text/image embedding function. Billed per million tokens.',
 
   // SPCS / OpenFlow / Collaboration
   spcs: 'Snowpark Container Services. Billed per instance-hour, by generation and instance family.',
   openflow: 'Snowflake OpenFlow connector runtime. Billed per source-connection vCPU-hour (0.0225 credits/vCPU-hr).',
   collab_reader: 'Reader account: read-only consumer account on the provider warehouse.',
   collab_managed: 'Managed account: writable consumer account billed via the provider warehouse compute model.',
+
+  // Warehouses
+  wh_size: 'Virtual warehouse size. Determines credits/hour; larger sizes cost proportionally more but finish work faster.',
+  wh_type: 'Warehouse generation/type: Standard Gen1, Standard Gen2 (faster, no local caching penalty), or Snowpark-Optimized (extra memory for ML/UDF workloads).',
+  wh_memory_config: 'Snowpark-Optimized memory multiplier (e.g. MEMORY_16X). Higher multipliers cost more credits/hour.',
+  wh_hours_day: 'Average hours/day this warehouse runs (auto-suspend assumed). Drives monthly compute-hour volume.',
+  wh_days_month: 'Average active days/month this warehouse is used.',
+  wh_clusters: 'Multi-cluster warehouse min/max cluster count for concurrency scaling. Min > 1 keeps extra clusters always-on.',
+
+  // SPCS
+  spcs_generation: 'Compute pool generation: gen1 (legacy memory/HIPU pools) or gen2 (current CPU_X64 / HIGHMEM_X64 / GPU families).',
+  spcs_instance_type: 'Compute pool instance family. Determines credits/hour per node.',
+  spcs_count: 'Number of nodes in this compute pool.',
+  spcs_hours_monthly: 'Hours/month this compute pool runs.',
+
+  // Postgres
+  pg_family: 'Snowflake Postgres compute instance family/size.',
+  pg_count: 'Number of Postgres instances of this family.',
+  pg_hours_monthly: 'Hours/month this Postgres instance runs.',
+  pg_ha: 'High Availability standby replica. Roughly doubles compute cost for this instance.',
+
+  // OpenFlow
+  of_connector_type: 'OpenFlow connector pattern (CDC/JDBC, Streaming, Files, SaaS/REST, Oracle CDC). Affects which cost drivers apply.',
+  of_deployment: 'Runtime deployment: BYOC (customer AWS account, vCPU-hour billed) or SPCS (inside Snowflake).',
+  of_runtime_size: 'OpenFlow runtime node size (vCPU/memory). Determines credits/hour per node.',
+  of_runtime_nodes: 'Number of OpenFlow runtime nodes for this connector.',
+  of_byoc_region: 'AWS region hosting the BYOC OpenFlow runtime.',
+  of_monthly_data_gb: 'Monthly data volume moved through this connector (drives Snowpipe Streaming ingestion cost where applicable).',
+  of_warehouse_size: 'Warehouse size used for MERGE operations after CDC/streaming ingestion. "None" if the connector does not require a MERGE warehouse.',
+  of_warehouse_hours: 'Monthly hours the MERGE warehouse runs for this connector.',
+
+  // Storage
+  storage_raw_tb: 'Uncompressed raw data volume in Year 1, before compression.',
+  storage_compression: 'Estimated Snowflake compression ratio applied to raw data (e.g. 3x means 3 TB raw -> 1 TB stored).',
+  storage_growth_pct: 'Assumed year-over-year growth rate applied to compressed storage across the contract.',
+  storage_time_travel: 'Time Travel retention window (days). Longer retention increases stored Time Travel bytes.',
+  storage_churn_rate: 'Monthly data churn (overwrite/delete) rate, driving Time Travel and Fail-safe storage volume.',
+
+  // Collaboration
+  collab_type: 'Reader Account (read-only) or Managed Account (writable) — both billed on the provider warehouse compute model.',
+  collab_wh_size: 'Virtual warehouse size used by this consumer account.',
+  collab_hours_day: 'Average hours/day this consumer account runs its warehouse.',
+  collab_days_month: 'Average active days/month for this consumer account.',
+
+  // Replication / DR
+  rep_source_region: 'Primary region where the source database lives.',
+  rep_target_region: 'Region hosting the replica (secondary) database.',
+  rep_initial_tb: 'Initial dataset size (TB) seeded to the replica in Year 1.',
+  rep_change_tb: 'Monthly change volume (TB) replicated on an ongoing basis after the initial seed.',
+  rep_frequency: 'Replication refresh interval (15 min / 1 hour / 1 day). Shorter intervals increase compute credits per TB replicated.',
+  rep_compute_credits_tb: 'Compute credits consumed per TB replicated (varies by refresh frequency).',
+  rep_storage_tb_mo: 'Monthly storage rate ($/TB) charged for the replica copy at the target region.',
+  rep_storage_growth: 'Assumed year-over-year storage growth rate for the replicated dataset.',
+  rep_yoy_change: 'Assumed year-over-year change in monthly replication change-volume.',
 };
 
 let _ttEl = null;
@@ -1274,12 +1328,12 @@ function calcAICredits() {
       if (f && f.enabled) total += (f.tokens_M_monthly || 0) * getUtilRate(featName);
     }
   }
-  if (ai.embeddings && ai.embeddings.enabled) {
-    const embModel = ai.embeddings.model || 'snowflake-arctic-embed-l-v2.0';
+  if (ai.ai_embed && ai.ai_embed.enabled) {
+    const embModel = ai.ai_embed.model || 'snowflake-arctic-embed-l-v2.0';
     const embData = ((PRICING_DATA.ai_features || {}).embeddings || {}).data || [];
     const embRow = embData.find(r => r.model === embModel);
     const embRate = embRow ? embRow.rate : 0.05;
-    total += (ai.embeddings.tokens_M_monthly || 0) * embRate;
+    total += (ai.ai_embed.tokens_M_monthly || 0) * embRate;
   }
   return total;
 }
@@ -2127,7 +2181,7 @@ function populateWorkloadCards() {
     const typeOpts = [['standard-1','Standard (Gen1)'],['standard-2','Standard (Gen2)'],['snowpark','Snowpark-Optimized']]
       .map(([v,l]) => `<option value="${v}" ${v===typeVal?'selected':''}>${l}</option>`).join('');
     const memBlock = isSnowpark
-      ? `<label>Memory Config
+      ? `<label>Memory Config${tt('wh_memory_config')}
           <select id="mem-${w.id}" onchange="updateWorkload('${w.id}', 'memory_config', this.value)">${
             PricingData.snowparkMemoryConfigs().map(mc => `<option value="${mc}" ${mc===(w.memory_config||'MEMORY_1X')?'selected':''}>${mc}</option>`).join('')
           }</select>
@@ -2155,22 +2209,22 @@ function populateWorkloadCards() {
         <button class="delete-btn" onclick="removeWorkload('${w.id}')" title="Delete this workload">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Warehouse Size
+        <label>Warehouse Size${tt('wh_size')}
           <select id="size-${w.id}" onchange="updateWorkload('${w.id}', 'size', this.value)">${sizeOpts}</select>
         </label>
-        <label>Warehouse Type
+        <label>Warehouse Type${tt('wh_type')}
           <select id="wtype-${w.id}" onchange="updateWorkloadType('${w.id}', this.value)">${typeOpts}</select>
         </label>
         ${memBlock}
-        <label>Hours/Day: <span id="hrs-val-${w.id}">${w.hours_per_day}</span>
+        <label>Hours/Day: <span id="hrs-val-${w.id}">${w.hours_per_day}</span>${tt('wh_hours_day')}
           <input type="range" id="hrs-${w.id}" min="0" max="24" step="0.5" value="${w.hours_per_day}"
                  oninput="updateWorkload('${w.id}', 'hours_per_day', +this.value)">
         </label>
-        <label>Days/Month: <span id="days-val-${w.id}">${w.days_per_month}</span>
+        <label>Days/Month: <span id="days-val-${w.id}">${w.days_per_month}</span>${tt('wh_days_month')}
           <input type="range" id="days-${w.id}" min="1" max="31" step="1" value="${w.days_per_month}"
                  oninput="updateWorkload('${w.id}', 'days_per_month', +this.value)">
         </label>
-        <label>Clusters (min / max)
+        <label>Clusters (min / max)${tt('wh_clusters')}
           <div style="display: flex; gap: 4px; align-items: center;">
             <input type="number" id="cmin-${w.id}" min="1" max="10" value="${w.clusters_min}"
                    onchange="updateWorkload('${w.id}', 'clusters_min', +this.value)" style="width: 60px;"> /
@@ -2449,13 +2503,13 @@ function populateAIPanel() {
         </div>`;
       }).join('')}
       <div class="ai-row">
-        <label><input type="checkbox" ${ai.embeddings.enabled ? 'checked' : ''}
-               onchange="updateAI('embeddings', 'enabled', this.checked)"> Embeddings${tt('embeddings')}</label>
+        <label><input type="checkbox" ${ai.ai_embed.enabled ? 'checked' : ''}
+               onchange="updateAI('ai_embed', 'enabled', this.checked)"> ai_embed${tt('ai_embed')}</label>
         <span></span>
         <span></span>
         <div class="input-with-unit">
-          <input type="number" min="0" placeholder="Tokens" value="${ai.embeddings.tokens_M_monthly}"
-                 oninput="updateAI('embeddings', 'tokens_M_monthly', +this.value)">
+          <input type="number" min="0" placeholder="Tokens" value="${ai.ai_embed.tokens_M_monthly}"
+                 oninput="updateAI('ai_embed', 'tokens_M_monthly', +this.value)">
           <span class="unit-chip">M tok/mo</span>
         </div>
       </div>
@@ -2488,20 +2542,20 @@ function populateSPCSPanel() {
         <button class="delete-btn" onclick="removeSPCSInstance('${inst.id}')" title="Delete this SPCS instance">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Generation
+        <label>Generation${tt('spcs_generation')}
           <select onchange="updateSPCSInstance('${inst.id}', 'generation', this.value)">
             <option value="gen1" ${!isGen2?'selected':''}>gen1</option>
             <option value="gen2" ${isGen2?'selected':''}>gen2</option>
           </select>
         </label>
-        <label>Instance type
+        <label>Instance type${tt('spcs_instance_type')}
           <select onchange="updateSPCSInstance('${inst.id}', 'instance_type', this.value)">${typeOpts}</select>
         </label>
-        <label>Count
+        <label>Count${tt('spcs_count')}
           <input type="number" value="${inst.count || 1}" min="0" step="1"
                  onchange="updateSPCSInstance('${inst.id}', 'count', +this.value)">
         </label>
-        <label>Hours/month
+        <label>Hours/month${tt('spcs_hours_monthly')}
           <input type="number" value="${inst.hours_monthly || 0}" min="0" max="744" step="1"
                  onchange="updateSPCSInstance('${inst.id}', 'hours_monthly', +this.value)">
         </label>
@@ -2572,18 +2626,18 @@ function populatePostgresPanel() {
         <button class="delete-btn" onclick="removePostgresInstance('${inst.id}')" title="Delete this Postgres instance">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Family
+        <label>Family${tt('pg_family')}
           <select onchange="updatePostgresInstance('${inst.id}', 'family', this.value)">${familyOpts}</select>
         </label>
-        <label>Count
+        <label>Count${tt('pg_count')}
           <input type="number" value="${inst.count || 1}" min="1" step="1"
                  onchange="updatePostgresInstance('${inst.id}', 'count', +this.value)">
         </label>
-        <label>Hours/month
+        <label>Hours/month${tt('pg_hours_monthly')}
           <input type="number" value="${inst.hours_monthly || 730}" min="0" max="744" step="1"
                  onchange="updatePostgresInstance('${inst.id}', 'hours_monthly', +this.value)">
         </label>
-        <label>High Availability
+        <label>High Availability${tt('pg_ha')}
           <input type="checkbox" ${inst.ha ? 'checked' : ''}
                  onchange="updatePostgresInstance('${inst.id}', 'ha', this.checked)">
         </label>
@@ -2645,7 +2699,7 @@ function populateOpenflowPanel() {
     const byocRegionOpts = Object.entries(byocRegions).map(([k,v]) =>
       `<option value="${k}" ${inst.byoc_region===k?'selected':''}>${v}</option>`).join('');
     const byocRegionRow = deployment === 'BYOC' ? `
-        <label>AWS region
+        <label>AWS region${tt('of_byoc_region')}
           <select onchange="updateOpenflowInstance('${inst.id}', 'byoc_region', this.value)">
             ${byocRegionOpts}
           </select>
@@ -2653,7 +2707,7 @@ function populateOpenflowPanel() {
     const whSize = inst.warehouse_size || '';
     const showWhHours = connType === 'CDC' && whSize;
     const whHoursRow = showWhHours ? `
-        <label>WH hours/month
+        <label>WH hours/month${tt('of_warehouse_hours')}
           <input type="number" value="${inst.warehouse_hours_monthly || 0}" min="0" max="744" step="1"
                  onchange="updateOpenflowInstance('${inst.id}', 'warehouse_hours_monthly', +this.value)">
         </label>` : '';
@@ -2665,7 +2719,7 @@ function populateOpenflowPanel() {
         <button class="delete-btn" onclick="removeOpenflowInstance('${inst.id}')" title="Delete this OpenFlow instance">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Connector type
+        <label>Connector type${tt('of_connector_type')}
           <select onchange="updateOpenflowInstance('${inst.id}', 'connector_type', this.value); populateOpenflowPanel()">
             <option value="CDC" ${connType==='CDC'?'selected':''}>CDC (JDBC)</option>
             <option value="Streaming" ${connType==='Streaming'?'selected':''}>Streaming (Kafka/Kinesis)</option>
@@ -2674,28 +2728,28 @@ function populateOpenflowPanel() {
             <option value="Oracle CDC" ${connType==='Oracle CDC'?'selected':''}>Oracle CDC</option>
           </select>
         </label>
-        <label>Deployment
+        <label>Deployment${tt('of_deployment')}
           <select onchange="updateOpenflowInstance('${inst.id}', 'deployment', this.value); populateOpenflowPanel()">
             <option value="BYOC" ${deployment==='BYOC'?'selected':''}>BYOC (AWS)</option>
             <option value="SPCS" ${deployment==='SPCS'?'selected':''}>SPCS (Snowflake)</option>
           </select>
         </label>
-        <label>Runtime size
+        <label>Runtime size${tt('of_runtime_size')}
           <select onchange="updateOpenflowInstance('${inst.id}', 'runtime_size', this.value)">
             <option value="Small" ${runtimeSize==='Small'?'selected':''}>Small (1 vCPU)</option>
             <option value="Medium" ${runtimeSize==='Medium'?'selected':''}>Medium (4 vCPU)</option>
             <option value="Large" ${runtimeSize==='Large'?'selected':''}>Large (8 vCPU)</option>
           </select>
         </label>
-        <label>Runtime nodes
+        <label>Runtime nodes${tt('of_runtime_nodes')}
           <input type="number" value="${inst.runtime_nodes || 1}" min="1" step="1"
                  onchange="updateOpenflowInstance('${inst.id}', 'runtime_nodes', +this.value)">
         </label>${byocRegionRow}
-        <label>Monthly data (GB)
+        <label>Monthly data (GB)${tt('of_monthly_data_gb')}
           <input type="number" value="${inst.monthly_data_gb || 0}" min="0" step="1"
                  onchange="updateOpenflowInstance('${inst.id}', 'monthly_data_gb', +this.value)">
         </label>${connType === 'CDC' || connType === 'Oracle CDC' ? `
-        <label>Warehouse size (MERGE)
+        <label>Warehouse size (MERGE)${tt('of_warehouse_size')}
           <select onchange="updateOpenflowInstance('${inst.id}', 'warehouse_size', this.value || null); populateOpenflowPanel()">
             <option value="" ${!whSize?'selected':''}>None</option>
             <option value="X-Small" ${whSize==='X-Small'?'selected':''}>X-Small</option>
@@ -2754,25 +2808,25 @@ function populateStoragePanel() {
   document.getElementById('storage-container').innerHTML =
     groupHeaderRow('Setting', 'Value', null, 'gh-d-storage') + `
     <div class="storage-form">
-      <label>Raw TB (Year 1): <span id="st-val-raw_tb_year1">${s.raw_tb_year1}</span>
+      <label>Raw TB (Year 1): <span id="st-val-raw_tb_year1">${s.raw_tb_year1}</span>${tt('storage_raw_tb')}
         <input type="range" min="0" max="1000" step="1" value="${s.raw_tb_year1}"
                oninput="updateStorage('raw_tb_year1', +this.value); document.getElementById('st-val-raw_tb_year1').textContent = this.value;">
       </label>
-      <label>Compression
+      <label>Compression${tt('storage_compression')}
         <select onchange="updateStorage('compression_ratio', +this.value)">
           ${[1,2,3,5,7,10].map(r => `<option value="${r}" ${r===s.compression_ratio?'selected':''}>${r}x</option>`).join('')}
         </select>
       </label>
-      <label>Annual growth %: <span id="st-val-annual_growth_pct">${s.annual_growth_pct}</span>
+      <label>Annual growth %: <span id="st-val-annual_growth_pct">${s.annual_growth_pct}</span>${tt('storage_growth_pct')}
         <input type="range" min="0" max="100" step="1" value="${s.annual_growth_pct}"
                oninput="updateStorage('annual_growth_pct', +this.value); document.getElementById('st-val-annual_growth_pct').textContent = this.value;">
       </label>
-      <label>Time travel days
+      <label>Time travel days${tt('storage_time_travel')}
         <select onchange="updateStorage('time_travel_days', +this.value)">
           ${[0,1,7,14,30,90].map(d => `<option value="${d}" ${d===s.time_travel_days?'selected':''}>${d}</option>`).join('')}
         </select>
       </label>
-      <label>Churn rate %: <span id="st-val-churn_rate_pct">${s.churn_rate_pct}</span>
+      <label>Churn rate %: <span id="st-val-churn_rate_pct">${s.churn_rate_pct}</span>${tt('storage_churn_rate')}
         <input type="range" min="0" max="100" step="1" value="${s.churn_rate_pct}"
                oninput="updateStorage('churn_rate_pct', +this.value); document.getElementById('st-val-churn_rate_pct').textContent = this.value;">
       </label>
@@ -2827,22 +2881,22 @@ function populateCollabPanel() {
         <button class="delete-btn" onclick="removeAccount('${a.id}')" title="Delete this account">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Account type
+        <label>Account type${tt('collab_type')}
           <select onchange="updateAccount('${a.id}', 'type', this.value)">
             <option value="reader" ${a.type==='reader'?'selected':''}>Reader Account</option>
             <option value="managed" ${a.type==='managed'?'selected':''}>Managed Account</option>
           </select>
         </label>
-        <label>Warehouse size
+        <label>Warehouse size${tt('collab_wh_size')}
           <select onchange="updateAccount('${a.id}', 'warehouse_size', this.value)">
             ${['XS','S','M','L','XL','2XL'].map(s => `<option value="${s}" ${s===a.warehouse_size?'selected':''}>${s}</option>`).join('')}
           </select>
         </label>
-        <label>Hours/day
+        <label>Hours/day${tt('collab_hours_day')}
           <input type="number" value="${a.hours_per_day || 0}" min="0" max="24" step="0.5"
                  onchange="updateAccount('${a.id}', 'hours_per_day', +this.value)">
         </label>
-        <label>Days/month
+        <label>Days/month${tt('collab_days_month')}
           <input type="number" value="${a.days_per_month || 0}" min="0" max="31" step="1"
                  onchange="updateAccount('${a.id}', 'days_per_month', +this.value)">
         </label>
@@ -3074,36 +3128,36 @@ function renderReplicationPanel() {
         <button class="delete-btn" onclick="disableReplication()" title="Disable replication / DR">Delete</button>
       </div>
       <div class="controls-grid">
-        <label>Source region
+        <label>Source region${tt('rep_source_region')}
           <select onchange="updateReplication('source_region', this.value)">${srcOpts}</select>
         </label>
-        <label>Target region
+        <label>Target region${tt('rep_target_region')}
           <select onchange="updateReplication('target_region', this.value)">${tgtOpts}</select>
         </label>
-        <label>Initial TB
+        <label>Initial TB${tt('rep_initial_tb')}
           <input type="number" min="0" step="0.1" value="${rep.initial_TB || 0}"
                  onchange="updateReplication('initial_TB', this.value)">
         </label>
-        <label>Monthly change TB
+        <label>Monthly change TB${tt('rep_change_tb')}
           <input type="number" min="0" step="0.1" value="${rep.monthly_change_TB || 0}"
                  onchange="updateReplication('monthly_change_TB', this.value)">
         </label>
-        <label>Replication frequency
+        <label>Replication frequency${tt('rep_frequency')}
           <select onchange="updateReplication('replication_frequency', this.value)">${freqOpts}</select>
         </label>
-        <label>Compute credits/TB
+        <label>Compute credits/TB${tt('rep_compute_credits_tb')}
           <input type="number" min="1" max="20" step="0.1" value="${rep.compute_credits_per_TB || 4}"
                  onchange="updateReplication('compute_credits_per_TB', this.value)">
         </label>
-        <label>Replica storage $/TB/mo
+        <label>Replica storage $/TB/mo${tt('rep_storage_tb_mo')}
           <input type="number" min="0" step="0.5" value="${rep.replica_storage_per_tb_per_month || 23}"
                  onchange="updateReplication('replica_storage_per_tb_per_month', this.value)">
         </label>
-        <label>Storage growth %/yr
+        <label>Storage growth %/yr${tt('rep_storage_growth')}
           <input type="number" min="0" max="100" step="1" value="${Math.round(rep.storage_growth_pct ?? 15)}"
                  onchange="updateReplication('storage_growth_pct', +this.value)">
         </label>
-        <label>YoY change %
+        <label>YoY change %${tt('rep_yoy_change')}
           <input type="number" min="0" max="100" step="1" value="${Math.round(rep.yoy_pct ?? 10)}"
                  onchange="updateReplication('yoy_pct', +this.value)">
         </label>

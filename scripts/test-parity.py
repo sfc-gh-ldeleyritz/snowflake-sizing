@@ -99,7 +99,7 @@ def test_rate_units():
     else:
         print("  SKIP: archive_cost_per_year not in computed_totals")
 
-    # Embeddings: 10 M tok/mo * 0.05 credits * 12 * ai_cr(2.0) * ramp
+    # AI_EMBED: 10 M tok/mo * 0.05 credits * 12 * ai_cr(2.0) * ramp
     # = 0.5 * 12 * 2.0 = $12/yr (with full ramp)
     # This is included in ai_cost_per_year
 

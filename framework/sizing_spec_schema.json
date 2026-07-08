@@ -690,7 +690,7 @@
         "cortex_search",
         "cortex_fine_tuning",
         "cortex_functions",
-        "embeddings"
+        "ai_embed"
       ],
       "additionalProperties": false,
       "properties": {
@@ -994,7 +994,7 @@
             }
           }
         },
-        "embeddings": {
+        "ai_embed": {
           "type": "object",
           "required": [
             "enabled"
@@ -1007,6 +1007,9 @@
             "tokens_M_monthly": {
               "type": "number",
               "minimum": 0
+            },
+            "model": {
+              "type": "string"
             }
           }
         }
@@ -1116,6 +1119,12 @@
             ],
             "additionalProperties": false,
             "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
               "instance_family": {
                 "type": "string",
                 "description": "Postgres instance family/size (e.g. 'memory4.xlarge', 'cpu4.2xlarge')."
@@ -1215,7 +1224,8 @@
           "required": [
             "enabled",
             "tb_year1",
-            "tier"
+            "tier",
+            "annual_growth_pct"
           ],
           "additionalProperties": false,
           "properties": {
@@ -1230,6 +1240,10 @@
               "type": "string",
               "enum": ["cool", "cold"],
               "default": "cool"
+            },
+            "annual_growth_pct": {
+              "type": "number",
+              "minimum": 0
             }
           }
         }
@@ -1276,71 +1290,150 @@
       }
     },
     "collaboration": {
-      "type": "object",
-      "required": [
-        "reader_accounts",
-        "native_apps",
-        "marketplace"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "reader_accounts": {
+      "description": "Reader accounts / native apps / marketplace subscriptions. Accepts either the legacy reader_accounts shape or the accounts[] array shape (JS-parity).",
+      "oneOf": [
+        {
           "type": "object",
           "required": [
-            "enabled"
+            "reader_accounts",
+            "native_apps",
+            "marketplace"
           ],
           "additionalProperties": false,
           "properties": {
-            "enabled": {
-              "type": "boolean"
+            "reader_accounts": {
+              "type": "object",
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "warehouse_size": {
+                  "$ref": "#/definitions/wh_size_abbreviated"
+                },
+                "hours_per_day": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "days_per_month": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 31
+                }
+              }
             },
-            "warehouse_size": {
-              "$ref": "#/definitions/wh_size_abbreviated"
+            "native_apps": {
+              "type": "object",
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "monthly_subscription": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
             },
-            "hours_per_day": {
-              "type": "number",
-              "minimum": 0
-            },
-            "days_per_month": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 31
+            "marketplace": {
+              "type": "object",
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "monthly_subscription": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
             }
           }
         },
-        "native_apps": {
+        {
           "type": "object",
           "required": [
-            "enabled"
+            "accounts"
           ],
           "additionalProperties": false,
           "properties": {
-            "enabled": {
-              "type": "boolean"
+            "accounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "warehouse_size": {
+                    "$ref": "#/definitions/wh_size_abbreviated"
+                  },
+                  "hours_per_day": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "days_per_month": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 31
+                  }
+                }
+              }
             },
-            "monthly_subscription": {
-              "type": "number",
-              "minimum": 0
-            }
-          }
-        },
-        "marketplace": {
-          "type": "object",
-          "required": [
-            "enabled"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean"
+            "native_apps": {
+              "type": "object",
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "monthly_subscription": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
             },
-            "monthly_subscription": {
-              "type": "number",
-              "minimum": 0
+            "marketplace": {
+              "type": "object",
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "monthly_subscription": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
             }
           }
         }
-      }
+      ]
     },
     "assumptions": {
       "description": "Human-readable assumptions list surfaced in the proposal.",

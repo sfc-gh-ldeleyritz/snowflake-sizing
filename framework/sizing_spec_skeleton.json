@@ -161,7 +161,7 @@
         "tokens_M_monthly": 0
       }
     },
-    "embeddings": {
+    "ai_embed": {
       "enabled": false
     },
     "document_ai": {
