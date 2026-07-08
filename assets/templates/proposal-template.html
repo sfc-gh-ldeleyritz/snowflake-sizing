@@ -1666,6 +1666,9 @@ function updateGroupHeaderTotals() {
   const spcsMonthly = calcSPCSCost();
   set('gh-cr-spcs', spcsMonthly); set('gh-d-spcs', spcsMonthly * cr);
 
+  const pgMonthly = calcPostgresCost();
+  set('gh-cr-pg', pgMonthly); set('gh-d-pg', pgMonthly * cr);
+
   let ofMonthlyDollars = 0;
   if (SIZING_SPEC.openflow && Array.isArray(SIZING_SPEC.openflow.instances) && SIZING_SPEC.openflow.instances.length > 0) {
     ofMonthlyDollars = calcOpenflowCost(cr, 1) / 12;

@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ---
 
+## [2.17.2] - 2026-07-07
+
+### Fixed
+
+- **Postgres tab group-header always showed `0 cr/mo` / `$0/mo`.**
+  `calcPostgresCost()` was correctly summed into `otherCost` and the TCV, but
+  `updateGroupHeaderTotals()` never populated the panel's `gh-cr-pg` / `gh-d-pg`
+  spans (every other tab sets its `gh-*` totals), so the Postgres tab header
+  stayed at its initial `0` regardless of configured instances. Added the
+  Postgres block to `updateGroupHeaderTotals` (mirrors the SPCS pattern) so the
+  header reflects the real per-month credits and dollars.
+
+---
+
 ## [2.17.1] - 2026-07-07
 
 ### Fixed
