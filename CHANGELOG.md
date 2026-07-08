@@ -6,92 +6,14 @@ All notable changes to this project are documented here.
 
 ## [2.18.0] - 2026-07-07
 
-### Changed
-
-- **Default AI/Cortex model is now `claude-sonnet-5`** (was `claude-4-sonnet`).
-  Applied to every runtime fallback used when a spec omits a model: JS
-  `calcAICredits` for Cortex Agents, Snowflake Intelligence, Cortex Code, and
-  the Cortex Complete model dropdown (`proposal-template.html`), and the Python
-  engine's Agents/SI and Cortex Code fallbacks (`compute_totals.py`).
-  `claude-sonnet-5` resolves in all relevant pricing tables (Complete 1.2/6.0,
-  Agents/SI 1.3/6.5, Cortex Code 1.1/5.5 AI cr per 1M tokens). Also updated the
-  skill authoring guidance (`references/ai-feature-defaults.md`,
-  `references/sizing-methodology.md`, `sub-skills/build-spec/SKILL.md`) so newly
-  built specs default to `claude-sonnet-5`; `claude-sonnet-4-6` is retained as
-  an alternative and `claude-4-sonnet` demoted to legacy.
-
----
-
-## [2.17.2] - 2026-07-07
-
-### Fixed
-
-- **Postgres tab group-header always showed `0 cr/mo` / `$0/mo`.**
-  `calcPostgresCost()` was correctly summed into `otherCost` and the TCV, but
-  `updateGroupHeaderTotals()` never populated the panel's `gh-cr-pg` / `gh-d-pg`
-  spans (every other tab sets its `gh-*` totals), so the Postgres tab header
-  stayed at its initial `0` regardless of configured instances. Added the
-  Postgres block to `updateGroupHeaderTotals` (mirrors the SPCS pattern) so the
-  header reflects the real per-month credits and dollars.
-
----
-
-## [2.17.1] - 2026-07-07
-
-### Fixed
-
-- **Serverless feature toggles were inert for features absent from the spec.**
-  `updateServerless` was guarded by `if (SIZING_SPEC.serverless[key])`, so
-  ticking the checkbox for any serverless feature not already present in the
-  spec (the majority when a spec enables only a few) was a no-op: `enabled`
-  never got set, the volume input stayed `disabled`, and no recalculation ran,
-  leaving the field permanently uneditable. The handler now lazily creates the
-  config object (`SIZING_SPEC.serverless[key] ||= { enabled: false }`) so every
-  feature can be enabled and edited in the rendered proposal. Re-rendered the
-  kitchen-sink example (`examples/kitchen-sink-aws-us-east.html`); TCV and
-  JS/Python parity unchanged ($169,470).
-
----
-
-## [2.17.0] - 2026-07-07
-
-Remediation of the 8 confirmed issues from the v2 calculator audit
-(`temp/calculator-audit-v2-2026-07-07.md`), applied to BOTH the JS engine
+Calculator audit remediation plus follow-on UI fixes and a default-model
+update. Every calculator change is applied to BOTH the JS engine
 (`assets/templates/proposal-template.html`) and the Python engine
 (`framework/compute_totals.py`) so on-screen totals and the stamped
-`computed_totals` stay in parity. The v1 audit's 10 false positives
-(already-correct code) were intentionally left untouched.
-
-### Fixed
-
-- **Data-transfer overcharge (both engines).** Replaced the hardcoded
-  `0.08`/`0.154` $/GB rates with a cloud- and region-aware `$/TB` lookup from
-  `data_transfer` (AWS `different_region`/`internet`, Azure
-  `same_continent`/`different_continent`, GCP nested; lowercase cloud keys,
-  array lookup by region). A cross-region AWS US-East 1 TB/mo transfer now
-  prices at ~$240/yr instead of ~$983/yr (a ~4x correction). New
-  `calc_access.data_transfer_rate()` accessor; fixes `calcTransferCost`
-  (proposal-template.html) and `transfer_monthly_cost` (compute_totals.py).
-- **Per-line serverless $0 display.** `updateWorkloadCalcs` showed $0 per-line
-  for the 8 unit-charge serverless features (aggregate totals were always
-  correct). Per-feature formulas were refactored into a shared
-  `serverlessFeatureMonthlyCredits()` helper so per-line costs now render
-  non-zero and can never drift from `calcServerlessCredits`.
-- **Python SPCS field parity.** `spcs_monthly_credits` now accepts the current
-  UI fields (`instance_type`/`count`/`hours_monthly`) with fallback to legacy
-  `instance_family`/`num_instances`/`hours_per_day * days_per_month`, fixing
-  $0 SPCS in `computed_totals` on new-field specs.
-- **Python collaboration parity.** `collaboration_monthly_cost` now iterates
-  `collaboration.accounts[]` (with `reader_accounts` fallback), fixing $0
-  collaboration in `computed_totals` on array-shaped specs.
-- **Embeddings rate (both engines).** Replaced the hardcoded `0.05` with a
-  model-aware lookup from the pricing data.
-- **Cortex Code pricing table.** Both engines now price Cortex Code from
-  Table 6(e) instead of the Agents Table 6(d).
-- **Replication egress region keys.** Case-insensitive normalization before the
-  egress-matrix lookup, preventing silent $0 egress on region-name mismatches.
-- **Python ramp exponents** now read from the pricing JSON (single source of
-  truth shared with the JS engine) rather than a hardcoded dict.
+`computed_totals` stay in parity. This remediates the 8 confirmed issues from
+the v2 calculator audit (`temp/calculator-audit-v2-2026-07-07.md`); the v1
+audit's 10 false positives (already-correct code) were intentionally left
+untouched.
 
 ### Added
 
@@ -116,6 +38,68 @@ Remediation of the 8 confirmed issues from the v2 calculator audit
   smoke test (no $0/NaN, per-line serverless non-zero, storage panel shows
   hybrid + archive, Postgres panel renders). Verified JS TCV equals Python
   `core_tcv` to the penny with SPCS, collaboration, and Postgres all populated.
+- **Kitchen-sink example** (`examples/kitchen-sink-aws-us-east.{json,html}`)
+  that enables every line item (all 27 serverless features, all AI/Cortex
+  features, both warehouse types, SPCS, Postgres, OpenFlow + Oracle, transfer,
+  PrivateLink, collaboration, standard/hybrid/archive storage, replication)
+  with representative non-zero volumes.
+
+### Changed
+
+- **Default AI/Cortex model is now `claude-sonnet-5`** (was `claude-4-sonnet`).
+  Applied to every runtime fallback used when a spec omits a model: JS
+  `calcAICredits` for Cortex Agents, Snowflake Intelligence, Cortex Code, and
+  the Cortex Complete model dropdown (`proposal-template.html`), and the Python
+  engine's Agents/SI and Cortex Code fallbacks (`compute_totals.py`).
+  `claude-sonnet-5` resolves in all relevant pricing tables (Complete 1.2/6.0,
+  Agents/SI 1.3/6.5, Cortex Code 1.1/5.5 AI cr per 1M tokens). Also updated the
+  skill authoring guidance (`references/ai-feature-defaults.md`,
+  `references/sizing-methodology.md`, `sub-skills/build-spec/SKILL.md`) so newly
+  built specs default to `claude-sonnet-5`; `claude-sonnet-4-6` is retained as
+  an alternative and `claude-4-sonnet` demoted to legacy.
+
+### Fixed
+
+- **Data-transfer overcharge (both engines).** Replaced the hardcoded
+  `0.08`/`0.154` $/GB rates with a cloud- and region-aware `$/TB` lookup from
+  `data_transfer` (AWS `different_region`/`internet`, Azure
+  `same_continent`/`different_continent`, GCP nested; lowercase cloud keys,
+  array lookup by region). A cross-region AWS US-East 1 TB/mo transfer now
+  prices at ~$240/yr instead of ~$983/yr (a ~4x correction). New
+  `calc_access.data_transfer_rate()` accessor; fixes `calcTransferCost`
+  (proposal-template.html) and `transfer_monthly_cost` (compute_totals.py).
+- **Per-line serverless $0 display.** `updateWorkloadCalcs` showed $0 per-line
+  for the 8 unit-charge serverless features (aggregate totals were always
+  correct). Per-feature formulas were refactored into a shared
+  `serverlessFeatureMonthlyCredits()` helper so per-line costs now render
+  non-zero and can never drift from `calcServerlessCredits`.
+- **Serverless feature toggles were inert for features absent from the spec.**
+  `updateServerless` was guarded by `if (SIZING_SPEC.serverless[key])`, so
+  ticking the checkbox for any serverless feature not already present in the
+  spec (the majority when a spec enables only a few) was a no-op: `enabled`
+  never got set, the volume input stayed `disabled`, and no recalculation ran,
+  leaving the field uneditable. The handler now lazily creates the config
+  object so every feature can be enabled and edited in the rendered proposal.
+- **Postgres tab group-header always showed `0 cr/mo` / `$0/mo`.**
+  `calcPostgresCost()` was correctly summed into `otherCost` and the TCV, but
+  `updateGroupHeaderTotals()` never populated the panel's `gh-cr-pg` / `gh-d-pg`
+  spans, so the Postgres tab header stayed at its initial `0`. Added the
+  Postgres block to `updateGroupHeaderTotals` (mirrors the SPCS pattern).
+- **Python SPCS field parity.** `spcs_monthly_credits` now accepts the current
+  UI fields (`instance_type`/`count`/`hours_monthly`) with fallback to legacy
+  `instance_family`/`num_instances`/`hours_per_day * days_per_month`, fixing
+  $0 SPCS in `computed_totals` on new-field specs.
+- **Python collaboration parity.** `collaboration_monthly_cost` now iterates
+  `collaboration.accounts[]` (with `reader_accounts` fallback), fixing $0
+  collaboration in `computed_totals` on array-shaped specs.
+- **Embeddings rate (both engines).** Replaced the hardcoded `0.05` with a
+  model-aware lookup from the pricing data.
+- **Cortex Code pricing table.** Both engines now price Cortex Code from
+  Table 6(e) instead of the Agents Table 6(d).
+- **Replication egress region keys.** Case-insensitive normalization before the
+  egress-matrix lookup, preventing silent $0 egress on region-name mismatches.
+- **Python ramp exponents** now read from the pricing JSON (single source of
+  truth shared with the JS engine) rather than a hardcoded dict.
 
 ---
 
