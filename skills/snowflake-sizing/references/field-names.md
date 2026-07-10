@@ -132,3 +132,32 @@ SOURCED, ASSUMPTION, ESTIMATED
 The full citation string (e.g. `"SOURCED: Gong abc123def turn 14 - ..."`) is
 recorded inside `justification`, NOT inside `source`. The validator enforces
 the enum strictly.
+
+## New fields (v3.0.0 / SF-01..SF-11)
+
+| Field | Feature | Notes |
+|---|---|---|
+| `workloads[].kind` | SF-01 | `"standard"` (default) \| `"unit_based"`. When `"unit_based"`, warehouse-hour fields are ignored; use the unit fields below instead. |
+| `workloads[].cost_per_unit`, `unit_count_start`, `unit_count_end`, `unit_ramp_months`, `growth_rate` | SF-01 | Per-unit (e.g. per-tenant) monthly cost model. Ramps linearly from `unit_count_start` to `unit_count_end` over `unit_ramp_months`, then grows at `growth_rate` (falls back to `meta.annual_growth_rate`). |
+| `workloads[].rollout_kind` | SF-02 | `"phased_multi_tenant"` pushes `go_live_month` to at least 12 and defaults `ramp_curve` to `"slow"` unless explicitly set. |
+| `workloads[].avg_clusters_override` | SF-03 | Explicit average-cluster count; takes priority over the peak-fraction formula and the naive `(clusters_min + clusters_max)/2` midpoint. |
+| `workloads[].peak_hours_per_day` | SF-03 | Hours/day running at `clusters_max`; used to derive an average-cluster estimate via peak fraction when `avg_clusters_override` is absent. |
+| `workloads[].active_fraction` | SF-04 | 0-1 multiplier on `hours_per_day` modeling auto-suspend idle time. `null`/absent = `1.0` (no change). |
+| `workloads[].zero_copy_source` | SF-09 | `true` = workload contributes $0 to warehouse credits/storage/ingest (e.g. zero-copy share). Listed in `computed_totals.zero_copy_sources`. |
+| `workloads[].interactive.{enabled, min_clusters, max_clusters, fallback_warehouse_size, fallback_hours_per_day}` | SF-10 | App-serving warehouse billed 24h/day at the interactive-warehouse rate; optional fallback warehouse adds its own hours/day contribution. |
+| `openflow.instances[].runtime_mode` | SF-05 | `"always_on"` (default, 730 hrs/mo) \| `"scheduled"` (uses `refresh_hours_per_run × runs_per_month`). |
+| `openflow.instances[].refresh_hours_per_run`, `runs_per_month` | SF-05 | Only read when `runtime_mode = "scheduled"`. |
+| `openflow.instances[].deployment` | SF-11 | `"BYOC"` \| `"SPCS"`. Defaults to `BYOC` on AWS, `SPCS` elsewhere. `SPCS` bills SPCS CPU-family rates plus an always-on control-pool node. |
+| `ai_cortex.cortex_complete.{active_entities, summaries_per_entity_per_mo, avg_input_tokens_per_call, avg_output_tokens_per_call, caching_reduction_pct}` | SF-06 | Usage-model inputs; derive `monthly_input_tokens_M`/`monthly_output_tokens_M` when the raw token fields are absent. Explicit raw tokens always win if both are present. |
+| `meta.target_budget` | SF-07 | SE-supplied budget anchor (USD TCV). When Year-1 cost exceeds 2x this value, a non-blocking warning fires in Python, JS, and the guard hook. |
+| `meta.per_unit_benchmark` | SF-07 | Optional per-unit cost benchmark (USD/unit/month); reserved for future per-unit reasonableness checks (not yet wired into JS). |
+| `scenarios.<tier>.intensity_factor` | SF-08 | Multiplier (default `1.0`) on warehouse + AI credits for that scenario tier. Serverless credits are intentionally NOT scaled by intensity. |
+
+### Guided prompts (Phase 3 discovery)
+
+Ask the SE:
+- Is this a phased / multi-tenant SaaS rollout? (triggers SF-02 defaults)
+- Is Salesforce or other data arriving via zero-copy share? (SF-09)
+- Is this a high-concurrency app-serving workload? (SF-10 interactive)
+- What is the customer's stated budget or per-tenant cost target? (SF-07)
+

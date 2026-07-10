@@ -182,6 +182,23 @@ def _strip_leakage(spec: dict) -> int:
     return count
 
 
+def _derive_cortex_complete_tokens(cc: dict) -> None:
+    """SF-06: If usage-model helper fields are present and monthly_input_tokens_M is absent,
+    derive monthly token volumes from entity/call parameters."""
+    if not cc.get("enabled"):
+        return
+    if cc.get("monthly_input_tokens_M") is not None:
+        return  # explicit value wins; do not overwrite
+    ae  = cc.get("active_entities", 0) or 0
+    spm = cc.get("summaries_per_entity_per_mo", 0) or 0
+    ai  = cc.get("avg_input_tokens_per_call", 0) or 0
+    ao  = cc.get("avg_output_tokens_per_call", 0) or 0
+    cr  = (100 - (cc.get("caching_reduction_pct") or 0)) / 100.0
+    if ae and spm and (ai or ao):
+        cc["monthly_input_tokens_M"]  = ae * spm * ai  * cr / 1_000_000
+        cc["monthly_output_tokens_M"] = ae * spm * ao  / 1_000_000
+
+
 def _stamp_meta_defaults(spec: dict) -> None:
     """Fill in `generated_date` if missing - the agent often forgets."""
     meta = spec.setdefault("meta", {})
@@ -305,6 +322,11 @@ def prepare(
         warnings.append(f"stripped {stripped} internal/leakage field(s)")
 
     _stamp_meta_defaults(spec)
+
+    # SF-06: derive cortex_complete token volumes from usage-model fields if present
+    cc = spec.get("ai_cortex", {}).get("cortex_complete")
+    if isinstance(cc, dict):
+        _derive_cortex_complete_tokens(cc)
 
     spec["computed_totals"] = compute_core_totals(spec, pricing)
     spec["pricing_snapshot"] = lp.build_pricing_snapshot(pricing)

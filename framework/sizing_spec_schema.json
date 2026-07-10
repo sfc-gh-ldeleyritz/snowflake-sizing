@@ -145,6 +145,20 @@
           "minimum": 0
         }
       }
+    },
+    "scenario_tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "growth_pct":     { "type": "number" },
+        "curve":          { "$ref": "#/definitions/ramp_curve" },
+        "go_live_shift":  { "type": "integer" },
+        "intensity_factor": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Multiplier on effective hours/clusters/tokens for this scenario tier. 1.0 = no change. SE-configured."
+        }
+      }
     }
   },
   "properties": {
@@ -279,6 +293,16 @@
               "minimum": 0
             }
           }
+        },
+        "target_budget": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional SE-supplied budget anchor (dollars TCV). Triggers reasonableness check."
+        },
+        "per_unit_benchmark": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional per-unit cost benchmark (dollars/unit/month). Used by SF-07 check."
         }
       }
     },
@@ -369,6 +393,53 @@
           "memory_config": {
             "type": "string",
             "description": "Snowpark-Optimized memory configuration (e.g. MEMORY_1X, MEMORY_1X_x86, MEMORY_16X). Only used when warehouse_type='snowpark'."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["standard", "unit_based"],
+            "description": "Workload kind: 'standard' (warehouse hours, default) or 'unit_based' (per-unit cost model)."
+          },
+          "cost_per_unit": { "type": "number", "minimum": 0 },
+          "unit_count_start": { "type": "number", "minimum": 0 },
+          "unit_count_end": { "type": "number", "minimum": 0 },
+          "unit_ramp_months": { "type": "integer", "minimum": 1 },
+          "rollout_kind": {
+            "type": "string",
+            "enum": ["standard", "phased_multi_tenant"],
+            "description": "Rollout pacing hint: 'phased_multi_tenant' auto-sets late go_live + slow ramp curve."
+          },
+          "avg_clusters_override": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Explicit average cluster count override, bypassing min/max midpoint or peak-fraction formula."
+          },
+          "peak_hours_per_day": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 24,
+            "description": "Hours per day running at max_clusters; used to compute peak fraction for avg_clusters estimate."
+          },
+          "active_fraction": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Fraction of hours_per_day actually billed (auto-suspend utilization). Multiplied into hours_per_day."
+          },
+          "zero_copy_source": {
+            "type": "boolean",
+            "description": "True for zero-copy / shared-source workloads. Contributes $0 to storage and ingest."
+          },
+          "interactive": {
+            "type": "object",
+            "required": ["enabled"],
+            "additionalProperties": false,
+            "properties": {
+              "enabled":               { "type": "boolean" },
+              "min_clusters":          { "type": "integer", "minimum": 1 },
+              "max_clusters":          { "type": "integer", "minimum": 1 },
+              "fallback_warehouse_size": { "$ref": "#/definitions/wh_size_abbreviated" },
+              "fallback_hours_per_day":  { "type": "number", "minimum": 0, "maximum": 24 }
+            }
           }
         }
       }
@@ -715,6 +786,32 @@
             "monthly_output_tokens_M": {
               "type": "number",
               "minimum": 0
+            },
+            "active_entities": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Number of active entities (users, records, etc.) generating completions per month. Used to derive monthly token volumes when monthly_input_tokens_M is absent."
+            },
+            "summaries_per_entity_per_mo": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Number of completions per active entity per month."
+            },
+            "avg_input_tokens_per_call": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Average input tokens per completion call."
+            },
+            "avg_output_tokens_per_call": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Average output tokens per completion call."
+            },
+            "caching_reduction_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Percentage reduction in effective input tokens due to prompt caching (0-100). Applied to derived monthly_input_tokens_M only."
             }
           }
         },
@@ -1061,18 +1158,52 @@
           "items": {
             "type": "object",
             "required": [
-              "id",
-              "warehouse_size"
+              "id"
             ],
+            "additionalProperties": false,
             "properties": {
-              "id": {
-                "type": "string"
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "warehouse_size": { "$ref": "#/definitions/wh_size_full" },
+              "warehouse_hours_monthly": { "type": "number", "minimum": 0 },
+              "rows_per_day_M": { "type": "number", "minimum": 0 },
+              "monthly_data_gb": { "type": "number", "minimum": 0 },
+              "runtime_size": {
+                "type": "string",
+                "enum": ["Small", "Medium", "Large"]
               },
-              "warehouse_size": {
-                "$ref": "#/definitions/wh_size_full"
-              }
-            },
-            "additionalProperties": true
+              "runtime_nodes": { "type": "integer", "minimum": 1 },
+              "hours_monthly": { "type": "number", "minimum": 0 },
+              "runtime_mode": {
+                "type": "string",
+                "enum": ["always_on", "scheduled"],
+                "description": "SF-05: 'always_on' (default, 730 h/mo) or 'scheduled' (runs_per_month * refresh_hours_per_run)."
+              },
+              "refresh_hours_per_run": {
+                "type": "number",
+                "minimum": 0,
+                "description": "SF-05: Hours consumed per scheduled run. Used when runtime_mode='scheduled'."
+              },
+              "runs_per_month": {
+                "type": "number",
+                "minimum": 0,
+                "description": "SF-05: Number of scheduled runs per month. Used when runtime_mode='scheduled'."
+              },
+              "deployment": {
+                "type": "string",
+                "enum": ["BYOC", "SPCS"],
+                "description": "SF-11: Runtime deployment model. Defaults to BYOC for AWS, SPCS for Azure/GCP."
+              },
+              "connector_type": { "type": "string" },
+              "source_type": { "type": "string" },
+              "tables": { "type": "integer", "minimum": 0 },
+              "byoc_region": { "type": ["string", "null"] },
+              "dev_start_month": { "type": "integer", "minimum": 0 },
+              "go_live_month": { "type": "integer", "minimum": 1 },
+              "ramp_curve": { "$ref": "#/definitions/ramp_curve" },
+              "source": { "type": "string", "description": "Provenance note for this connector instance (free text)." },
+              "justification": { "type": "string" }
+            }
           }
         }
       }
@@ -1290,150 +1421,100 @@
       }
     },
     "collaboration": {
-      "description": "Reader accounts / native apps / marketplace subscriptions. Accepts either the legacy reader_accounts shape or the accounts[] array shape (JS-parity).",
-      "oneOf": [
-        {
+      "description": "Reader accounts / native apps / marketplace subscriptions. Accepts the legacy reader_accounts shape, the accounts[] array shape (JS-parity), or both together (accounts[] takes priority when non-empty; falls back to reader_accounts otherwise).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reader_accounts": {
           "type": "object",
           "required": [
-            "reader_accounts",
-            "native_apps",
-            "marketplace"
+            "enabled"
           ],
           "additionalProperties": false,
           "properties": {
-            "reader_accounts": {
-              "type": "object",
-              "required": [
-                "enabled"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "warehouse_size": {
-                  "$ref": "#/definitions/wh_size_abbreviated"
-                },
-                "hours_per_day": {
-                  "type": "number",
-                  "minimum": 0
-                },
-                "days_per_month": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 31
-                }
-              }
+            "enabled": {
+              "type": "boolean"
             },
-            "native_apps": {
-              "type": "object",
-              "required": [
-                "enabled"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "monthly_subscription": {
-                  "type": "number",
-                  "minimum": 0
-                }
-              }
+            "warehouse_size": {
+              "$ref": "#/definitions/wh_size_abbreviated"
             },
-            "marketplace": {
-              "type": "object",
-              "required": [
-                "enabled"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "monthly_subscription": {
-                  "type": "number",
-                  "minimum": 0
-                }
+            "hours_per_day": {
+              "type": "number",
+              "minimum": 0
+            },
+            "days_per_month": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 31
+            }
+          }
+        },
+        "accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "warehouse_size": {
+                "$ref": "#/definitions/wh_size_abbreviated"
+              },
+              "hours_per_day": {
+                "type": "number",
+                "minimum": 0
+              },
+              "days_per_month": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 31
               }
             }
           }
         },
-        {
+        "native_apps": {
           "type": "object",
           "required": [
-            "accounts"
+            "enabled"
           ],
           "additionalProperties": false,
           "properties": {
-            "accounts": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "label": {
-                    "type": "string"
-                  },
-                  "type": {
-                    "type": "string"
-                  },
-                  "enabled": {
-                    "type": "boolean"
-                  },
-                  "warehouse_size": {
-                    "$ref": "#/definitions/wh_size_abbreviated"
-                  },
-                  "hours_per_day": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "days_per_month": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 31
-                  }
-                }
-              }
+            "enabled": {
+              "type": "boolean"
             },
-            "native_apps": {
-              "type": "object",
-              "required": [
-                "enabled"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "monthly_subscription": {
-                  "type": "number",
-                  "minimum": 0
-                }
-              }
+            "monthly_subscription": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "marketplace": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
             },
-            "marketplace": {
-              "type": "object",
-              "required": [
-                "enabled"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "monthly_subscription": {
-                  "type": "number",
-                  "minimum": 0
-                }
-              }
+            "monthly_subscription": {
+              "type": "number",
+              "minimum": 0
             }
           }
         }
-      ]
+      }
     },
     "assumptions": {
       "description": "Human-readable assumptions list surfaced in the proposal.",
@@ -1462,6 +1543,16 @@
             "description": "Fractional cost impact if assumption is wrong, e.g. 0.15 = 15%."
           }
         }
+      }
+    },
+    "scenarios": {
+      "description": "Scenario tiers for multi-scenario proposals. Each tier multiplies effective hours/clusters/tokens by intensity_factor.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conservative": { "$ref": "#/definitions/scenario_tier" },
+        "expected":     { "$ref": "#/definitions/scenario_tier" },
+        "aggressive":   { "$ref": "#/definitions/scenario_tier" }
       }
     },
     "replication": {

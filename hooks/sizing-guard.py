@@ -141,6 +141,28 @@ def _path_kind(path: str) -> str:
 
 # ── JSON path ─────────────────────────────────────────────────────────────── #
 
+def _check_reasonableness(spec: dict) -> list:
+    """SF-07: Warn-only reasonableness check against target_budget.
+
+    Reads meta.target_budget and computed_totals.core_year_total from the spec.
+    Returns a list of warning strings (never blocks).
+    """
+    warnings = []
+    meta = spec.get("meta") or {}
+    target = meta.get("target_budget")
+    totals = spec.get("computed_totals") or {}
+    y1_total = (totals.get("core_year_total") or [0])[0]
+
+    if target and y1_total > 0:
+        ratio = y1_total / target
+        if ratio > 2.0:
+            warnings.append(
+                f"Year-1 estimate (${y1_total:,.0f}) is {ratio:.1f}× the stated target budget "
+                f"(${target:,.0f}). Review sizing inputs — this may be inflated."
+            )
+    return warnings
+
+
 def _check_json(content: str, file_path: str) -> list[str]:
     errors: list[str] = []
     try:
@@ -363,6 +385,16 @@ def main():
     else:  # evidence-md
         errors = _check_evidence_md(content)
         label = "Research evidence pre-write checks"
+
+    if kind == "sizing-json" and not errors:
+        try:
+            spec = json.loads(content)
+        except json.JSONDecodeError:
+            spec = {}
+        warnings = _check_reasonableness(spec)
+        if warnings:
+            print(json.dumps({"decision": "approve", "warnings": warnings}))
+            sys.exit(0)
 
     if errors:
         reason = (

@@ -53,6 +53,31 @@ body {
 .header h1 { margin: 0; font-size: 36px; font-weight: 700; font-family: 'Texta', 'Lato', sans-serif; }
 .header-subtitle { margin-top: 8px; font-size: 18px; opacity: 0.9; }
 
+/* SF-07: Reasonableness warning banner */
+.warning-banner {
+  background: #fff8e1;
+  border: 1px solid #f0c000;
+  border-left: 4px solid #f0c000;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #6b5200;
+}
+.warning-banner p { margin: 2px 0; }
+
+/* SF-09: badges */
+.badge-info {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e3f2fd;
+  color: #0d5aa7;
+  margin-left: 6px;
+}
+
 /* KPI Tiles */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .kpi-tile {
@@ -570,6 +595,9 @@ li:hover .item-delete-btn { display: inline; }
     <div class="kpi-value" id="kpi-commit">$0</div>
   </div>
 </div>
+
+<!-- 2b. SF-07: Reasonableness Warning Banner -->
+<div id="reasonableness-warning" class="warning-banner" style="display:none;"></div>
 
 <!-- 3. Year-by-Year + Donut -->
 <div class="section">
@@ -1165,9 +1193,42 @@ function whRate(size, w) {
   return (r == null) ? (WH_CREDITS[size] || 1) : r;
 }
 function whMonthlyCredits(w) {
+  // SF-10: interactive warehouse path — 24h/day continuous billing
+  if (w.interactive && w.interactive.enabled) return _interactiveWhMonthlyCredits(w);
+
   const rate = whRate(w.size, w);
-  const avgClusters = (w.clusters_min + w.clusters_max) / 2;
-  return rate * w.hours_per_day * w.days_per_month * avgClusters;
+  // SF-03: explicit override > peak-fraction formula > naïve midpoint
+  let avgClusters;
+  const override = w.avg_clusters_override;
+  if (override != null) {
+    avgClusters = override;
+  } else if (w.peak_hours_per_day != null && w.hours_per_day > 0) {
+    const peakFrac = Math.min(1, w.peak_hours_per_day / w.hours_per_day);
+    avgClusters = w.clusters_min + (w.clusters_max - w.clusters_min) * peakFrac;
+  } else {
+    avgClusters = (w.clusters_min + w.clusters_max) / 2;
+  }
+  // SF-04: active_fraction multiplier on effective hours
+  const activeFrac = (w.active_fraction != null) ? w.active_fraction : 1.0;
+  const effHours = w.hours_per_day * activeFrac;
+  return rate * effHours * w.days_per_month * avgClusters;
+}
+
+function _interactiveWhMonthlyCredits(w) {
+  // SF-10: interactive warehouse — runs 24h/day, clusters from interactive block
+  const ib = w.interactive;
+  const intData = (PRICING_DATA.warehouses && PRICING_DATA.warehouses.interactive && PRICING_DATA.warehouses.interactive.data) || [];
+  const intRow = intData.find(r => r.size === w.size);
+  const intRate = intRow ? intRow.credits_per_hour : whRate(w.size, w);
+  const cmin = ib.min_clusters || 1, cmax = ib.max_clusters || 1;
+  const avgClusters = (w.avg_clusters_override != null) ? w.avg_clusters_override : ((cmin + cmax) / 2);
+  const days = w.days_per_month || 30;
+  let credits = intRate * 24 * days * avgClusters;
+  if (ib.fallback_warehouse_size) {
+    const fbRate = whRate(ib.fallback_warehouse_size, {});
+    credits += fbRate * (ib.fallback_hours_per_day || 2) * days;
+  }
+  return credits;
 }
 
 // ========== Birdbox ramp curve helpers ==========
@@ -1195,8 +1256,15 @@ function rampMultiplierForYear(row, year, growthOverride) {
                       : (row && row.growth_rate != null) ? row.growth_rate
                       : (m.annual_growth_rate != null) ? m.annual_growth_rate : 0.20;
   const devStart = (row && row.dev_start_month != null) ? row.dev_start_month : (m.default_dev_start_month != null ? m.default_dev_start_month : 0);
-  const goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   != null ? m.default_go_live_month   : 3);
-  const curve   = (row && row.ramp_curve)              ? row.ramp_curve      : (m.default_ramp_curve || 'linear');
+  let goLive  = (row && row.go_live_month   != null) ? row.go_live_month   : (m.default_go_live_month   != null ? m.default_go_live_month   : 3);
+  let curve   = (row && row.ramp_curve)              ? row.ramp_curve      : (m.default_ramp_curve || 'linear');
+  // SF-02: rollout_kind='phased_multi_tenant' -> push go_live >= 18, default curve to slow
+  // (mirrors framework/compute_totals.py::_resolve_ramp_window for JS/Python parity)
+  const rolloutKind = (row && row.rollout_kind) || m.rollout_kind;
+  if (rolloutKind === 'phased_multi_tenant') {
+    if (goLive < 9) goLive = Math.max(goLive, 18);
+    if (!(row && row.ramp_curve) && !m.default_ramp_curve) curve = 'slow';
+  }
   let avg;
   if (year === 1) {
     let sum = 0;
@@ -1265,9 +1333,22 @@ function calcAICredits() {
     return f ? (f.rate || 0) : 0;
   };
 
-  if (ai.cortex_complete && ai.cortex_complete.enabled)
-    total += (ai.cortex_complete.monthly_input_tokens_M || 0)  * getRate(ai.cortex_complete.model, 'input') +
-             (ai.cortex_complete.monthly_output_tokens_M || 0) * getRate(ai.cortex_complete.model, 'output');
+  if (ai.cortex_complete && ai.cortex_complete.enabled) {
+    let inM = ai.cortex_complete.monthly_input_tokens_M;
+    let outM = ai.cortex_complete.monthly_output_tokens_M;
+    // SF-06: derive from usage model if raw tokens absent
+    if (inM == null && ai.cortex_complete.active_entities != null) {
+      const ae  = ai.cortex_complete.active_entities || 0;
+      const spm = ai.cortex_complete.summaries_per_entity_per_mo || 0;
+      const aip = ai.cortex_complete.avg_input_tokens_per_call || 0;
+      const aop = ai.cortex_complete.avg_output_tokens_per_call || 0;
+      const crFactor = 1 - (ai.cortex_complete.caching_reduction_pct || 0) / 100;
+      inM  = ae * spm * aip * crFactor / 1_000_000;
+      outM = ae * spm * aop / 1_000_000;
+    }
+    total += (inM  || 0) * getRate(ai.cortex_complete.model, 'input') +
+             (outM || 0) * getRate(ai.cortex_complete.model, 'output');
+  }
   if (ai.cortex_agents && ai.cortex_agents.enabled) {
     const model = ai.cortex_agents.model || 'claude-sonnet-5';
     total += (ai.cortex_agents.monthly_input_tokens_M  || 0) * getSIRate(model, 'input') +
@@ -1353,11 +1434,13 @@ function calcSPCSCost() {
     let rate = PricingData.spcsCredit(family);
     if (rate == null) {
       // Fallback to the static master tables (cpu/highmem/gpu/spcs_gen2) by family code.
+      // Gen2 pools price per-cloud (aws/azure/gcp columns) instead of a flat credits_per_hour.
       const spcs = PRICING_DATA.spcs || {};
       const want = String(family || '').trim().toLowerCase();
+      const cloudKey = (SIZING_SPEC.meta.cloud || 'aws').trim().toLowerCase();
       for (const grp of ['cpu', 'highmem', 'gpu', 'spcs_gen2']) {
         const row = ((spcs[grp] && spcs[grp].data) || []).find(r => String(r.family || '').trim().toLowerCase() === want);
-        if (row) { rate = row.credits_per_hour; break; }
+        if (row) { rate = row.credits_per_hour != null ? row.credits_per_hour : row[cloudKey]; break; }
       }
     }
     return sum + (rate || 0) * count * hours;
@@ -1413,12 +1496,12 @@ function calcTransferCost() {
 
 function calcCollabCost() {
   // Returns collaboration $/MONTH: account credits × cr + native-app / marketplace subscriptions.
-  // New schema: c.accounts[] (array). Legacy schema: c.reader_accounts (single object, fallback).
+  // New schema: c.accounts[] (array, used when non-empty). Legacy schema: c.reader_accounts (single object, fallback).
   const c = SIZING_SPEC.collaboration;
   if (!c) return 0;
   const cr = SIZING_SPEC.meta.credit_rate || 0;
   let total = 0;
-  if (Array.isArray(c.accounts)) {
+  if (Array.isArray(c.accounts) && c.accounts.length > 0) {
     for (const a of c.accounts) {
       total += whRate(a.warehouse_size || 'XS', a) * (a.hours_per_day || 0) * (a.days_per_month || 0) * cr;
     }
@@ -1467,11 +1550,31 @@ function calcOpenflowCost(cr, ramp) {
     if (ingestGb > 0) {
       monthlyCredits += ingestGb * _OF_SNOWPIPE_CR_PER_GB;
     }
-    // Runtime vCPU-hour billing (credits/vCPU-hr per Table 1(h))
-    const vcpus = (runtimeVcpu[inst.runtime_size || 'Medium']) || 4;
+    // SF-05: scheduled runtime mode
+    const runtimeMode = inst.runtime_mode || 'always_on';
+    const hoursM = (runtimeMode === 'scheduled')
+      ? (inst.refresh_hours_per_run || 1) * (inst.runs_per_month || 30)
+      : (inst.hours_monthly || 730);
+    // SF-11: deployment-aware billing (BYOC vs SPCS)
+    const cloud = (SIZING_SPEC.meta || {}).cloud || 'AWS';
+    const deployment = inst.deployment || (cloud === 'AWS' ? 'BYOC' : 'SPCS');
     const nodes = inst.runtime_nodes || 1;
-    const hoursM = inst.hours_monthly || 730;
-    monthlyCredits += vcpus * nodes * hoursM * runtimeRate;
+    const runtimeSize = inst.runtime_size || 'Medium';
+    if (deployment === 'SPCS') {
+      const spcsMap = { Small: 'CPU_X64_S', Medium: 'CPU_X64_SL', Large: 'CPU_X64_L' };
+      const family = spcsMap[runtimeSize] || 'CPU_X64_SL';
+      const spcsData = (PRICING_DATA.spcs && PRICING_DATA.spcs.cpu && PRICING_DATA.spcs.cpu.data) || [];
+      const spcsRow = spcsData.find(r => r.family === family);
+      const spcsRate = spcsRow ? spcsRow.credits_per_hour : 0.41;
+      monthlyCredits += spcsRate * nodes * hoursM;
+      // Always-on control pool (1x CPU_X64_S)
+      const cpuSRow = spcsData.find(r => r.family === 'CPU_X64_S');
+      const controlRate = cpuSRow ? cpuSRow.credits_per_hour : 0.11;
+      monthlyCredits += controlRate * hoursM;
+    } else {
+      const vcpus = (runtimeVcpu[runtimeSize]) || 4;
+      monthlyCredits += vcpus * nodes * hoursM * runtimeRate;
+    }
   }
   return monthlyCredits * cr * 12 * ramp;
 }
@@ -1646,20 +1749,32 @@ function computeYearData(opts) {
     }, y, growth);
   };
 
+  // SF-08: intensity factor from scenario opts (1.0 = no change)
+  const intensityFactor = ov ? (ov.intensityFactor != null ? ov.intensityFactor : 1.0) : 1.0;
+
   const yearData = [];
   for (let y = 1; y <= years; y++) {
     // Per-workload ramp: each warehouse row uses its own dev_start/go_live/curve.
+    // SF-01: skip unit_based workloads (handled separately below)
+    // SF-09: skip zero_copy_source workloads ($0 contribution)
+    // SF-08: apply intensityFactor to warehouse credits
     const whCredits = SIZING_SPEC.workloads.reduce((sum, w) => {
-      return sum + whMonthlyCredits(w) * 12 * wRamp(w, y);
+      if (w.kind === 'unit_based') return sum;  // SF-01
+      if (w.zero_copy_source) return sum;        // SF-09
+      return sum + whMonthlyCredits(w) * 12 * intensityFactor * wRamp(w, y);
     }, 0);
+    // SF-01: unit-based workload annual cost
+    const unitCost = SIZING_SPEC.workloads
+      .filter(w => w.kind === 'unit_based')
+      .reduce((sum, w) => sum + _unitBasedYearCost(w, y), 0);
     // Serverless uses the meta-default ramp; AI uses its own ai_growth_rate (falling
     // back to annual_growth_rate when unset). In a scenario band, the scenario growth
     // override takes precedence for AI too, so the bands stay clean.
     const defRamp = dRamp(y);
     const aiGrowthOv = (m.ai_growth_rate != null) ? m.ai_growth_rate : undefined;
     const aiRamp = ov ? defRamp : defaultRampMultiplierForYear(y, aiGrowthOv);
-    const slCredits = calcServerlessCredits() * 12 * defRamp;
-    const aiCredits = calcAICredits() * 12 * aiRamp;
+    const slCredits = calcServerlessCredits() * 12 * defRamp;  // SF-08: serverless NOT scaled by intensity
+    const aiCredits = calcAICredits() * intensityFactor * 12 * aiRamp;  // SF-08: AI scaled by intensity
     const storageCost = storageForYear(y) * sr * 12 + hybridStorageCostForYear(y) + archiveStorageCostForYear(y);
     const spcsCost = calcSPCSCost() * 12 * defRamp * cr;
     const pgCost   = calcPostgresCost() * 12 * defRamp * cr;
@@ -1670,12 +1785,12 @@ function computeYearData(opts) {
     const transferCost = calcTransferCost() * 12;
     const collabCost = calcCollabCost() * 12 * defRamp;
     const replication  = calcReplicationForYear(y);
-    const computeCost    = whCredits  * cr;
+    const computeCost    = whCredits  * cr + unitCost;  // SF-01: include unit-based cost
     const serverlessCost = slCredits * cr;
     const aiCost         = aiCredits  * aiCr;
     const otherCost      = spcsCost + pgCost + ofCost + oracleCost + transferCost + collabCost + replication.total_cost;
     const yearTotal      = computeCost + serverlessCost + aiCost + storageCost + otherCost;
-    yearData.push({ y, whCredits, slCredits, aiCredits,
+    yearData.push({ y, whCredits, slCredits, aiCredits, unitCost,
                     computeCost, serverlessCost, aiCost, storageCost, otherCost, yearTotal,
                     replicationCost: replication.total_cost,
                     replicationDetail: replication,
@@ -1685,6 +1800,30 @@ function computeYearData(opts) {
                     collabCost });
   }
   return yearData;
+}
+
+function _unitBasedYearCost(w, year) {
+  // SF-01: annual cost for a unit_based workload
+  const cpp    = w.cost_per_unit || 0;
+  const start  = w.unit_count_start || 0;
+  const end    = w.unit_count_end != null ? w.unit_count_end : start;
+  const rampMo = w.unit_ramp_months || 1;
+  const devMo  = w.dev_start_month || 0;
+  const m = SIZING_SPEC.meta;
+  const growth = (w.growth_rate != null) ? w.growth_rate
+               : ((m.annual_growth_rate != null) ? m.annual_growth_rate : 0.20);
+  let totalUnits = 0;
+  for (let mo = 1; mo <= 12; mo++) {
+    const absM = (year - 1) * 12 + mo;
+    if (absM <= devMo) { continue; }
+    if (absM <= devMo + rampMo) {
+      const frac = (absM - devMo) / rampMo;
+      totalUnits += start + (end - start) * frac;
+    } else {
+      totalUnits += end * Math.pow(1 + growth, year - 1);
+    }
+  }
+  return cpp * (totalUnits / 12);
 }
 
 function recalculate() {
@@ -1697,6 +1836,36 @@ function recalculate() {
   updateScenarios();
   updateReplicationPanel(yearData);
   updateStorageBreakdown();
+  updateReasonablenessWarning(yearData);
+}
+
+// SF-07: reasonableness warning — combine spec-prepare (Python) warnings with a
+// live JS re-check so the banner stays accurate after in-browser edits.
+function _checkReasonableness(yearData) {
+  const warnings = [];
+  const meta = SIZING_SPEC.meta || {};
+  const y1 = yearData[0] ? yearData[0].yearTotal : 0;
+  if (meta.target_budget && y1 > 2 * meta.target_budget) {
+    warnings.push(
+      `Year-1 estimate ($${fmt(y1)}) is ${(y1 / meta.target_budget).toFixed(1)}\u00d7 the stated budget ($${fmt(meta.target_budget)}).`
+    );
+  }
+  return warnings;
+}
+
+function updateReasonablenessWarning(yearData) {
+  const el = document.getElementById('reasonableness-warning');
+  if (!el) return;
+  const fromSpec = (SIZING_SPEC.computed_totals && SIZING_SPEC.computed_totals.reasonableness_warnings) || [];
+  const fromJs = _checkReasonableness(yearData);
+  const all = Array.from(new Set([...fromSpec, ...fromJs]));
+  if (all.length === 0) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = all.map(w => `<p>&#9888; ${w}</p>`).join('');
 }
 
 // ========== Group-header monthly totals ==========
@@ -2098,11 +2267,17 @@ function updateScenarios() {
   // Aggressive are editable sensitivity bands computed over the full stack via the same engine.
   const scenarioDefs = [
     showLowHigh && { key: 'conservative', name: 'Conservative', base: false,
-                     growth: sp.conservative.growth_pct / 100, curve: sp.conservative.curve, shift: sp.conservative.go_live_shift, cls: '' },
+                     growth: sp.conservative.growth_pct / 100, curve: sp.conservative.curve,
+                     shift: sp.conservative.go_live_shift,
+                     intensityFactor: sp.conservative.intensity_factor != null ? sp.conservative.intensity_factor : 0.80,
+                     cls: '' },
     { key: 'expected', name: 'Expected', base: true,
       growth: baseGrowthPct / 100, curve: null, shift: 0, cls: 'expected' },
     showLowHigh && { key: 'aggressive', name: 'Aggressive', base: false,
-                     growth: sp.aggressive.growth_pct / 100, curve: sp.aggressive.curve, shift: sp.aggressive.go_live_shift, cls: '' },
+                     growth: sp.aggressive.growth_pct / 100, curve: sp.aggressive.curve,
+                     shift: sp.aggressive.go_live_shift,
+                     intensityFactor: sp.aggressive.intensity_factor != null ? sp.aggressive.intensity_factor : 1.20,
+                     cls: '' },
   ].filter(Boolean);
 
   const years = m.contract_years;
@@ -2110,7 +2285,7 @@ function updateScenarios() {
   const html = scenarioDefs.map(sc => {
     const yearData = sc.base
       ? computeYearData(null)
-      : computeYearData({ growth: sc.growth, curveOverride: sc.curve, goLiveShift: sc.shift });
+      : computeYearData({ growth: sc.growth, curveOverride: sc.curve, goLiveShift: sc.shift, intensityFactor: sc.intensityFactor });
     let yearRows = '';
     let tcv = 0;
     for (let y = 1; y <= years; y++) {
@@ -2201,10 +2376,15 @@ function populateWorkloadCards() {
           >${w.justification || ''}</span><button class="item-delete-btn" onclick="removeWorkloadNote('${w.id}')" title="Delete sourcing note">✕</button>
         </div>`
       : `<div class="justification note-empty"><button class="add-item-btn" onclick="addWorkloadNote('${w.id}')">+ Add sourcing note</button></div>`;
+    // SF-09: zero-copy source badge
+    const zcBadge = w.zero_copy_source
+      ? `<span class="badge-info">Zero-copy source — $0 storage/ingest</span>`
+      : '';
     return `<div class="workload-card" data-id="${w.id}">
       <div class="workload-header">
         <input type="text" class="card-label-edit" value="${(w.label || '').replace(/"/g, '&quot;')}"
                onchange="updateWorkload('${w.id}', 'label', this.value)" aria-label="Workload label">
+        ${zcBadge}
         <span class="workload-calc" id="calc-${w.id}"></span>
         <button class="delete-btn" onclick="removeWorkload('${w.id}')" title="Delete this workload">Delete</button>
       </div>
@@ -2518,6 +2698,25 @@ function populateAIPanel() {
     groupHeaderRow('Feature', 'Configuration', 'gh-cr-ai', 'gh-d-ai') + html;
 }
 
+// Real SPCS instance families for a generation, sourced from the static master
+// tables (mirrors the group lookup in calcSPCSCost's fallback / Python's
+// _spcs_credit_fallback): gen1 = cpu/highmem/gpu pools, gen2 = spcs_gen2 pools.
+// Falls back to the live calculator's computeTypes.SPCS block when populated.
+function spcsFamiliesForGen(gen) {
+  const groups = gen === 'gen2' ? ['spcs_gen2'] : ['cpu', 'highmem', 'gpu'];
+  const spcs = PRICING_DATA.spcs || {};
+  const cloudKey = (SIZING_SPEC.meta.cloud || 'aws').trim().toLowerCase();
+  const out = [];
+  for (const grp of groups) {
+    for (const row of ((spcs[grp] || {}).data) || []) {
+      const rate = row.credits_per_hour != null ? row.credits_per_hour : row[cloudKey];
+      out.push({ family: row.family, creditsPerHour: rate });
+    }
+  }
+  if (out.length === 0) return PricingData.spcsFamilies();
+  return out.filter(f => f.creditsPerHour != null);
+}
+
 function populateSPCSPanel() {
   const sp = SIZING_SPEC.spcs;
   const header = groupHeaderRow('Instance', 'Generation / Type / Count / Hours', 'gh-cr-spcs', 'gh-d-spcs');
@@ -2526,15 +2725,10 @@ function populateSPCSPanel() {
       '<p style="color: var(--gray-600); font-style: italic;">No SPCS instances configured. Click + Add SPCS Instance to create one.</p>';
     return;
   }
-  // gen2 families now come from the live calculator SPCS compute pools
-  // (HIGHMEM_X64 / CPU_X64 / GPU); gen1 keeps the legacy memory/HIPU pools.
-  const gen2Families = PricingData.spcsFamilies();
-  const gen1Types = ['XS_MEM', 'S_MEM', 'M_MEM', 'L_MEM', 'XS_HIPU', 'S_HIPU', 'M_HIPU'];
   const html = sp.instances.map(inst => {
     const isGen2 = inst.generation === 'gen2';
-    const typeOpts = isGen2
-      ? gen2Families.map(f => `<option value="${f.family}" ${f.family===inst.instance_type?'selected':''}>${f.family} - ${f.creditsPerHour} cr/hr</option>`).join('')
-      : gen1Types.map(t => `<option value="${t}" ${t===inst.instance_type?'selected':''}>${t}</option>`).join('');
+    const typeOpts = spcsFamiliesForGen(isGen2 ? 'gen2' : 'gen1')
+      .map(f => `<option value="${f.family}" ${f.family===inst.instance_type?'selected':''}>${f.family} - ${f.creditsPerHour} cr/hr</option>`).join('');
     return `<div class="workload-card" data-id="${inst.id}">
       <div class="workload-header">
         <input type="text" class="card-label-edit" value="${(inst.label || '').replace(/"/g, '&quot;')}"
@@ -2573,7 +2767,7 @@ function addSPCSInstance() {
     id: nextId('sp'),
     label: 'New instance',
     generation: 'gen2',
-    instance_type: (PricingData.spcsFamilies()[0] || {}).family || 'CPU_X64_M',
+    instance_type: (spcsFamiliesForGen('gen2')[0] || {}).family || 'GEN_X64_G2_2',
     count: 1,
     hours_monthly: 730,
   });
@@ -2595,7 +2789,7 @@ function updateSPCSInstance(id, field, value) {
   inst[field] = value;
   if (field === 'generation') {
     // Re-render so the instance-type select shows the right options.
-    inst.instance_type = (value === 'gen2') ? ((PricingData.spcsFamilies()[0] || {}).family || 'CPU_X64_M') : 'XS_MEM';
+    inst.instance_type = (spcsFamiliesForGen(value)[0] || {}).family || (value === 'gen2' ? 'GEN_X64_G2_2' : 'CPU_X64_XS');
     populateSPCSPanel();
   }
   recalculate();

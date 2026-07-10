@@ -15,7 +15,8 @@
     "ai_growth_rate": null,
     "default_dev_start_month": 0,
     "default_go_live_month": 1,
-    "version_number": 1
+    "version_number": 1,
+    "target_budget": 1000000
   },
   "workloads": [
     {
@@ -30,8 +31,9 @@
       "dev_start_month": 0,
       "go_live_month": 1,
       "ramp_curve": "linear",
-      "source": "TEST",
-      "justification": "Primary analytics warehouse"
+      "source": "ASSUMPTION",
+      "justification": "Primary analytics warehouse",
+      "peak_hours_per_day": 5
     },
     {
       "id": "wh-snowpark",
@@ -47,8 +49,84 @@
       "dev_start_month": 0,
       "go_live_month": 1,
       "ramp_curve": "linear",
-      "source": "TEST",
-      "justification": "Snowpark-optimized ML training"
+      "source": "ASSUMPTION",
+      "justification": "Snowpark-optimized ML training",
+      "active_fraction": 0.85
+    },
+    {
+      "id": "wh-saas-tenants",
+      "label": "Per-Tenant Metered Usage",
+      "size": "S",
+      "hours_per_day": 0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 60,
+      "dev_start_month": 0,
+      "go_live_month": 1,
+      "ramp_curve": "linear",
+      "source": "ASSUMPTION",
+      "justification": "SF-01: unit-based per-tenant cost model.",
+      "kind": "unit_based",
+      "cost_per_unit": 25.0,
+      "unit_count_start": 10,
+      "unit_count_end": 100,
+      "unit_ramp_months": 6,
+      "growth_rate": 0.2
+    },
+    {
+      "id": "wh-phased-rollout",
+      "label": "Multi-Tenant Serving Warehouse",
+      "size": "M",
+      "hours_per_day": 12,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 4,
+      "auto_suspend_seconds": 120,
+      "dev_start_month": 0,
+      "go_live_month": 3,
+      "ramp_curve": "linear",
+      "source": "ASSUMPTION",
+      "justification": "SF-02: phased multi-tenant rollout (late go-live + slow ramp).",
+      "rollout_kind": "phased_multi_tenant"
+    },
+    {
+      "id": "wh-dev-clone",
+      "label": "Dev Environment (Zero-Copy Clone)",
+      "size": "XS",
+      "hours_per_day": 3,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 60,
+      "dev_start_month": 0,
+      "go_live_month": 1,
+      "ramp_curve": "linear",
+      "source": "ASSUMPTION",
+      "justification": "SF-09: zero-copy clone of production data; contributes $0 to storage/ingest.",
+      "zero_copy_source": true
+    },
+    {
+      "id": "wh-app-serving",
+      "label": "App-Serving Warehouse",
+      "size": "M",
+      "hours_per_day": 5.0,
+      "days_per_month": 22,
+      "clusters_min": 1,
+      "clusters_max": 1,
+      "auto_suspend_seconds": 120,
+      "dev_start_month": 0,
+      "go_live_month": 1,
+      "ramp_curve": "fastest",
+      "source": "ASSUMPTION",
+      "justification": "SF-10: interactive (app-serving) warehouse with MCW and fallback.",
+      "interactive": {
+        "enabled": true,
+        "min_clusters": 2,
+        "max_clusters": 6,
+        "fallback_warehouse_size": "M",
+        "fallback_hours_per_day": 2
+      }
     }
   ],
   "serverless": {
@@ -81,7 +159,7 @@
     "hybrid_tables_requests": { "enabled": true, "reads_gb_monthly": 300, "writes_gb_monthly": 75 }
   },
   "ai_cortex": {
-    "cortex_complete": { "enabled": true, "model": "claude-sonnet-4-5", "monthly_input_tokens_M": 40, "monthly_output_tokens_M": 10 },
+    "cortex_complete": { "enabled": true, "model": "claude-sonnet-4-5", "active_entities": 2000, "summaries_per_entity_per_mo": 20, "avg_input_tokens_per_call": 1000, "avg_output_tokens_per_call": 250, "caching_reduction_pct": 20 },
     "cortex_agents": { "enabled": true, "model": "claude-sonnet-4-5", "monthly_input_tokens_M": 20, "monthly_output_tokens_M": 6, "monthly_cache_write_tokens_M": 4, "monthly_cache_read_tokens_M": 8 },
     "snowflake_intelligence": { "enabled": true, "model": "claude-sonnet-4-5", "monthly_input_tokens_M": 15, "monthly_output_tokens_M": 5, "monthly_cache_write_tokens_M": 3, "monthly_cache_read_tokens_M": 6 },
     "cortex_code": {
@@ -102,7 +180,7 @@
       "ai_extract": { "enabled": true, "tokens_M_monthly": 5 },
       "ai_transcribe": { "enabled": true, "tokens_M_monthly": 4 }
     },
-    "embeddings": { "enabled": true, "tokens_M_monthly": 20, "model": "snowflake-arctic-embed-l-v2.0" }
+    "ai_embed": { "enabled": true, "tokens_M_monthly": 20, "model": "snowflake-arctic-embed-l-v2.0" }
   },
   "spcs": {
     "enabled": true,
@@ -122,6 +200,14 @@
         "instance_type": "GPU_NV_S",
         "count": 1,
         "hours_monthly": 200
+      },
+      {
+        "id": "sp-3",
+        "label": "Batch Scoring (Gen2)",
+        "generation": "gen2",
+        "instance_type": "GEN_X64_G2_8",
+        "count": 1,
+        "hours_monthly": 300
       }
     ]
   },
@@ -131,7 +217,7 @@
       {
         "id": "pg-1",
         "label": "App DB (HA)",
-        "family": "STANDARD_L",
+        "instance_family": "STANDARD_L",
         "count": 2,
         "hours_monthly": 730,
         "ha": true
@@ -149,7 +235,20 @@
         "monthly_data_gb": 500,
         "runtime_size": "Medium",
         "runtime_nodes": 1,
-        "hours_monthly": 730
+        "hours_monthly": 730,
+        "runtime_mode": "always_on",
+        "deployment": "BYOC"
+      },
+      {
+        "id": "of-2",
+        "label": "Nightly Batch Connector (SPCS)",
+        "monthly_data_gb": 120,
+        "runtime_size": "Small",
+        "runtime_nodes": 1,
+        "runtime_mode": "scheduled",
+        "refresh_hours_per_run": 2,
+        "runs_per_month": 30,
+        "deployment": "SPCS"
       }
     ]
   },
@@ -213,12 +312,12 @@
     "replica_storage_per_tb_per_month": 23
   },
   "scenarios": {
-    "conservative": { "growth_pct": 10, "curve": "slow", "go_live_shift": 1 },
-    "expected": { "growth_pct": 20, "curve": "linear", "go_live_shift": 0 },
-    "aggressive": { "growth_pct": 35, "curve": "fast", "go_live_shift": -1 }
+    "conservative": { "growth_pct": 10, "curve": "slow", "go_live_shift": 1, "intensity_factor": 0.8 },
+    "expected": { "growth_pct": 20, "curve": "linear", "go_live_shift": 0, "intensity_factor": 1.0 },
+    "aggressive": { "growth_pct": 35, "curve": "fast", "go_live_shift": -1, "intensity_factor": 1.2 }
   },
   "assumptions": [
-    "Kitchen-sink example: every line item enabled with representative non-zero volumes for demonstration."
+    "Kitchen-sink example: every line item enabled with representative non-zero volumes, plus one showcase of every SF-01..SF-11 feature (unit-based workload, phased multi-tenant rollout, avg-cluster/peak-hours estimation, active-fraction utilization, OpenFlow scheduled + SPCS-deployment runtime, Cortex Complete usage-model derivation, budget-anchor reasonableness check, per-scenario intensity factor, zero-copy-source workload, interactive app-serving warehouse, and SPCS gen1 + gen2 instance families) for demonstration."
   ],
   "confirm_required": []
 }

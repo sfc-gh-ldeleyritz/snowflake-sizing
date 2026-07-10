@@ -192,10 +192,16 @@ def validate(path_str):
             "must be 'monthly_input_tokens_M' (value in millions)"
         )
     if cc.get("enabled") and "monthly_input_tokens_M" not in cc:
-        errors.append(
-            f"{path_str}: ai_cortex.cortex_complete enabled but missing "
-            "'monthly_input_tokens_M'"
+        # SF-06: usage-model derivation is a valid alternative to raw token counts.
+        has_usage_model = cc.get("active_entities") and cc.get("summaries_per_entity_per_mo") and (
+            cc.get("avg_input_tokens_per_call") or cc.get("avg_output_tokens_per_call")
         )
+        if not has_usage_model:
+            errors.append(
+                f"{path_str}: ai_cortex.cortex_complete enabled but missing "
+                "'monthly_input_tokens_M' (or the SF-06 active_entities/"
+                "summaries_per_entity_per_mo/avg_*_tokens_per_call usage-model fields)"
+            )
 
     # cortex_search: wrong field name
     cs = ai.get("cortex_search", {})

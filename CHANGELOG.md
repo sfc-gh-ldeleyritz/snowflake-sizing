@@ -4,6 +4,171 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.0.0] - 2026-07-08
+
+Adds 11 SE-requested sizing capabilities (SF-01..SF-11) spanning workload
+modeling, rollout/scenario controls, OpenFlow/AI usage modeling, and a
+non-blocking budget sanity check. Full Python↔JS parity maintained; all 13
+existing fixtures regenerated and 5 new feature-specific fixtures added.
+
+### Breaking changes
+
+- `workloads[].kind` now defaults to `"standard"`; existing specs are
+  unaffected, but consumers that iterate `workloads[]` assuming only
+  warehouse-hour billing must branch on `kind === "unit_based"` (SF-01).
+- `sizing_spec_schema.json` gained several new object/enum fields
+  (`interactive`, `rollout_kind`, `scenario_tier.intensity_factor`, etc.) —
+  additive, but a major bump reflects the schema-contract scope of this
+  release.
+
+### Added
+
+- **SF-01 — Unit-based (per-tenant/per-unit) workload cost model.**
+  `workloads[].kind = "unit_based"` with `cost_per_unit`, `unit_count_start`,
+  `unit_count_end`, `unit_ramp_months`, and optional `growth_rate` computes a
+  monthly-unit-driven annual cost (`computed_totals.unit_cost_per_year`)
+  instead of warehouse-hour billing.
+- **SF-02 — Phased multi-tenant rollout default.** `workloads[].rollout_kind
+  = "phased_multi_tenant"` pushes `go_live_month` to at least 12 and defaults
+  the ramp curve to `"slow"` unless explicitly overridden.
+- **SF-03 — Explicit `avg_clusters_override` / peak-fraction formula.**
+  Warehouse average-cluster estimation now supports an explicit override,
+  falling back to a `peak_hours_per_day`-driven peak-fraction formula before
+  the naive min/max midpoint.
+- **SF-04 — `active_fraction`.** Multiplies effective billed
+  `hours_per_day` to model auto-suspend utilization below the scheduled
+  window.
+- **SF-05 — OpenFlow scheduled runtime mode.** `openflow.instances[].
+  runtime_mode = "scheduled"` bills `refresh_hours_per_run × runs_per_month`
+  instead of the always-on 730 hours/month default.
+- **SF-06 — Cortex Complete usage-model derivation.** When raw
+  `monthly_input_tokens_M`/`monthly_output_tokens_M` are absent,
+  `ai_cortex.cortex_complete` derives them from `active_entities ×
+  summaries_per_entity_per_mo × avg_*_tokens_per_call`, with an optional
+  `caching_reduction_pct` applied to input tokens.
+- **SF-07 — Reasonableness (budget-anchor) warning.** `meta.target_budget`
+  triggers a non-blocking warning (Python `compute_core_totals()`, JS
+  `_checkReasonableness()`, and `hooks/sizing-guard.py`) when Year-1 cost
+  exceeds 2x the stated budget. Surfaced in the HTML proposal via a new
+  `#reasonableness-warning` banner and in the guard hook via
+  `{"decision": "approve", "warnings": [...]}` (never blocks).
+- **SF-08 — Per-scenario `intensity_factor`.** `scenarios.<tier>.
+  intensity_factor` scales warehouse and AI credits (not serverless) for
+  Conservative/Expected/Aggressive bands, and is accepted directly by
+  `compute_core_totals(spec, pricing, {"intensity_factor": ...})`.
+- **SF-09 — `zero_copy_source` workload flag.** Workloads with
+  `zero_copy_source: true` contribute $0 to warehouse credits/storage/ingest
+  and are listed in `computed_totals.zero_copy_sources`; the HTML workload
+  card shows a "Zero-copy source" badge.
+- **SF-10 — Interactive (app-serving) warehouse block.** `workloads[].
+  interactive.{enabled, min_clusters, max_clusters, fallback_warehouse_size,
+  fallback_hours_per_day}` bills 24h/day at the interactive-warehouse rate
+  plus an optional fallback-warehouse contribution.
+- **SF-11 — OpenFlow SPCS-vs-BYOC deployment billing.** `openflow.
+  instances[].deployment` (defaulting to `SPCS` off-AWS, `BYOC` on AWS) bills
+  SPCS CPU-family credit rates plus an always-on control-pool node when
+  deployment is `SPCS`.
+- 5 new fixtures: `tests/fixtures/unit-based-workload-1year.json`,
+  `interactive-warehouse-3year.json`, `openflow-spcs-azure-1year.json`,
+  `phased-rollout-saas-3year.json`, `reasonableness-budget-anchor-1year.json`.
+- `tests/test_sf01_sf11_red_phase.py` — 50 acceptance tests covering all 11
+  items.
+
+### Fixed (2026-07-10)
+
+- **`collaboration` schema's `oneOf` rejected the legacy+`accounts[]` shapes
+  coexisting.** All 18 fixtures (via `spec-prepare.py`'s own skeleton
+  defaults) populate `accounts: []` alongside the legacy `reader_accounts`/
+  `native_apps`/`marketplace` keys, which `compute_totals.py` already handles
+  by preferring `accounts[]` when non-empty and falling back otherwise. The
+  schema's two mutually-exclusive `oneOf` branches (each
+  `additionalProperties: false`) rejected that intentional coexistence.
+  Flattened `collaboration` to a single object schema with all four fields
+  optional, resolving all 17 previously-failing
+  `test_schema_conformance.py` cases.
+- **JS `calcCollabCost` diverged from Python on empty `accounts[]`.** JS used
+  `Array.isArray(c.accounts)` (true even for `[]`), so it never fell back to
+  `reader_accounts` the way Python's truthy `if accounts:` check does. Every
+  fixture has `accounts: []`, so the HTML proposal silently computed $0 for
+  reader-account costs. Changed the JS check to `c.accounts.length > 0`.
+- **`storage.archive` missing required `annual_growth_pct`.** Added the
+  field (`0`) to 5 fixtures that omitted it:
+  `feature-coverage-ai-serverless-3year.json`,
+  `feature-coverage-warehouses-3year.json`,
+  `light-and-wonder-3year-sizing-v1-2026-05-26.json`,
+  `marks-and-spencer-3year-sizing-v1-2026-05-27.json`,
+  `momentum-group-3year-sizing-v1-2026-05-27.json`.
+- **OpenFlow `warehouse_size` incorrectly required + fixture field-name
+  typo.** Schema listed `openflow.instances[].warehouse_size` as required,
+  but both engines treat it as optional (no MERGE warehouse needed for some
+  connectors) — removed from `required`. Separately,
+  `openflow-spcs-azure-1year.json` used `ingest_gb_monthly`, a key neither
+  engine reads; renamed to `monthly_data_gb` (the field both engines
+  consume), restoring non-zero ingest credits (TCV $0 → ~$18,314 for that
+  fixture).
+- **SPCS gen1 instance-type selector priced everything at $0.** The
+  proposal template's "gen1" dropdown was populated from a hardcoded list of
+  fictitious codes (`XS_MEM`, `S_MEM`, `M_MEM`, `L_MEM`, `XS_HIPU`, `S_HIPU`,
+  `M_HIPU`) that don't exist in any pricing table, so every gen1 selection
+  resolved to a null/0 rate — the price never changed because it was always
+  $0. Replaced with `spcsFamiliesForGen()`, sourcing real gen1 families
+  (`CPU_X64_*`, `HIGHMEM_X64_*`, `GPU_NV_*`) from the same static tables the
+  cost engine already falls back to; also fixed the generation-switch and
+  new-instance defaults, which previously mismatched generation vs. family.
+- **SPCS gen2 pools also priced at $0 (latent, no fixture coverage).**
+  `spcs_gen2` pricing rows carry per-cloud rates (`aws`/`azure`/`gcp`
+  columns) instead of a flat `credits_per_hour`, but both the JS and Python
+  fallback (`_spcs_credit_fallback`) only ever read `credits_per_hour`.
+  Threaded `cloud` through `spcs_monthly_credits()` / `calcSPCSCost()` and
+  fall back to the cloud-specific column for `spcs_gen2` rows.
+- Result: `pytest tests/` fully green (506/506), JS↔Python parity checks
+  pass, `spec-validate.py` reports 0 errors across all 18 fixtures.
+
+### Known issues (resolved 2026-07-10, see above)
+
+- ~~`test_schema_conformance.py::test_fixture_conforms_to_schema` fails for
+  17/18 fixtures: `collaboration`'s `oneOf` (legacy shape vs. `accounts[]`
+  shape) rejects specs where `spec-prepare.py`'s own skeleton defaults
+  populate both `accounts: []` and the legacy `reader_accounts`/
+  `native_apps`/`marketplace` keys together.~~
+
+### Examples refresh (2026-07-10)
+
+- **`examples/acme-financial-3year-sizing.json/.html`** synced from
+  `tests/fixtures/acme-financial-3year-sizing.json` (the two copies of this
+  customer sizing had drifted — the fixture already carried the `ai_embed`
+  rename, `collaboration.accounts[]` shape, `scenarios.<tier>.
+  intensity_factor`, corrected currency-consistent `confirm_required` text,
+  and percentage-unit `replication.storage_growth_pct`/`yoy_pct`, none of
+  which had been backported to `examples/`). HTML regenerated against the
+  current template (`core_tcv` unchanged at $466,553).
+- **`examples/kitchen-sink-aws-us-east.json/.html`** repaired and expanded to
+  actually be a "every line item" demo of the current engine:
+  - Fixed 3 latent bugs: `embeddings` → `ai_embed`; `workloads[].source:
+    "TEST"` (invalid enum) → `"ASSUMPTION"`; `postgres.instances[].family` →
+    `instance_family` (was silently billing $0).
+  - Added an SPCS **gen2** instance (`GEN_X64_G2_8`) alongside the existing
+    2 gen1 instances, to demonstrate this session's SPCS gen1/gen2 pricing
+    fix (all 3 instances now price distinctly and non-zero).
+  - Added one representative showcase of every SF-01..SF-11 feature not
+    previously demonstrated: a `kind: "unit_based"` workload (SF-01), a
+    `rollout_kind: "phased_multi_tenant"` workload (SF-02),
+    `peak_hours_per_day` / `active_fraction` (SF-03/04), an OpenFlow
+    `runtime_mode: "scheduled"` + `deployment: "SPCS"` instance (SF-05/11),
+    `cortex_complete` usage-model derivation fields (SF-06),
+    `meta.target_budget` (SF-07, set above TCV so no warning fires),
+    `scenarios.<tier>.intensity_factor` (SF-08), a `zero_copy_source: true`
+    workload (SF-09), and an `interactive` app-serving warehouse (SF-10).
+  - Fixed a related gap in `scripts/spec-validate.py`: its `cortex_complete`
+    check required `monthly_input_tokens_M` unconditionally and didn't know
+    about the SF-06 usage-model fields as a valid alternative, so a
+    correctly-built SF-06 spec failed validation. Now accepts either shape.
+- Both examples verified: `spec-validate.py` 0 errors, `html-render-check.py`
+  PASS (JS boot + non-zero TCV), `pytest tests/` still 506/506.
+- `examples/acme-financial-3year-sizing.pptx` left as-is — PPTX export is
+  browser-only (client-side JS in the template); re-export it from the
+  regenerated HTML's "Export to PPTX" button if an updated deck is needed.
+
 ## [2.19.1] - 2026-07-08
 
 Follow-up schema/fixture drift fixes. The 2.18.0 hybrid_tables/archive

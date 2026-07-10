@@ -1,6 +1,6 @@
 {
   "name": "snowflake-sizing",
-  "version": "2.15.0",
+  "version": "3.0.0",
   "description": "Generate accurate, interactive Snowflake consumption estimates and customer-facing HTML pricing proposals from discovery notes and Glean research.",
   "author": { "name": "Alex Ross" },
   "skills": "skills",

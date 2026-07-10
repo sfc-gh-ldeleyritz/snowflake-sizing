@@ -166,6 +166,13 @@ def _resolve_ramp_window(w: dict, meta: dict) -> tuple:
     if go is None:
         go = 3
     curve = w.get("ramp_curve") or meta.get("default_ramp_curve") or "linear"
+    # SF-02: rollout_kind='phased_multi_tenant' → push go_live >= 18, default curve to slow
+    rollout_kind = w.get("rollout_kind") or meta.get("rollout_kind")
+    if rollout_kind == "phased_multi_tenant":
+        if go < 9:
+            go = max(go, 18)
+        if not w.get("ramp_curve") and not meta.get("default_ramp_curve"):
+            curve = "slow"
     return int(dev), int(go), curve
 
 
@@ -203,17 +210,95 @@ def wh_credits_per_hour(w: dict, pricing: Optional[dict] = None, cloud: Optional
     return WH_CREDITS.get(size, 1)
 
 
+def _interactive_wh_monthly_credits(w: dict, ib: dict, pricing: Optional[dict] = None, cloud: Optional[str] = None) -> float:
+    """SF-10: Interactive warehouse billing.
+
+    Runs continuously (24h/day), multi-cluster via ib.min_clusters/max_clusters.
+    Falls back to standard rate when no interactive-specific rate in pricing.
+    Adds optional fallback warehouse credits on top.
+    """
+    size = w.get("size", "XS")
+    # Look up interactive-specific rate from pricing
+    int_data = ((pricing or {}).get("warehouses") or {}).get("interactive") or {}
+    int_rate = None
+    for row in int_data.get("data") or []:
+        if row.get("size") == size:
+            int_rate = float(row["credits_per_hour"])
+            break
+    if int_rate is None:
+        # Fallback to standard rate when no interactive pricing available
+        int_rate = wh_credits_per_hour(w, pricing, cloud)
+
+    cmin = ib.get("min_clusters", 1) or 1
+    cmax = ib.get("max_clusters", 1) or 1
+    avg_clusters = w.get("avg_clusters_override") or ((cmin + cmax) / 2.0)
+    days = w.get("days_per_month", 30) or 30
+
+    # Interactive: 24h/day continuous (minimum 24h auto-suspend)
+    main_credits = int_rate * 24 * days * avg_clusters
+
+    # Fallback warehouse for overflow (5-second timeout threshold)
+    fb_size  = ib.get("fallback_warehouse_size")
+    fb_hours = ib.get("fallback_hours_per_day", 2) or 2
+    fallback_credits = 0.0
+    if fb_size:
+        fb_rate = wh_credits_per_hour({"size": fb_size}, pricing, cloud)
+        fallback_credits = fb_rate * fb_hours * days
+
+    return main_credits + fallback_credits
+
+
 def wh_monthly_credits(w: dict, pricing: Optional[dict] = None, cloud: Optional[str] = None) -> float:
+    # SF-10: interactive warehouse path runs 24h/day
+    interactive = w.get("interactive") or {}
+    if interactive.get("enabled"):
+        return _interactive_wh_monthly_credits(w, interactive, pricing, cloud)
     rate = wh_credits_per_hour(w, pricing, cloud)
     cmin = w.get("clusters_min", 1) or 0
     cmax = w.get("clusters_max", 1) or 0
-    avg_clusters = (cmin + cmax) / 2.0
-    return (
-        rate
-        * (w.get("hours_per_day", 0) or 0)
-        * (w.get("days_per_month", 0) or 0)
-        * avg_clusters
-    )
+    # SF-03: explicit override > peak-fraction formula > naïve midpoint
+    avg_clusters = w.get("avg_clusters_override")
+    if avg_clusters is None:
+        peak_hrs = w.get("peak_hours_per_day")
+        hours_per_day = w.get("hours_per_day", 0) or 0
+        if peak_hrs is not None and hours_per_day > 0:
+            peak_frac = min(1.0, (peak_hrs or 0) / hours_per_day)
+            avg_clusters = cmin + (cmax - cmin) * peak_frac
+        else:
+            avg_clusters = (cmin + cmax) / 2.0  # legacy midpoint
+    # SF-04: active_fraction multiplier on effective hours
+    active_fraction = w.get("active_fraction", 1.0)
+    if active_fraction is None:
+        active_fraction = 1.0
+    eff_hours = (w.get("hours_per_day", 0) or 0) * active_fraction
+    return rate * eff_hours * (w.get("days_per_month", 0) or 0) * avg_clusters
+
+
+def unit_based_monthly_cost(w: dict, year: int, growth_rate: float = 0.0) -> float:
+    """SF-01: Monthly cost for a unit_based workload.
+
+    cost_per_unit × avg_unit_count across the 12 months of `year`.
+    Unit count ramps linearly from unit_count_start to unit_count_end over
+    unit_ramp_months, then grows at growth_rate annually.
+    """
+    cpp     = w.get("cost_per_unit", 0) or 0
+    start   = w.get("unit_count_start", 0) or 0
+    end     = w.get("unit_count_end", start) or start
+    ramp_mo = w.get("unit_ramp_months", 1) or 1
+    dev_mo  = w.get("dev_start_month", 0) or 0
+
+    total_units = 0.0
+    for m in range(1, 13):
+        abs_m = (year - 1) * 12 + m
+        if abs_m <= dev_mo:
+            total_units += 0
+        elif abs_m <= dev_mo + ramp_mo:
+            frac = (abs_m - dev_mo) / ramp_mo
+            total_units += start + (end - start) * frac
+        else:
+            grown = end * ((1 + growth_rate) ** (year - 1))
+            total_units += grown
+    return cpp * (total_units / 12.0)
 
 
 def storage_active_tb(spec: dict, year: int) -> float:
@@ -313,8 +398,20 @@ def ai_monthly_credits(spec: dict, pricing: dict) -> float:
 
     cc = ai.get("cortex_complete") or {}
     if cc.get("enabled"):
-        total += (cc.get("monthly_input_tokens_M", 0) or 0) * cc_rate(cc.get("model"), "input")
-        total += (cc.get("monthly_output_tokens_M", 0) or 0) * cc_rate(cc.get("model"), "output")
+        # SF-06: derive token volumes from usage-model fields when raw tokens absent
+        in_tokens_M = cc.get("monthly_input_tokens_M")
+        out_tokens_M = cc.get("monthly_output_tokens_M")
+        if in_tokens_M is None:
+            ae  = cc.get("active_entities", 0) or 0
+            spm = cc.get("summaries_per_entity_per_mo", 0) or 0
+            ai_tok = cc.get("avg_input_tokens_per_call", 0) or 0
+            ao_tok = cc.get("avg_output_tokens_per_call", 0) or 0
+            cr  = (100 - (cc.get("caching_reduction_pct") or 0)) / 100.0
+            if ae and spm and (ai_tok or ao_tok):
+                in_tokens_M  = ae * spm * ai_tok * cr / 1_000_000
+                out_tokens_M = ae * spm * ao_tok / 1_000_000
+        total += (in_tokens_M or 0) * cc_rate(cc.get("model"), "input")
+        total += (out_tokens_M or 0) * cc_rate(cc.get("model"), "output")
 
     for feat_key in ("cortex_agents", "snowflake_intelligence"):
         f = ai.get(feat_key) or {}
@@ -422,7 +519,7 @@ def _wh_credits_for_size(size: str, pricing: Optional[dict] = None, cloud: Optio
     return WH_CREDITS.get(size, 1)
 
 
-def spcs_monthly_credits(spec: dict, pricing: dict) -> float:
+def spcs_monthly_credits(spec: dict, pricing: dict, cloud: Optional[str] = None) -> float:
     """SPCS compute pool credits/month, summed across instances (schema-keyed).
 
     Accepts both legacy (instance_family/num_instances/hours_per_day*days_per_month)
@@ -436,7 +533,7 @@ def spcs_monthly_credits(spec: dict, pricing: dict) -> float:
         fam = inst.get("instance_type") or inst.get("instance_family")
         rate = calc_access.spcs_credit(pricing, fam)
         if rate is None:
-            rate = _spcs_credit_fallback(pricing, fam)
+            rate = _spcs_credit_fallback(pricing, fam, cloud)
         count = inst.get("count") if inst.get("count") is not None else (inst.get("num_instances", 0) or 0)
         hours = inst.get("hours_monthly")
         if hours is None:
@@ -445,20 +542,25 @@ def spcs_monthly_credits(spec: dict, pricing: dict) -> float:
     return total
 
 
-def _spcs_credit_fallback(pricing: dict, family: str) -> Optional[float]:
+def _spcs_credit_fallback(pricing: dict, family: str, cloud: Optional[str] = None) -> Optional[float]:
     """Look up SPCS credits/hour from the static master tables when no calc block.
 
     Mirrors the JS fallback to PRICING_DATA.spcs (cpu/highmem/gpu/spcs_gen2),
-    keyed by the same family codes the schema uses (e.g. 'CPU_X64_M').
+    keyed by the same family codes the schema uses (e.g. 'CPU_X64_M'). Gen2 pools
+    (``spcs_gen2`` group) price per-cloud (aws/azure/gcp columns) instead of a
+    single flat ``credits_per_hour``.
     """
     if not family:
         return None
     want = family.strip().lower()
+    cloud_key = (cloud or "aws").strip().lower()
     spcs = pricing.get("spcs") or {}
     for group in ("cpu", "highmem", "gpu", "spcs_gen2"):
         for row in ((spcs.get(group) or {}).get("data") or []):
             if (row.get("family") or "").strip().lower() == want:
                 v = row.get("credits_per_hour")
+                if v is None and group == "spcs_gen2":
+                    v = row.get(cloud_key)
                 return float(v) if v is not None else None
     return None
 
@@ -496,10 +598,33 @@ def openflow_connector_monthly_credits(spec: dict, pricing: dict, cloud: Optiona
         if ingest_gb:
             total += ingest_gb * _OF_SNOWPIPE_CREDITS_PER_GB
         # Runtime vCPU-hour billing (credits/vCPU-hr per Table 1(h))
-        vcpus = size_map.get(inst.get("runtime_size") or "Medium", 4)
+        # SF-05: scheduled runtime mode
+        runtime_mode = inst.get("runtime_mode", "always_on") or "always_on"
+        if runtime_mode == "scheduled":
+            refresh_hrs = inst.get("refresh_hours_per_run", 1) or 1
+            runs_per_mo = inst.get("runs_per_month", 30) or 30
+            hours_m = refresh_hrs * runs_per_mo
+        else:
+            hours_m = inst.get("hours_monthly", 730) or 730
+        # SF-11: deployment-aware billing (BYOC vs SPCS)
+        deployment = inst.get("deployment")
+        if deployment is None:
+            cloud_lower = (cloud or "aws").lower()
+            deployment = "BYOC" if cloud_lower == "aws" else "SPCS"
+        runtime_size = inst.get("runtime_size") or "Medium"
         nodes = inst.get("runtime_nodes", 1) or 1
-        hours_m = inst.get("hours_monthly", 730) or 730
-        total += vcpus * nodes * hours_m * runtime_rate
+        if deployment == "SPCS":
+            spcs_family_map = {"Small": "CPU_X64_S", "Medium": "CPU_X64_SL", "Large": "CPU_X64_L"}
+            family = spcs_family_map.get(runtime_size, "CPU_X64_SL")
+            rate = _spcs_credit_fallback(pricing, family) or 0.41
+            total += rate * nodes * hours_m
+            # Always-on control pool: 1x CPU_X64_S per connector
+            control_rate = _spcs_credit_fallback(pricing, "CPU_X64_S") or 0.11
+            total += control_rate * hours_m
+        else:
+            # BYOC vCPU-hour billing
+            vcpus = size_map.get(runtime_size, 4)
+            total += vcpus * nodes * hours_m * runtime_rate
     return total
 
 
@@ -696,7 +821,33 @@ def archive_storage_cost_for_year(spec: dict, pricing: dict, year: int) -> float
 
 # ── Public entry point ────────────────────────────────────────────────────── #
 
-def compute_core_totals(spec: dict, pricing: dict) -> dict:
+def reasonableness_check(spec: dict, totals: dict) -> list:
+    """SF-07: Warn-only reasonableness check. Returns list of warning strings."""
+    warnings = []
+    meta = spec.get("meta", {}) or {}
+    target = meta.get("target_budget")
+    per_unit = meta.get("per_unit_benchmark")
+    y1_total = (totals.get("core_year_total") or [0])[0]
+
+    if target and y1_total > 0:
+        ratio = y1_total / target
+        if ratio > 2.0:
+            warnings.append(
+                f"Year-1 estimate (${y1_total:,.0f}) is {ratio:.1f}× the stated budget "
+                f"(${target:,.0f}). Verify sizing inputs — this may be inflated."
+            )
+    if per_unit and meta.get("unit_count_start"):
+        unit_cost = y1_total / meta["unit_count_start"]
+        benchmark_ratio = unit_cost / per_unit
+        if benchmark_ratio > 2.0:
+            warnings.append(
+                f"Per-unit Year-1 cost (${unit_cost:,.0f}/unit) is {benchmark_ratio:.1f}× "
+                f"the benchmark (${per_unit:,.0f}/unit). Check avg_clusters and hours_per_day."
+            )
+    return warnings
+
+
+def compute_core_totals(spec: dict, pricing: dict, scenario_opts: Optional[dict] = None) -> dict:
     global RAMP_EXPONENTS
     RAMP_EXPONENTS = _load_ramp_exponents(pricing)
 
@@ -708,21 +859,33 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
     workloads = spec.get("workloads", []) or []
     ag = _annual_growth(meta)
     ai_g = _ai_growth(meta)
+    # SF-08: scenario intensity factor (1.0 = no change)
+    intensity = 1.0
+    if scenario_opts:
+        intensity = float(scenario_opts.get("intensity_factor", 1.0) or 1.0)
 
     sl_monthly = serverless_monthly_credits(spec)
     ai_monthly = ai_monthly_credits(spec, pricing)
     cloud = meta.get("cloud")
-    spcs_monthly = spcs_monthly_credits(spec, pricing)
+    spcs_monthly = spcs_monthly_credits(spec, pricing, cloud)
     of_conn_monthly = openflow_connector_monthly_credits(spec, pricing, cloud)
     transfer_monthly = transfer_monthly_cost(spec, pricing)
     collab_monthly = collaboration_monthly_cost(spec, pricing, cr, cloud)
     pg_monthly = postgres_monthly_credits(spec, pricing, cloud)
+
+    # SF-09: collect zero_copy_source workload labels upfront
+    zero_copy_sources = [
+        w.get("label") or w.get("id") or f"workload[{i}]"
+        for i, w in enumerate(workloads)
+        if w.get("zero_copy_source")
+    ]
 
     wh_credits_yr = []
     sl_credits_yr = []
     ai_credits_yr = []
     st_tb_yr = []
     compute_cost_yr = []
+    unit_cost_yr = []
     sl_cost_yr = []
     ai_cost_yr = []
     st_cost_yr = []
@@ -739,11 +902,20 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
 
     for y in range(1, years + 1):
         wh_credits = 0.0
+        unit_cost_y = 0.0
         for w in workloads:
+            if w.get("kind") == "unit_based":
+                # SF-01: unit-based workloads contribute $0 to warehouse credits
+                g = float(w["growth_rate"]) if w.get("growth_rate") is not None else ag
+                unit_cost_y += unit_based_monthly_cost(w, y, g) * 12
+                continue
+            if w.get("zero_copy_source"):
+                # SF-09: zero-copy / shared-source workloads contribute $0
+                continue
             dev, go, curve = _resolve_ramp_window(w, meta)
             g = float(w["growth_rate"]) if w.get("growth_rate") is not None else ag
             wh_credits += (
-                wh_monthly_credits(w, pricing, meta.get("cloud")) * 12
+                wh_monthly_credits(w, pricing, meta.get("cloud")) * 12 * intensity
                 * ramp_multiplier_for_year(dev, go, curve, y, g)
             )
         # Default-window ramp for the non-workload categories. Serverless / SPCS /
@@ -752,8 +924,8 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         # defRamp / aiRamp split in computeYearData.
         def_ramp = default_ramp_multiplier_for_year(meta, y, ag)
         ai_ramp = default_ramp_multiplier_for_year(meta, y, ai_g)
-        sl_credits = sl_monthly * 12 * def_ramp
-        ai_credits = ai_monthly * 12 * ai_ramp
+        sl_credits = sl_monthly * 12 * def_ramp  # SF-08: serverless NOT scaled by intensity
+        ai_credits = ai_monthly * intensity * 12 * ai_ramp  # SF-08: AI scaled by intensity
         st_tb = storage_active_tb(spec, y)
 
         compute_cost = wh_credits * cr
@@ -775,13 +947,14 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         pg_cost = pg_monthly * 12 * def_ramp * cr
         other_cost = spcs_cost + of_cost + transfer_cost + collab_cost + repl_cost + pg_cost
 
-        core_total = compute_cost + sl_cost + ai_cost + st_cost + hybrid_st_cost + archive_cost + other_cost
+        core_total = compute_cost + unit_cost_y + sl_cost + ai_cost + st_cost + hybrid_st_cost + archive_cost + other_cost
 
         wh_credits_yr.append(round(wh_credits, 2))
         sl_credits_yr.append(round(sl_credits, 2))
         ai_credits_yr.append(round(ai_credits, 2))
         st_tb_yr.append(round(st_tb, 4))
         compute_cost_yr.append(round(compute_cost, 2))
+        unit_cost_yr.append(round(unit_cost_y, 2))
         sl_cost_yr.append(round(sl_cost, 2))
         ai_cost_yr.append(round(ai_cost, 2))
         st_cost_yr.append(round(st_cost, 2))
@@ -796,7 +969,7 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         other_cost_yr.append(round(other_cost, 2))
         core_total_yr.append(round(core_total, 2))
 
-    return {
+    result = {
         "schema_version": 1,
         "computed_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "computed_by": "framework/compute_totals.py",
@@ -806,6 +979,7 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         "ai_credits_per_year": ai_credits_yr,
         "storage_active_tb_per_year": st_tb_yr,
         "compute_cost_per_year": compute_cost_yr,
+        "unit_cost_per_year": unit_cost_yr,
         "serverless_cost_per_year": sl_cost_yr,
         "ai_cost_per_year": ai_cost_yr,
         "storage_cost_per_year": st_cost_yr,
@@ -820,7 +994,11 @@ def compute_core_totals(spec: dict, pricing: dict) -> dict:
         "other_cost_per_year": other_cost_yr,
         "core_year_total": core_total_yr,
         "core_tcv": round(sum(core_total_yr), 2),
+        "zero_copy_sources": zero_copy_sources,
     }
+    # SF-07: reasonableness check
+    result["reasonableness_warnings"] = reasonableness_check(spec, result)
+    return result
 
 
 def load_pricing(plugin_root: Optional[pathlib.Path] = None) -> dict:

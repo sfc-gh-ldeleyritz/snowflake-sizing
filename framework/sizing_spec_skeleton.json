@@ -231,9 +231,9 @@
     "enabled": false
   },
   "scenarios": {
-    "conservative": { "growth_pct": 10, "curve": "slow",   "go_live_shift":  1 },
-    "expected":     { "growth_pct": 20, "curve": "linear", "go_live_shift":  0 },
-    "aggressive":   { "growth_pct": 35, "curve": "fast",   "go_live_shift": -1 }
+    "conservative": { "growth_pct": 10, "curve": "slow",   "go_live_shift":  1, "intensity_factor": 0.80 },
+    "expected":     { "growth_pct": 20, "curve": "linear", "go_live_shift":  0, "intensity_factor": 1.00 },
+    "aggressive":   { "growth_pct": 35, "curve": "fast",   "go_live_shift": -1, "intensity_factor": 1.20 }
   },
   "_skeleton_marker": "Generated from framework/sizing_spec_schema.json by scripts/regen_skeleton.py. Do not edit by hand; rerun the script."
 }
