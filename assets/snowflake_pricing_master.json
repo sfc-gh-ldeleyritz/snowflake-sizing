@@ -6213,23 +6213,21 @@
     ]
   },
   "ramp_curves": {
-    "description": "Birdbox-style power-curve ramp model. factor(month) = clamp(((month - dev_start + 1) / (go_live - dev_start + 1)) ^ exponent, 0, 1). After go_live month, factor stays at 1.0; pre-dev_start it is 0. 'manual' uses exponent 0 to force factor=0 (caller overrides per-month values).",
+    "description": "Birdbox-style power-curve ramp model. factor(month) = clamp(((month - dev_start + 1) / (go_live - dev_start + 1)) ^ exponent, 0, 1). After go_live month, factor stays at 1.0; pre-dev_start it is 0.",
     "formula": "factor(m) = ((m - dev_start + 1) / (go_live - dev_start + 1)) ^ exponent, clamped to [0, 1]",
     "exponents": {
       "slowest": 4.0,
       "slow": 2.0,
       "linear": 1.0,
       "fast": 0.5,
-      "fastest": 0.25,
-      "manual": 0.0
+      "fastest": 0.25
     },
     "curve_descriptions": {
       "slowest": "Slowest Ramp - slow initial consumption, gradually increasing growth rate until go-live",
       "slow": "Slow Ramp - happy medium between Slowest and Linear",
       "linear": "Linear Ramp - linear growth from dev start through go-live",
       "fast": "Fast Ramp - happy medium between Fastest and Linear",
-      "fastest": "Fastest Ramp - quicker initial consumption, gradually decreasing growth rate until go-live",
-      "manual": "Manual - sets all months to 0; caller overrides per-month values"
+      "fastest": "Fastest Ramp - quicker initial consumption, gradually decreasing growth rate until go-live"
     },
     "recommended_by_workload_type": {
       "migration": "slow",

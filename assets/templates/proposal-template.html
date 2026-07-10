@@ -775,12 +775,13 @@ fill="#29B5E8" stroke="none">
 
     <h3>Configuration Tabs</h3>
     <ul>
-      <li><strong>Global Settings</strong> :  Cloud/region, edition, credit rate, contract years, growth rate, discount override, and ramp-curve defaults.</li>
+      <li><strong>Global Settings</strong> :  Customer name, cloud/region, edition, contract years, growth rate, discount override, dev-start/go-live month defaults, and ramp-curve defaults.</li>
       <li><strong>Warehouses</strong> :  Add and configure virtual warehouse workloads: size, hours/day, cluster count, warehouse type (Gen 1/2/Snowpark), and per-workload ramp schedule.</li>
       <li><strong>Serverless</strong> :  Toggle features (Snowpipe, Tasks, Auto-clustering, Search Optimization, etc.) and enter monthly volumes.</li>
       <li><strong>AI / Cortex</strong> :  Cortex Complete, Agents, Search, Analyst, Document AI, Cortex Code surfaces, AI Functions, and AI_EMBED.</li>
       <li><strong>SPCS</strong> :  Snowpark Container Services compute pools by instance family and hours.</li>
-      <li><strong>OpenFlow</strong> :  OpenFlow connector instances: warehouse MERGE hours and Snowpipe Streaming row volumes.</li>
+      <li><strong>Postgres</strong> :  Snowflake Postgres (Preview: AWS and Azure only) instance family, count, hours/month, and High Availability toggle.</li>
+      <li><strong>OpenFlow</strong> :  OpenFlow connector instances: connector type, BYOC/SPCS deployment, runtime size/node count, monthly data volume, and MERGE warehouse size/hours.</li>
       <li><strong>Storage</strong> :  Raw TB, compression ratio, time-travel days, churn rate, and annual growth.</li>
       <li><strong>Collaboration</strong> :  Reader and Managed Account compute sizing.</li>
       <li><strong>Replication</strong> :  Cross-region replication: initial dataset, monthly change rate, source/target regions, and egress pricing.</li>
@@ -791,7 +792,7 @@ fill="#29B5E8" stroke="none">
       <li><strong>Add workloads / instances</strong> :  Use the &ldquo;+ Add &hellip;&rdquo; buttons at the bottom of each tab. Click a workload&rsquo;s name to rename it inline.</li>
       <li><strong>Delete</strong> :  Hover a workload, SPCS, or OpenFlow card to reveal the delete (&times;) button in its top-right corner.</li>
       <li><strong>Assumptions &amp; Confirmations</strong> :  Click any bullet to edit inline; hover to reveal the &times; delete button; click &ldquo;+ Add&rdquo; to append a new item.</li>
-      <li><strong>Scenarios</strong> :  The three scenario cards (Conservative / Expected / Aggressive) let you tune growth rate, ramp curve, and go-live shift. Toggle the checkbox above to show or hide the outer two.</li>
+      <li><strong>Scenarios</strong> :  The three scenario cards (Conservative / Expected / Aggressive) let you tune growth rate and ramp curve. Toggle the checkbox above to show or hide the outer two.</li>
       <li><strong>&#9432; icons</strong> :  Hover or focus any &#9432; icon next to a field for a short definition of that feature or metric.</li>
     </ul>
   </div>
@@ -998,6 +999,17 @@ const FEATURE_TOOLTIPS = {
   rep_storage_tb_mo: 'Monthly storage rate ($/TB) charged for the replica copy at the target region.',
   rep_storage_growth: 'Assumed year-over-year storage growth rate for the replicated dataset.',
   rep_yoy_change: 'Assumed year-over-year change in monthly replication change-volume.',
+
+  // Global Settings
+  global_customer: 'Customer/prospect name shown on the cover page and throughout the proposal.',
+  global_edition: 'Snowflake edition (Standard, Enterprise, Business Critical, or VPS). Drives credit rates and available features.',
+  global_region: 'Cloud provider + region where the account will run. Drives credit rates, storage rates, and available product families.',
+  global_contract_years: 'Length of the contract in years. Determines how many annual columns appear in the pricing tables.',
+  global_ramp_curve: 'Default consumption ramp shape applied to all workloads: how quickly usage grows from dev start to go-live. Slowest/Slow ramp up gradually; Fastest reaches full usage almost immediately.',
+  global_dev_start: 'Default month (0 = contract start) each workload begins consuming credits, before reaching go-live.',
+  global_go_live: 'Default month each workload reaches full (100%) ramp and stays there for the remainder of the contract.',
+  global_growth_pct: 'Default year-over-year growth rate applied to consumption starting in Year 2.',
+  global_list_rate: 'List (undiscounted) price per credit for this edition/region, from the Snowflake pricing table. Not editable directly — enable a discount below to override.',
 };
 
 let _ttEl = null;
@@ -1239,7 +1251,6 @@ function rampExponentFor(curve) {
   return (typeof exp[curve] === 'number') ? exp[curve] : 1.0;
 }
 function rampFactorForMonth(devStart, goLive, curve, m) {
-  if (curve === 'manual') return (devStart === 1 && goLive === 1) ? 1.0 : 0.0;
   if (m < devStart) return 0;
   if (m >= goLive)  return 1;
   const denom = (goLive - devStart + 1);
@@ -3149,16 +3160,16 @@ function populateGlobalSettings() {
   }
   document.getElementById('global-container').innerHTML = `
     <div class="storage-form">
-      <label>Customer name
+      <label>Customer name${tt('global_customer')}
         <input type="text" value="${(m.customer || '').replace(/"/g, '&quot;')}"
                onchange="updateGlobal('customer', this.value)">
       </label>
-      <label>Edition
+      <label>Edition${tt('global_edition')}
         <select onchange="updateGlobal('edition', this.value)">
           ${['Standard','Enterprise','Business Critical','VPS'].map(e => `<option value="${e}" ${e===m.edition?'selected':''}>${e}</option>`).join('')}
         </select>
       </label>
-      <label>Cloud + Region
+      <label>Cloud + Region${tt('global_region')}
         <select onchange="
           const [cloud, region] = this.value.split('|');
           SIZING_SPEC.meta.cloud = cloud;
@@ -3167,12 +3178,12 @@ function populateGlobalSettings() {
           ${regionOpts}
         </select>
       </label>
-      <label>Contract years
+      <label>Contract years${tt('global_contract_years')}
         <select onchange="updateGlobal('contract_years', +this.value)">
           ${[1,2,3,4,5].map(y => `<option value="${y}" ${y===m.contract_years?'selected':''}>${y}</option>`).join('')}
         </select>
       </label>
-      <label>Default Ramp curve
+      <label>Default Ramp curve${tt('global_ramp_curve')}
         <select onchange="
           SIZING_SPEC.meta.default_ramp_curve = this.value;
           SIZING_SPEC.workloads.forEach(w => { w.ramp_curve = this.value; });
@@ -3182,30 +3193,29 @@ function populateGlobalSettings() {
           <option value="linear"${(m.default_ramp_curve==='linear' || !m.default_ramp_curve)?' selected':''}>Linear (x)</option>
           <option value="fast"${m.default_ramp_curve==='fast'?' selected':''}>Fast (x^0.5)</option>
           <option value="fastest"${m.default_ramp_curve==='fastest'?' selected':''}>Fastest (x^0.25)</option>
-          <option value="manual"${m.default_ramp_curve==='manual'?' selected':''}>Manual (override)</option>
         </select>
       </label>
-      <label>Dev start (month)
+      <label>Dev start (month)${tt('global_dev_start')}
         <input type="number" min="0" max="36" value="${m.default_dev_start_month ?? 0}"
                onchange="
           SIZING_SPEC.meta.default_dev_start_month = +this.value;
           SIZING_SPEC.workloads.forEach(w => { w.dev_start_month = +this.value; });
           recalculate();">
       </label>
-      <label>Go-live (month)
+      <label>Go-live (month)${tt('global_go_live')}
         <input type="number" min="1" max="36" value="${m.default_go_live_month || 3}"
                onchange="
           SIZING_SPEC.meta.default_go_live_month = +this.value;
           SIZING_SPEC.workloads.forEach(w => { w.go_live_month = +this.value; });
           recalculate();">
       </label>
-      <label>Annual growth %
+      <label>Annual growth %${tt('global_growth_pct')}
         <input type="number" value="${Math.round((m.annual_growth_rate ?? 0.20) * 100)}" min="0" max="100"
                onchange="
           SIZING_SPEC.meta.annual_growth_rate = +this.value / 100;
           recalculate();">
       </label>
-      <label>List rate ($/credit)
+      <label>List rate ($/credit)${tt('global_list_rate')}
         <input type="number" value="${Number(m.list_credit_rate ?? m.credit_rate).toFixed(2)}" step="0.01" disabled style="background: var(--gray-100);">
       </label>
     </div>

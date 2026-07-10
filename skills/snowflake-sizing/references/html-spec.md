@@ -572,7 +572,6 @@ function rampExponentFor(curve) {
   return (typeof exp[curve] === 'number') ? exp[curve] : 1.0;
 }
 function rampFactorForMonth(devStart, goLive, curve, m) {
-  if (curve === 'manual') return (devStart === 1 && goLive === 1) ? 1.0 : 0.0;
   if (m < devStart) return 0;
   if (m >= goLive)  return 1;
   const denom = (goLive - devStart + 1);

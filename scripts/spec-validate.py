@@ -114,12 +114,10 @@ def validate(path_str):
                     f"must be one of: {', '.join(sorted(valid_sources))}"
                 )
             wl_ramp = w.get("ramp_curve")
-            # Validators tolerate 'manual' as a sixth ramp curve (Birdbox
-            # flat-line signal); the schema enum covers the five named curves.
-            if wl_ramp and wl_ramp != "manual" and wl_ramp not in valid_ramp_curves:
+            if wl_ramp and wl_ramp not in valid_ramp_curves:
                 errors.append(
                     f"{path_str}: workload '{label}' ramp_curve '{wl_ramp}' is not valid - "
-                    f"must be one of: {', '.join(sorted(valid_ramp_curves))}, manual"
+                    f"must be one of: {', '.join(sorted(valid_ramp_curves))}"
                 )
             # Detect legacy avg_clusters usage
             if "avg_clusters" in w:

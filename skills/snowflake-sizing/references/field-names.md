@@ -112,14 +112,11 @@ X-Large, 2X-Large, 3X-Large, 4X-Large`.
 
 ## Ramp curve enum
 
-Five named curves plus the manual flat-line:
+Five named curves:
 
 ```
-fastest, fast, linear, slow, slowest, manual
+fastest, fast, linear, slow, slowest
 ```
-
-Use `manual` with `dev_start=1, go_live=1` to pin a workload at full ramp from
-month 1 onwards (e.g. ongoing production system being lifted).
 
 ## Source label enum
 

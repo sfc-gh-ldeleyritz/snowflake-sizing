@@ -72,7 +72,7 @@ WH_CREDITS = {
 
 _RAMP_EXPONENTS_FALLBACK = {
     "slowest": 4.0, "slow": 2.0, "linear": 1.0,
-    "fast": 0.5, "fastest": 0.25, "manual": 0.0,
+    "fast": 0.5, "fastest": 0.25,
 }
 RAMP_EXPONENTS = _RAMP_EXPONENTS_FALLBACK  # overridden at runtime by _load_ramp_exponents
 
@@ -109,8 +109,6 @@ _CORTEX_FN_TO_FEATURE = {
 # ── Core math ─────────────────────────────────────────────────────────────── #
 
 def ramp_factor_for_month(dev_start: int, go_live: int, curve: str, m: int) -> float:
-    if curve == "manual":
-        return 1.0 if (dev_start == 1 and go_live == 1) else 0.0
     if m < dev_start:
         return 0.0
     if m >= go_live:

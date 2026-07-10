@@ -257,7 +257,7 @@ Each workload row carries three ramp inputs that determine its month-by-month co
 
 - `dev_start_month` — first month of any consumption (typically 0; billing ramp begins from month 1 of the contract)
 - `go_live_month` — month at which consumption reaches 100% of steady-state (typically 3)
-- `ramp_curve` — one of `slowest | slow | linear | fast | fastest | manual`
+- `ramp_curve` — one of `slowest | slow | linear | fast | fastest`
 
 ### The factor formula
 
@@ -274,7 +274,6 @@ Where `exponent` comes from `pricing.ramp_curves.exponents`:
 | Linear | 1.0 | Steady straight line | Standard new deployment (default) |
 | Fast | 0.5 | Square-root: quick early gains | Replacing existing system; team ready |
 | Fastest | 0.25 | Sharp early ramp, tail to 100% | Lift-and-shift; immediate full usage |
-| Manual | 0 | All months = 0 | Caller overrides per-month values |
 
 For `m < dev_start` factor is 0; for `m > go_live` factor is 1. After go-live, the existing annual `growth_rate` applies to subsequent years.
 

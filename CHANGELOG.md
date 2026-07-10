@@ -4,6 +4,63 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.1.0] - 2026-07-10
+
+Removes the broken "Manual" ramp curve option and closes the last
+tooltip-coverage gap (Global Settings tab).
+
+### Fixed
+
+- **Removed the "Manual (override)" ramp curve.** `rampFactorForMonth()`
+  special-cased `curve === 'manual'` to return `1.0` only when
+  `dev_start_month === 1 AND go_live_month === 1`, else `0.0` for every
+  month in the year. The Global Settings "Default Ramp curve" dropdown set
+  `default_ramp_curve` but never touched `dev_start`/`go_live`, so selecting
+  Manual silently zeroed out Year 1 cost for almost every spec. Rather than
+  fix the semantics, the option is removed entirely: the JS branch in
+  `assets/templates/proposal-template.html`, its Python mirror in
+  `framework/compute_totals.py` (`ramp_factor_for_month()` and
+  `_RAMP_EXPONENTS_FALLBACK`), the `<option value="manual">` in the Default
+  Ramp curve `<select>`, the `manual` entries in
+  `assets/snowflake_pricing_master.json` (`ramp_curves.exponents` /
+  `curve_descriptions`), the `manual`-tolerance carve-outs in
+  `scripts/spec-validate.py` and `scripts/_schema_loader.py`
+  (`valid_ramp_curves()` now matches the schema enum exactly), and all
+  doc references (`references/field-names.md`,
+  `references/sizing-methodology.md`, `references/html-spec.md`). Regenerated
+  `examples/acme-financial-3year-sizing.html` and
+  `examples/kitchen-sink-aws-us-east.html`; updated the one test
+  (`tests/test_compute_totals.py`) that asserted on `manual` to use `linear`
+  with `go_live_month=1` (same full-ramp-all-year behavior, now via a valid
+  curve). `ramp_curve` enum is now exactly `slowest | slow | linear | fast |
+  fastest`.
+
+### Added
+
+- **Information tooltips on the Global Settings tab.** The last configuration
+  tab without `tt(key)` info-icons. Added `FEATURE_TOOLTIPS` entries and wired
+  `${tt('key')}` next to every control: customer name, edition, cloud +
+  region, contract years, default ramp curve, dev start month, go-live month,
+  annual growth %, and list rate.
+
+### Fixed (docs)
+
+- **`? Help` modal content pass.** The in-app help modal
+  (`assets/templates/proposal-template.html`, `#help-modal`) had drifted from
+  the actual UI:
+  - **Global Settings** bullet was missing "customer name" and the
+    dev-start/go-live month default fields.
+  - **Postgres** tab was missing entirely from the Configuration Tabs list.
+  - **OpenFlow** bullet described stale fields ("warehouse MERGE hours and
+    Snowpipe Streaming row volumes") instead of the actual connector type,
+    BYOC/SPCS deployment, runtime size/node count, and monthly data volume
+    controls.
+  - **Scenarios** bullet claimed go-live shift is user-tunable; it is fixed
+    per scenario tier (Conservative +1mo, Aggressive -1mo) with no UI
+    control, so the claim was removed.
+  Regenerated `examples/acme-financial-3year-sizing.html` and
+  `examples/kitchen-sink-aws-us-east.html` to pick up the modal text.
+
 ## [3.0.0] - 2026-07-08
 
 Adds 11 SE-requested sizing capabilities (SF-01..SF-11) spanning workload

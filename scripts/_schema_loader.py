@@ -108,10 +108,6 @@ class SchemaLoader:
         return set(self.get("properties", "meta", "properties", "cloud", "enum"))
 
     def valid_ramp_curves(self) -> set:
-        # Validator scripts also accept 'manual' (used as a Birdbox flat-line
-        # signal in build-spec phase). The schema's #/definitions/ramp_curve
-        # enum covers the five named curves; the spec validators tolerate
-        # 'manual' as a sixth.
         return set(self.get("definitions", "ramp_curve", "enum"))
 
     def valid_wh_sizes(self) -> set:
