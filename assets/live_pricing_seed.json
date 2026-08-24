@@ -1,6 +1,6 @@
 {
   "schema": "snowflake-calculator-native/1",
-  "fetched_at": "2026-08-17T07:14:22+00:00",
+  "fetched_at": "2026-08-24T07:18:44+00:00",
   "source": {
     "calculator_page": "https://www.snowflake.com/en/pricing-options/calculator/",
     "pricing_url": "https://www.snowflake.com/content/snowflake-site/global/en/pricing-options/calculator/_jcr_content/root/responsivegrid/container_397110202_/container/pricing_calculator.pricing.json",
@@ -19,12 +19,12 @@
               "region": "Sweden Central",
               "data": [
                 {
-                  "id": "c4a1069e-ab72-4088-90d3-89819f2b2c7e",
-                  "productFamily2": "Enterprise",
+                  "id": "df745ec2-9ad8-4729-8fba-1f336794d2b9",
+                  "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 3.6,
+                  "listPrice": 2.4,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -37,12 +37,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "df745ec2-9ad8-4729-8fba-1f336794d2b9",
-                  "productFamily2": "Standard",
+                  "id": "c4a1069e-ab72-4088-90d3-89819f2b2c7e",
+                  "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 2.4,
+                  "listPrice": 3.6,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -50,6 +50,15 @@
             {
               "region": "UAE North (Dubai)",
               "data": [
+                {
+                  "id": "1eb5bc8b-c317-4652-92c4-d7216978a051",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.4,
+                  "externalKey": "COMPUTE"
+                },
                 {
                   "id": "1a9ad65f-8685-4971-b92b-8e73b142619c",
                   "productFamily2": "Enterprise",
@@ -67,30 +76,12 @@
                   "priceUnit": "Credit",
                   "listPrice": 2.7,
                   "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "1eb5bc8b-c317-4652-92c4-d7216978a051",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.4,
-                  "externalKey": "COMPUTE"
                 }
               ]
             },
             {
               "region": "East US 2 (Virginia)",
               "data": [
-                {
-                  "id": "e7882d74-fa69-4816-a6e4-9aea4242ea31",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
                 {
                   "id": "4fb7f0ce-f45d-4d1a-85d3-11571e8ac734",
                   "productFamily2": "Standard",
@@ -107,6 +98,15 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 4.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "e7882d74-fa69-4816-a6e4-9aea4242ea31",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -130,6 +130,38 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.0,
+                  "externalKey": "COMPUTE"
+                }
+              ]
+            },
+            {
+              "region": "Southeast Asia (Singapore)",
+              "data": [
+                {
+                  "id": "1ed71dcc-f98b-495b-9506-50f01fbcea08",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.7,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "d9916d5a-cd15-425f-97ee-407e80c53dd1",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.5,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "ec6dd497-cf4e-4f44-8993-bcf6f5898739",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -162,38 +194,6 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.7,
-                  "externalKey": "COMPUTE"
-                }
-              ]
-            },
-            {
-              "region": "Southeast Asia (Singapore)",
-              "data": [
-                {
-                  "id": "d9916d5a-cd15-425f-97ee-407e80c53dd1",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.5,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "ec6dd497-cf4e-4f44-8993-bcf6f5898739",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "1ed71dcc-f98b-495b-9506-50f01fbcea08",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.7,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -243,15 +243,6 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "12f1561f-a04f-48d4-8f7b-7df1335e8819",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.2,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "c274811a-dc3b-4926-9c11-4c4820c0b8ed",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
@@ -259,21 +250,21 @@
                   "priceUnit": "Credit",
                   "listPrice": 3.9,
                   "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "12f1561f-a04f-48d4-8f7b-7df1335e8819",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.2,
+                  "externalKey": "COMPUTE"
                 }
               ]
             },
             {
               "region": "Australia East (New South Wales)",
               "data": [
-                {
-                  "id": "5a15b14a-7a22-4163-8770-daad0ff8edeb",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.75,
-                  "externalKey": "COMPUTE"
-                },
                 {
                   "id": "e394ff0f-0532-41c4-bec5-3a118a23b273",
                   "productFamily2": "Enterprise",
@@ -291,6 +282,15 @@
                   "priceUnit": "Credit",
                   "listPrice": 5.5,
                   "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "5a15b14a-7a22-4163-8770-daad0ff8edeb",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.75,
+                  "externalKey": "COMPUTE"
                 }
               ]
             },
@@ -298,12 +298,12 @@
               "region": "Korea Central",
               "data": [
                 {
-                  "id": "9f614c02-9fff-4e2a-b241-fbd5bae020fc",
-                  "productFamily2": "Enterprise",
+                  "id": "8f16941e-7391-4541-9c32-0fdf983d3c6c",
+                  "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 4.05,
+                  "listPrice": 2.75,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -316,12 +316,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "8f16941e-7391-4541-9c32-0fdf983d3c6c",
-                  "productFamily2": "Standard",
+                  "id": "9f614c02-9fff-4e2a-b241-fbd5bae020fc",
+                  "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 2.75,
+                  "listPrice": 4.05,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -329,15 +329,6 @@
             {
               "region": "Central India (Pune)",
               "data": [
-                {
-                  "id": "b1f3356c-27eb-4815-8837-db1915c67244",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 4.0,
-                  "externalKey": "COMPUTE"
-                },
                 {
                   "id": "b09f4301-1483-45f8-895e-59ea725fe4bc",
                   "productFamily2": "Enterprise",
@@ -354,6 +345,15 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "b1f3356c-27eb-4815-8837-db1915c67244",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -385,15 +385,6 @@
               "region": "Mexico Central",
               "data": [
                 {
-                  "id": "a0ce04e3-4d9a-49fc-8ff0-7d68877d130c",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "63428761-c7e6-472d-a824-1ba884f14105",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
@@ -410,37 +401,14 @@
                   "priceUnit": "Credit",
                   "listPrice": 2.0,
                   "externalKey": "COMPUTE"
-                }
-              ]
-            },
-            {
-              "region": "Japan East (Tokyo)",
-              "data": [
+                },
                 {
-                  "id": "e8bacb09-256f-43a5-8328-94b85001e93f",
+                  "id": "a0ce04e3-4d9a-49fc-8ff0-7d68877d130c",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 4.3,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "df64e8d1-7bce-4366-a655-ca02f5038246",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.85,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "9d3cc7f2-926b-450e-b5cf-6a56b56c2dc5",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.7,
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -448,15 +416,6 @@
             {
               "region": "Switzerland North",
               "data": [
-                {
-                  "id": "562fe675-9391-4bf4-98ed-ac4cc93f7d35",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 6.2,
-                  "externalKey": "COMPUTE"
-                },
                 {
                   "id": "205b536a-ce16-48f5-adf2-942a0395da02",
                   "productFamily2": "Standard",
@@ -474,6 +433,47 @@
                   "priceUnit": "Credit",
                   "listPrice": 4.65,
                   "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "562fe675-9391-4bf4-98ed-ac4cc93f7d35",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 6.2,
+                  "externalKey": "COMPUTE"
+                }
+              ]
+            },
+            {
+              "region": "Japan East (Tokyo)",
+              "data": [
+                {
+                  "id": "9d3cc7f2-926b-450e-b5cf-6a56b56c2dc5",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.7,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "e8bacb09-256f-43a5-8328-94b85001e93f",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.3,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "df64e8d1-7bce-4366-a655-ca02f5038246",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.85,
+                  "externalKey": "COMPUTE"
                 }
               ]
             },
@@ -481,21 +481,21 @@
               "region": "West US 2 (Washington)",
               "data": [
                 {
-                  "id": "89c4e8a0-33d5-403b-ac30-aa11dbdf86f6",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "760ad84b-bc06-47f6-9949-65c8891b1eae",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 4.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "89c4e8a0-33d5-403b-ac30-aa11dbdf86f6",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -513,21 +513,21 @@
               "region": "East US",
               "data": [
                 {
-                  "id": "765b1600-3338-44af-9e44-93018251d4ae",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "c2b8c97b-4d78-475b-8d39-853645f282c6",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 4.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "765b1600-3338-44af-9e44-93018251d4ae",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -545,6 +545,15 @@
               "region": "South Central US (Texas)",
               "data": [
                 {
+                  "id": "e6803398-4c58-43c8-b7e7-dfb12876ca1d",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
                   "id": "8050a892-68b9-4763-bb22-98d29e47ff04",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
@@ -561,15 +570,6 @@
                   "priceUnit": "Credit",
                   "listPrice": 3.0,
                   "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "e6803398-4c58-43c8-b7e7-dfb12876ca1d",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 4.0,
-                  "externalKey": "COMPUTE"
                 }
               ]
             },
@@ -577,21 +577,21 @@
               "region": "Canada Central (Toronto)",
               "data": [
                 {
-                  "id": "b8bf7183-a1f3-4847-bcdd-39eee697b70a",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 4.5,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "5c917e2e-0373-4e10-ac23-b95f14acb927",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 3.5,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "b8bf7183-a1f3-4847-bcdd-39eee697b70a",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.5,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -609,12 +609,12 @@
               "region": "Central US (Iowa)",
               "data": [
                 {
-                  "id": "22f6692a-0927-49db-9471-8ce4c038be17",
-                  "productFamily2": "Standard",
+                  "id": "e7badbd2-7900-48de-aa30-c89ffabe6a99",
+                  "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 2.0,
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -627,12 +627,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "e7badbd2-7900-48de-aa30-c89ffabe6a99",
-                  "productFamily2": "Enterprise",
+                  "id": "22f6692a-0927-49db-9471-8ce4c038be17",
+                  "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 3.0,
+                  "listPrice": 2.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -646,21 +646,21 @@
               "region": "US Central 1 (Iowa)",
               "data": [
                 {
-                  "id": "4176dd76-074f-4452-8f29-dd7e6bc8d5fb",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "7618422e-c8f1-4a76-ade2-4c1bd0619531",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "4176dd76-074f-4452-8f29-dd7e6bc8d5fb",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -678,12 +678,12 @@
               "region": "Middle East Central 2 (Dammam)",
               "data": [
                 {
-                  "id": "74bb15ba-916b-4070-8b46-0f45aa5c80dc",
-                  "productFamily2": "Business Critical",
+                  "id": "45bcbddb-19f4-44f1-b850-a6d7b51078f8",
+                  "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 6.5,
+                  "listPrice": 4.9,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -696,12 +696,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "45bcbddb-19f4-44f1-b850-a6d7b51078f8",
-                  "productFamily2": "Enterprise",
+                  "id": "74bb15ba-916b-4070-8b46-0f45aa5c80dc",
+                  "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 4.9,
+                  "listPrice": 6.5,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -710,21 +710,21 @@
               "region": "Australia Southeast 2 (Melbourne)",
               "data": [
                 {
-                  "id": "01516fd6-5dd5-49af-8e9a-afbac587cd8b",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.5,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "48c52a4f-3f35-4013-bfc5-ba604aad66c3",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.75,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "01516fd6-5dd5-49af-8e9a-afbac587cd8b",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.5,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -751,21 +751,21 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "1806a928-cf07-4923-914b-987fcbfcd5e6",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.6,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "78218269-49a9-4fc7-b73b-80ebf1e51c4a",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 5.2,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "1806a928-cf07-4923-914b-987fcbfcd5e6",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.6,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -783,21 +783,21 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "c524515a-2832-42b7-be78-4137825046ab",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.9,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "cb003217-062f-430b-b5b8-59dc6d9ce439",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 5.2,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "c524515a-2832-42b7-be78-4137825046ab",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.9,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -815,21 +815,21 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "905201f8-d7f6-439a-89b5-4792cc95df96",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.4,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "9699323c-7885-4bf2-9aa0-77618cbda2c8",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 4.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "905201f8-d7f6-439a-89b5-4792cc95df96",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.4,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -838,21 +838,21 @@
               "region": "US East 4 (N. Virginia)",
               "data": [
                 {
-                  "id": "9f4bf753-3286-4b98-844c-bd67c5768744",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "bc501d91-a810-4aca-baa1-a2a8803b899e",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "9f4bf753-3286-4b98-844c-bd67c5768744",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -904,81 +904,8 @@
               ]
             },
             {
-              "region": "Asia Pacific (Jakarta)",
-              "data": [
-                {
-                  "id": "744a4ffb-171a-4033-9cd9-b9734315feea",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "7c330407-4a51-4432-8957-d3a98f86e522",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.5,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "cfef1bb0-fcfd-4086-83c9-245644c04d40",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.7,
-                  "externalKey": "COMPUTE"
-                }
-              ]
-            },
-            {
-              "region": "EU (Zurich)",
-              "data": [
-                {
-                  "id": "7a48c2f1-1c01-4e14-8a7d-c3ea23edc379",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 6.2,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "e23945f5-3c7b-4bab-94ed-f34b35b6e54e",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.1,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "254cca74-02a9-4fb5-bc23-6ad9aef5342f",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 4.65,
-                  "externalKey": "COMPUTE"
-                }
-              ]
-            },
-            {
               "region": "Asia Pacific (Osaka)",
               "data": [
-                {
-                  "id": "0e89d45b-c130-44e4-b33f-b2784422857a",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.7,
-                  "externalKey": "COMPUTE"
-                },
                 {
                   "id": "d21724fb-94b9-4355-b02d-4430172ef8a2",
                   "productFamily2": "Enterprise",
@@ -996,6 +923,79 @@
                   "priceUnit": "Credit",
                   "listPrice": 2.85,
                   "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "0e89d45b-c130-44e4-b33f-b2784422857a",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.7,
+                  "externalKey": "COMPUTE"
+                }
+              ]
+            },
+            {
+              "region": "Asia Pacific (Jakarta)",
+              "data": [
+                {
+                  "id": "7c330407-4a51-4432-8957-d3a98f86e522",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.5,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "cfef1bb0-fcfd-4086-83c9-245644c04d40",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.7,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "744a4ffb-171a-4033-9cd9-b9734315feea",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.0,
+                  "externalKey": "COMPUTE"
+                }
+              ]
+            },
+            {
+              "region": "EU (Zurich)",
+              "data": [
+                {
+                  "id": "e23945f5-3c7b-4bab-94ed-f34b35b6e54e",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.1,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "254cca74-02a9-4fb5-bc23-6ad9aef5342f",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.65,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "7a48c2f1-1c01-4e14-8a7d-c3ea23edc379",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 6.2,
+                  "externalKey": "COMPUTE"
                 }
               ]
             },
@@ -1003,12 +1003,12 @@
               "region": "AP Northeast 1 (Tokyo)",
               "data": [
                 {
-                  "id": "1b842e28-92c7-4df7-9630-49658e6ba796",
-                  "productFamily2": "Standard",
+                  "id": "e0edb019-b508-4e56-ae77-805f9d1cccaf",
+                  "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 2.85,
+                  "listPrice": 5.7,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1021,12 +1021,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "e0edb019-b508-4e56-ae77-805f9d1cccaf",
-                  "productFamily2": "Business Critical",
+                  "id": "1b842e28-92c7-4df7-9630-49658e6ba796",
+                  "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 5.7,
+                  "listPrice": 2.85,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1067,6 +1067,15 @@
               "region": "US West (Oregon)",
               "data": [
                 {
+                  "id": "b11cac76-0647-402e-bf46-7688dc4f1442",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
                   "id": "6ed41f7b-f764-4936-a36e-7f50ef3d0152",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
@@ -1083,15 +1092,6 @@
                   "priceUnit": "Credit",
                   "listPrice": 4.0,
                   "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "b11cac76-0647-402e-bf46-7688dc4f1442",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.0,
-                  "externalKey": "COMPUTE"
                 }
               ]
             },
@@ -1099,21 +1099,21 @@
               "region": "EU Frankfurt",
               "data": [
                 {
-                  "id": "ac4d912b-7ba4-425c-a1fb-a0a2663d9158",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.6,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "7f1f8b00-da98-423c-8103-050aa99f4559",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 5.2,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "ac4d912b-7ba4-425c-a1fb-a0a2663d9158",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.6,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1131,21 +1131,21 @@
               "region": "US Gov West 1",
               "data": [
                 {
-                  "id": "1a600b75-d467-463c-8a7a-c1d72e4aabd5",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.0,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "91e7b55d-d99b-4030-b5c7-502d88efb2b8",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 5.6,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "1a600b75-d467-463c-8a7a-c1d72e4aabd5",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1177,6 +1177,15 @@
               "region": "AP Sydney",
               "data": [
                 {
+                  "id": "63d57aaf-ab11-40c1-bedc-be950cb2b822",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.75,
+                  "externalKey": "COMPUTE"
+                },
+                {
                   "id": "4a067555-8e47-4afb-ae9b-ccf31c942e5c",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
@@ -1193,21 +1202,21 @@
                   "priceUnit": "Credit",
                   "listPrice": 5.5,
                   "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "63d57aaf-ab11-40c1-bedc-be950cb2b822",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.75,
-                  "externalKey": "COMPUTE"
                 }
               ]
             },
             {
               "region": "South America East 1 (São Paulo)",
               "data": [
+                {
+                  "id": "4655c0a7-4f07-4592-9077-1c954b519048",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 6.2,
+                  "externalKey": "COMPUTE"
+                },
                 {
                   "id": "087980f6-90f4-4fc2-8eec-a2014140a857",
                   "productFamily2": "Standard",
@@ -1224,15 +1233,6 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 4.65,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "4655c0a7-4f07-4592-9077-1c954b519048",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 6.2,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1284,49 +1284,8 @@
               ]
             },
             {
-              "region": "Africa (Cape Town)",
-              "data": [
-                {
-                  "id": "3723c473-1427-4970-838d-20434ba5fbb9",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 4.2,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "434e9798-eba3-49bd-8d50-7375a3050395",
-                  "productFamily2": "Standard",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 2.8,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "c14b58d7-d9d3-4e5f-a53b-375b50e016c0",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.6,
-                  "externalKey": "COMPUTE"
-                }
-              ]
-            },
-            {
               "region": "US East 2 (Ohio)",
               "data": [
-                {
-                  "id": "964aa428-4bee-4469-a2b9-dbcf8a8eb2b5",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.0,
-                  "externalKey": "COMPUTE"
-                },
                 {
                   "id": "dbe436d7-b255-4256-b6c4-e9f7ffb9cd57",
                   "productFamily2": "Business Critical",
@@ -1334,6 +1293,15 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 4.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "964aa428-4bee-4469-a2b9-dbcf8a8eb2b5",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1348,17 +1316,40 @@
               ]
             },
             {
-              "region": "AP Singapore",
+              "region": "Africa (Cape Town)",
               "data": [
                 {
-                  "id": "44a45cc3-94be-4f53-be89-ff954cd2be63",
+                  "id": "434e9798-eba3-49bd-8d50-7375a3050395",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 2.5,
+                  "listPrice": 2.8,
                   "externalKey": "COMPUTE"
                 },
+                {
+                  "id": "3723c473-1427-4970-838d-20434ba5fbb9",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.2,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "c14b58d7-d9d3-4e5f-a53b-375b50e016c0",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.6,
+                  "externalKey": "COMPUTE"
+                }
+              ]
+            },
+            {
+              "region": "AP Singapore",
+              "data": [
                 {
                   "id": "34d81b48-8c13-47f9-b2f2-61cac7dec0bf",
                   "productFamily2": "Enterprise",
@@ -1375,6 +1366,15 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 5.0,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "44a45cc3-94be-4f53-be89-ff954cd2be63",
+                  "productFamily2": "Standard",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 2.5,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1406,12 +1406,12 @@
               "region": "Middle East (UAE)",
               "data": [
                 {
-                  "id": "9fc97965-dc9c-41b6-aa18-71d57693be14",
-                  "productFamily2": "Enterprise",
+                  "id": "72971dd3-8f60-49e6-9d48-357e48e345da",
+                  "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 4.0,
+                  "listPrice": 5.4,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1424,12 +1424,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "72971dd3-8f60-49e6-9d48-357e48e345da",
-                  "productFamily2": "Business Critical",
+                  "id": "9fc97965-dc9c-41b6-aa18-71d57693be14",
+                  "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 5.4,
+                  "listPrice": 4.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1461,15 +1461,6 @@
               "region": "EU (Paris)",
               "data": [
                 {
-                  "id": "2d03c2b2-86d7-48dc-be1e-174d2a7c91ff",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.9,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "f1027d58-4115-4752-8118-1b0d2b57bddd",
                   "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
@@ -1486,6 +1477,15 @@
                   "priceUnit": "Credit",
                   "listPrice": 2.6,
                   "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "2d03c2b2-86d7-48dc-be1e-174d2a7c91ff",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.9,
+                  "externalKey": "COMPUTE"
                 }
               ]
             },
@@ -1493,12 +1493,12 @@
               "region": "US East (Northern Virginia)",
               "data": [
                 {
-                  "id": "861f8795-835e-41a7-85f1-6f723e7661e4",
-                  "productFamily2": "Standard",
+                  "id": "1adbed79-168b-4c46-b8c9-ae4cddf55552",
+                  "productFamily2": "Business Critical",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 2.0,
+                  "listPrice": 4.0,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1511,12 +1511,12 @@
                   "externalKey": "COMPUTE"
                 },
                 {
-                  "id": "1adbed79-168b-4c46-b8c9-ae4cddf55552",
-                  "productFamily2": "Business Critical",
+                  "id": "861f8795-835e-41a7-85f1-6f723e7661e4",
+                  "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
-                  "listPrice": 4.0,
+                  "listPrice": 2.0,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1548,21 +1548,21 @@
               "region": "Canada Central",
               "data": [
                 {
-                  "id": "7273c134-7c60-4917-899a-b5e52e1e1735",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 4.5,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "b3e727d8-62f1-4ed8-a637-aee15fbd91f5",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.25,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "7273c134-7c60-4917-899a-b5e52e1e1735",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 4.5,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1580,21 +1580,21 @@
               "region": "EU Dublin",
               "data": [
                 {
-                  "id": "5cae4934-b303-43a9-b8fa-428cc4ab160f",
-                  "productFamily2": "Enterprise",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 3.9,
-                  "externalKey": "COMPUTE"
-                },
-                {
                   "id": "55bbbab5-027e-4369-adff-d9f2d2b7e4d5",
                   "productFamily2": "Standard",
                   "productFamily3": "N/A",
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.6,
+                  "externalKey": "COMPUTE"
+                },
+                {
+                  "id": "5cae4934-b303-43a9-b8fa-428cc4ab160f",
+                  "productFamily2": "Enterprise",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 3.9,
                   "externalKey": "COMPUTE"
                 },
                 {
@@ -1612,6 +1612,15 @@
               "region": "Asia Pacific (Seoul)",
               "data": [
                 {
+                  "id": "3a67e6d6-f892-4751-920e-76f026dbc852",
+                  "productFamily2": "Business Critical",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "Credit",
+                  "listPrice": 5.5,
+                  "externalKey": "COMPUTE"
+                },
+                {
                   "id": "0ef98094-9053-49ce-9045-2ff6693a2cff",
                   "productFamily2": "Enterprise",
                   "productFamily3": "N/A",
@@ -1627,15 +1636,6 @@
                   "currency": "USD",
                   "priceUnit": "Credit",
                   "listPrice": 2.75,
-                  "externalKey": "COMPUTE"
-                },
-                {
-                  "id": "3a67e6d6-f892-4751-920e-76f026dbc852",
-                  "productFamily2": "Business Critical",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "Credit",
-                  "listPrice": 5.5,
                   "externalKey": "COMPUTE"
                 }
               ]
@@ -1670,6 +1670,13 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
+                      "id": "73c773b5-ea8f-418a-9500-5588a92e157a",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
                       "id": "0c940b90-ca0e-4b7c-a592-3f180bee171b",
                       "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
@@ -1682,13 +1689,6 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 50.0
-                    },
-                    {
-                      "id": "73c773b5-ea8f-418a-9500-5588a92e157a",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -1697,61 +1697,6 @@
                   "data": [
                     {
                       "id": "c34590e4-c30e-4ce8-ab66-2247b079da1c",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "region": "East US 2 (Virginia)",
-              "data": [
-                {
-                  "productFamily2": "To Different Cloud Provider or Internet",
-                  "data": [
-                    {
-                      "id": "884b7763-fb4a-495d-8b5c-98429677ba3a",
-                      "productFamily3": "To Different Cloud Provider or Internet",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 87.5
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Same Cloud Provider",
-                  "data": [
-                    {
-                      "id": "4ba968b4-ed21-4641-96b0-c8f8d7c933f3",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
-                      "id": "368055f2-54d6-4ee8-819c-bfcf96674ccf",
-                      "productFamily3": "Different Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 50.0
-                    },
-                    {
-                      "id": "c2ceacd3-00c9-4053-841d-7a6e8e37474a",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "466068b7-1ef1-44d6-8315-cb4fe09ac566",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -1780,13 +1725,6 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "7ada182f-3159-4641-b5c9-cb87dc71ae6c",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 80.0
-                    },
-                    {
                       "id": "1f41de68-7897-42de-ad88-ba4ef2e442c6",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
@@ -1799,6 +1737,13 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    },
+                    {
+                      "id": "7ada182f-3159-4641-b5c9-cb87dc71ae6c",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 80.0
                     }
                   ]
                 },
@@ -1817,13 +1762,13 @@
               ]
             },
             {
-              "region": "UK South (London)",
+              "region": "East US 2 (Virginia)",
               "data": [
                 {
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "b35f4fd6-b4bc-4213-8fb8-56de120abeda",
+                      "id": "884b7763-fb4a-495d-8b5c-98429677ba3a",
                       "productFamily3": "To Different Cloud Provider or Internet",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -1835,25 +1780,25 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "39c7cb8e-fff0-421d-bc54-0b112a85a508",
+                      "id": "c2ceacd3-00c9-4053-841d-7a6e8e37474a",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
+                      "id": "368055f2-54d6-4ee8-819c-bfcf96674ccf",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 50.0
                     },
                     {
-                      "id": "98a99397-1832-4935-8d5b-a2979737a4a5",
+                      "id": "4ba968b4-ed21-4641-96b0-c8f8d7c933f3",
                       "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 20.0
-                    },
-                    {
-                      "id": "525d5923-67a7-4f0d-8574-ca5145dc7632",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -1861,7 +1806,7 @@
                   "productFamily2": "SPCS Internal Data Transfer",
                   "data": [
                     {
-                      "id": "5af53c0c-7be7-437d-bf88-ce510e3fb248",
+                      "id": "466068b7-1ef1-44d6-8315-cb4fe09ac566",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -1952,18 +1897,18 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "7f4787df-96b4-4fc9-9e84-83fce1b97e24",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
                       "id": "b0f1a6ee-415f-473f-ba8a-3b09e2fcb87f",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 80.0
+                    },
+                    {
+                      "id": "7f4787df-96b4-4fc9-9e84-83fce1b97e24",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -1972,6 +1917,61 @@
                   "data": [
                     {
                       "id": "d9e3d282-6dd9-43a3-b3c1-67664014f324",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "region": "UK South (London)",
+              "data": [
+                {
+                  "productFamily2": "To Different Cloud Provider or Internet",
+                  "data": [
+                    {
+                      "id": "b35f4fd6-b4bc-4213-8fb8-56de120abeda",
+                      "productFamily3": "To Different Cloud Provider or Internet",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 87.5
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Cloud Provider",
+                  "data": [
+                    {
+                      "id": "39c7cb8e-fff0-421d-bc54-0b112a85a508",
+                      "productFamily3": "Different Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 50.0
+                    },
+                    {
+                      "id": "525d5923-67a7-4f0d-8574-ca5145dc7632",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
+                      "id": "98a99397-1832-4935-8d5b-a2979737a4a5",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "5af53c0c-7be7-437d-bf88-ce510e3fb248",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -2000,18 +2000,18 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "614f6bba-a5f0-41f7-ae32-3c1a2ee1014f",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
                       "id": "af4c70c1-33f2-472a-a5e1-5ccb9b5552fa",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 50.0
+                    },
+                    {
+                      "id": "614f6bba-a5f0-41f7-ae32-3c1a2ee1014f",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     },
                     {
                       "id": "4a760b67-1325-41a7-accc-fac1128a2804",
@@ -2055,6 +2055,13 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
+                      "id": "cc723d92-3325-4ad5-b6e5-b4ac495b2d37",
+                      "productFamily3": "Different Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 50.0
+                    },
+                    {
                       "id": "6cc2b506-e70c-443a-a8af-53a51fda561c",
                       "productFamily3": "Same Region",
                       "currency": "USD",
@@ -2067,13 +2074,6 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 20.0
-                    },
-                    {
-                      "id": "cc723d92-3325-4ad5-b6e5-b4ac495b2d37",
-                      "productFamily3": "Different Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 50.0
                     }
                   ]
                 },
@@ -2110,11 +2110,11 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "88bce292-d2a7-43aa-bce6-9a40634750e7",
-                      "productFamily3": "Same Region",
+                      "id": "bfd961b1-9bc2-4ca2-8050-7bf3af3ee08e",
+                      "productFamily3": "Different Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 0.0
+                      "listPrice": 80.0
                     },
                     {
                       "id": "a53c1ceb-181e-43d8-a727-8590819c0ebd",
@@ -2124,11 +2124,11 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "bfd961b1-9bc2-4ca2-8050-7bf3af3ee08e",
-                      "productFamily3": "Different Continent",
+                      "id": "88bce292-d2a7-43aa-bce6-9a40634750e7",
+                      "productFamily3": "Same Region",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 80.0
+                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -2165,18 +2165,18 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "77499279-153d-4542-8999-e870e219540b",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
                       "id": "950fc0e5-8898-4fe1-abbf-dfb4d37066e3",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 80.0
+                    },
+                    {
+                      "id": "77499279-153d-4542-8999-e870e219540b",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     },
                     {
                       "id": "d513d6bf-3d54-4015-9e0e-d4522e477b39",
@@ -2227,18 +2227,18 @@
                       "listPrice": 0.0
                     },
                     {
-                      "id": "1df4e571-779b-4661-a1d1-d176785646a1",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 40.0
-                    },
-                    {
                       "id": "582804a1-189f-48b1-a437-c8850413a691",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 50.0
+                    },
+                    {
+                      "id": "1df4e571-779b-4661-a1d1-d176785646a1",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 40.0
                     }
                   ]
                 },
@@ -2282,18 +2282,18 @@
                       "listPrice": 50.0
                     },
                     {
-                      "id": "907327ce-e8e9-4403-86c9-365cbf2a85e4",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
                       "id": "344192c0-eef2-4799-bfef-8b7934b0ab22",
                       "productFamily3": "Same Region",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    },
+                    {
+                      "id": "907327ce-e8e9-4403-86c9-365cbf2a85e4",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
                     }
                   ]
                 },
@@ -2385,13 +2385,6 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "d4353912-38a6-4c22-8ff1-4d5a66c447da",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
                       "id": "c2f8eafe-d8a6-4e0b-94e5-761a6f9edae6",
                       "productFamily3": "Different Continent",
                       "currency": "USD",
@@ -2404,6 +2397,13 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    },
+                    {
+                      "id": "d4353912-38a6-4c22-8ff1-4d5a66c447da",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
                     }
                   ]
                 },
@@ -2440,13 +2440,6 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "be4f3dce-f30a-438c-9901-6e7e918a456b",
-                      "productFamily3": "Different Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 80.0
-                    },
-                    {
                       "id": "ad04d197-dcfc-4c04-8470-839512a3628a",
                       "productFamily3": "Same Region",
                       "currency": "USD",
@@ -2459,6 +2452,13 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 80.0
+                    },
+                    {
+                      "id": "be4f3dce-f30a-438c-9901-6e7e918a456b",
+                      "productFamily3": "Different Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 80.0
                     }
                   ]
                 },
@@ -2467,61 +2467,6 @@
                   "data": [
                     {
                       "id": "0e789c8d-e6eb-4a8d-bbc3-100553de4054",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "region": "East US",
-              "data": [
-                {
-                  "productFamily2": "To Different Cloud Provider or Internet",
-                  "data": [
-                    {
-                      "id": "67b32993-a46d-4921-9e73-4449375dfaa2",
-                      "productFamily3": "To Different Cloud Provider or Internet",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 87.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Same Cloud Provider",
-                  "data": [
-                    {
-                      "id": "3347f71f-5f0b-495f-9a29-6e620cef8796",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
-                      "id": "d00f50ec-a63c-42c1-9e92-b64ff5c9962e",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
-                      "id": "eeb6c261-bc5c-4143-8355-ae9120926912",
-                      "productFamily3": "Different Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 50.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "c15389ef-7ece-404e-a4a7-37473d7e40ad",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -2557,18 +2502,18 @@
                       "listPrice": 50.0
                     },
                     {
-                      "id": "f9352a2f-0453-49bb-913f-c267cb9a802c",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
                       "id": "7ca74db0-f30b-4c19-b082-8a6d8b129140",
                       "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 20.0
+                    },
+                    {
+                      "id": "f9352a2f-0453-49bb-913f-c267cb9a802c",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -2577,6 +2522,61 @@
                   "data": [
                     {
                       "id": "69af3eb1-6afe-4b2c-aa2f-3fc5ccbec22d",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "region": "East US",
+              "data": [
+                {
+                  "productFamily2": "To Different Cloud Provider or Internet",
+                  "data": [
+                    {
+                      "id": "67b32993-a46d-4921-9e73-4449375dfaa2",
+                      "productFamily3": "To Different Cloud Provider or Internet",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 87.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Cloud Provider",
+                  "data": [
+                    {
+                      "id": "d00f50ec-a63c-42c1-9e92-b64ff5c9962e",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
+                      "id": "3347f71f-5f0b-495f-9a29-6e620cef8796",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    },
+                    {
+                      "id": "eeb6c261-bc5c-4143-8355-ae9120926912",
+                      "productFamily3": "Different Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 50.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "c15389ef-7ece-404e-a4a7-37473d7e40ad",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -2605,6 +2605,13 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
+                      "id": "306fe199-e720-4bf2-b608-eaaddb16f17d",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
                       "id": "ab378b30-26cb-45b2-87ea-6f194a493cb2",
                       "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
@@ -2617,13 +2624,6 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 50.0
-                    },
-                    {
-                      "id": "306fe199-e720-4bf2-b608-eaaddb16f17d",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -2632,61 +2632,6 @@
                   "data": [
                     {
                       "id": "e0b5a1ab-989b-4008-9528-2d1667e565a9",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "region": "Canada Central (Toronto)",
-              "data": [
-                {
-                  "productFamily2": "To Different Cloud Provider or Internet",
-                  "data": [
-                    {
-                      "id": "b74c96c9-34ef-41d6-ba6f-a146711830f2",
-                      "productFamily3": "To Different Cloud Provider or Internet",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 87.5
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Same Cloud Provider",
-                  "data": [
-                    {
-                      "id": "befc1ead-10c8-47db-ad67-62dc36d34d0f",
-                      "productFamily3": "Different Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 50.0
-                    },
-                    {
-                      "id": "cf2027e2-3320-403c-a011-c97b0c054fd3",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
-                      "id": "a17b8d68-e600-45f5-8c16-75fefe682ddd",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "79d47368-2db5-438c-9008-e0f954eb26b4",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -2715,11 +2660,11 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "fa3ee940-b1de-4653-81e1-ff474066f6ca",
-                      "productFamily3": "Same Region",
+                      "id": "d77040c0-4464-4e84-9e50-6ef5f78cc899",
+                      "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 0.0
+                      "listPrice": 20.0
                     },
                     {
                       "id": "0f260610-909e-46b2-8059-377e705a4077",
@@ -2729,11 +2674,11 @@
                       "listPrice": 50.0
                     },
                     {
-                      "id": "d77040c0-4464-4e84-9e50-6ef5f78cc899",
-                      "productFamily3": "Different Region, Same Continent",
+                      "id": "fa3ee940-b1de-4653-81e1-ff474066f6ca",
+                      "productFamily3": "Same Region",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 20.0
+                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -2742,6 +2687,61 @@
                   "data": [
                     {
                       "id": "5639cf9c-b1c9-433d-af2d-1d7c87330ccf",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "region": "Canada Central (Toronto)",
+              "data": [
+                {
+                  "productFamily2": "To Different Cloud Provider or Internet",
+                  "data": [
+                    {
+                      "id": "b74c96c9-34ef-41d6-ba6f-a146711830f2",
+                      "productFamily3": "To Different Cloud Provider or Internet",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 87.5
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Cloud Provider",
+                  "data": [
+                    {
+                      "id": "a17b8d68-e600-45f5-8c16-75fefe682ddd",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
+                      "id": "cf2027e2-3320-403c-a011-c97b0c054fd3",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    },
+                    {
+                      "id": "befc1ead-10c8-47db-ad67-62dc36d34d0f",
+                      "productFamily3": "Different Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 50.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "79d47368-2db5-438c-9008-e0f954eb26b4",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -2763,29 +2763,8 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "a0845947-dcb6-4ce4-b007-edf2e42ad027",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
                       "id": "89b0f60f-0e0a-4c1e-abe7-b0007cc99dfe",
                       "productFamily3": "Different Continent (excludes Oceania)",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "0dfede0a-7b2b-4128-8aef-2f3821f21943",
-                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "e1e8e169-cbe3-4ce6-b030-6a3384b1fc3b",
-                      "productFamily3": "Asia Excluding Korea and Indonesia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
@@ -2803,6 +2782,20 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
+                    },
+                    {
+                      "id": "0dfede0a-7b2b-4128-8aef-2f3821f21943",
+                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
+                      "id": "a0845947-dcb6-4ce4-b007-edf2e42ad027",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
                     },
                     {
                       "id": "9b92fbc2-b5d4-429a-b06b-645a5b017a82",
@@ -2824,6 +2817,13 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
+                    },
+                    {
+                      "id": "e1e8e169-cbe3-4ce6-b030-6a3384b1fc3b",
+                      "productFamily3": "Asia Excluding Korea and Indonesia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
                     }
                   ]
                 },
@@ -2831,32 +2831,25 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "4ef0e4b9-98ea-4c0b-9844-0561b5dc6ec3",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
-                      "id": "266e42c2-043f-4e02-b9a1-297a8207a7b0",
-                      "productFamily3": "South America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 140.0
-                    },
-                    {
-                      "id": "3278d0c8-382b-4d57-ad5a-5e33ee15251b",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 10.0
-                    },
-                    {
                       "id": "ffe8f830-c9b6-4f95-960c-424b292c7dca",
                       "productFamily3": "North America",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 20.0
+                    },
+                    {
+                      "id": "67aaed08-df5d-4615-ba4c-8e955d77d045",
+                      "productFamily3": "Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
+                      "id": "b7c3415d-a75e-4dc8-a6a6-692b8b120745",
+                      "productFamily3": "Oceania",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 100.0
                     },
                     {
                       "id": "5dd2701b-e0b0-4e71-9039-18aec0bf1926",
@@ -2873,11 +2866,25 @@
                       "listPrice": 110.0
                     },
                     {
+                      "id": "8d5fc1da-d0af-43c2-91fe-de48e5a61187",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 50.0
+                    },
+                    {
                       "id": "0b7ca627-adb2-4663-8311-58b794073b36",
                       "productFamily3": "Indonesia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 100.0
+                    },
+                    {
+                      "id": "3278d0c8-382b-4d57-ad5a-5e33ee15251b",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 10.0
                     },
                     {
                       "id": "c3df633c-a3cb-452d-a526-534436973cf7",
@@ -2887,25 +2894,18 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "67aaed08-df5d-4615-ba4c-8e955d77d045",
-                      "productFamily3": "Africa",
+                      "id": "266e42c2-043f-4e02-b9a1-297a8207a7b0",
+                      "productFamily3": "South America",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 110.0
+                      "listPrice": 140.0
                     },
                     {
-                      "id": "8d5fc1da-d0af-43c2-91fe-de48e5a61187",
-                      "productFamily3": "Europe",
+                      "id": "4ef0e4b9-98ea-4c0b-9844-0561b5dc6ec3",
+                      "productFamily3": "Same Region",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 50.0
-                    },
-                    {
-                      "id": "b7c3415d-a75e-4dc8-a6a6-692b8b120745",
-                      "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
+                      "listPrice": 0.0
                     }
                   ]
                 },
@@ -2930,22 +2930,8 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "8054e673-120d-447a-bf91-9dafc5bd24ec",
-                      "productFamily3": "Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
                       "id": "7eb3b83d-7e0a-4a58-8dcb-a3b32b77cbdb",
                       "productFamily3": "North America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "1833e238-df30-4b73-a9e6-c4f6693e8894",
-                      "productFamily3": "Middle East excl Saudi Arabia and Africa",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
@@ -2958,11 +2944,39 @@
                       "listPrice": 190.0
                     },
                     {
+                      "id": "8054e673-120d-447a-bf91-9dafc5bd24ec",
+                      "productFamily3": "Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
+                      "id": "d6dee22b-c417-4581-b93f-cc2212b71c7e",
+                      "productFamily3": "Oceania",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
                       "id": "607bd5d5-749f-4a93-8b92-76dacb0a8ceb",
                       "productFamily3": "China Excluding Hong Kong",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 230.0
+                    },
+                    {
+                      "id": "1833e238-df30-4b73-a9e6-c4f6693e8894",
+                      "productFamily3": "Middle East excl Saudi Arabia and Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
+                      "id": "41537d7c-2b73-489a-9aa2-0bfc61f76739",
+                      "productFamily3": "Different Continent (excludes Oceania)",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
                     },
                     {
                       "id": "d58b8dd0-a53f-46a4-8399-2cb29b4ce932",
@@ -2977,20 +2991,6 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
-                    },
-                    {
-                      "id": "d6dee22b-c417-4581-b93f-cc2212b71c7e",
-                      "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "41537d7c-2b73-489a-9aa2-0bfc61f76739",
-                      "productFamily3": "Different Continent (excludes Oceania)",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
                     }
                   ]
                 },
@@ -2998,53 +2998,11 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "2652b910-6999-4374-988c-172495c1c81f",
-                      "productFamily3": "Africa",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "940fc7cd-95ba-43a0-b987-4f6aaafd41ad",
-                      "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "f353ffd7-e396-4b34-afb4-a0894a18b286",
-                      "productFamily3": "Asia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "920c2dbf-eb22-448c-bd6f-59c1397b23fa",
-                      "productFamily3": "South America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 140.0
-                    },
-                    {
                       "id": "3a1c4074-5662-4a4a-bb1a-f0c5f22ffdc5",
                       "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
-                    },
-                    {
-                      "id": "43f3c1a4-1565-4f76-bd0f-c4bec20c3343",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "ab2a527e-6b8b-4664-b0e2-0b909d45db8b",
-                      "productFamily3": "Middle East",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 80.0
                     },
                     {
                       "id": "2cb1b443-1d51-4eb8-9338-6d6fe1e6b4f4",
@@ -3061,6 +3019,13 @@
                       "listPrice": 0.0
                     },
                     {
+                      "id": "f353ffd7-e396-4b34-afb4-a0894a18b286",
+                      "productFamily3": "Asia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
                       "id": "84e17d04-ebf4-49c3-a831-15dea44e9457",
                       "productFamily3": "Different Continent (excludes Oceania)",
                       "currency": "USD",
@@ -3068,11 +3033,46 @@
                       "listPrice": 120.0
                     },
                     {
+                      "id": "940fc7cd-95ba-43a0-b987-4f6aaafd41ad",
+                      "productFamily3": "Oceania",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
                       "id": "10b450f3-c792-4fd2-8143-6e46a89309cb",
                       "productFamily3": "North America",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 110.0
+                    },
+                    {
+                      "id": "43f3c1a4-1565-4f76-bd0f-c4bec20c3343",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
+                      "id": "920c2dbf-eb22-448c-bd6f-59c1397b23fa",
+                      "productFamily3": "South America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 140.0
+                    },
+                    {
+                      "id": "2652b910-6999-4374-988c-172495c1c81f",
+                      "productFamily3": "Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
+                      "id": "ab2a527e-6b8b-4664-b0e2-0b909d45db8b",
+                      "productFamily3": "Middle East",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 80.0
                     }
                   ]
                 },
@@ -3097,22 +3097,15 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "d4f013a5-5135-4a36-8dc2-d16d45edffa7",
-                      "productFamily3": "China Excluding Hong Kong",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 230.0
-                    },
-                    {
-                      "id": "5350eb06-21ad-4392-817a-da4af0adb315",
-                      "productFamily3": "Asia Excluding Korea and Indonesia",
+                      "id": "d93370b5-b536-49b4-a604-636fd34b8614",
+                      "productFamily3": "North America",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
                     },
                     {
-                      "id": "72da5658-22ea-4b13-95a2-363f58a10db9",
-                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
+                      "id": "5350eb06-21ad-4392-817a-da4af0adb315",
+                      "productFamily3": "Asia Excluding Korea and Indonesia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
@@ -3125,6 +3118,13 @@
                       "listPrice": 190.0
                     },
                     {
+                      "id": "d4f013a5-5135-4a36-8dc2-d16d45edffa7",
+                      "productFamily3": "China Excluding Hong Kong",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 230.0
+                    },
+                    {
                       "id": "87ace6f0-de94-4d6b-aa27-9699d5b91e0c",
                       "productFamily3": "Middle East excl Saudi Arabia and Africa",
                       "currency": "USD",
@@ -3132,8 +3132,8 @@
                       "listPrice": 190.0
                     },
                     {
-                      "id": "d93370b5-b536-49b4-a604-636fd34b8614",
-                      "productFamily3": "North America",
+                      "id": "72da5658-22ea-4b13-95a2-363f58a10db9",
+                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
@@ -3144,8 +3144,22 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "9ed72f4a-9934-422a-95cf-05e022f236f3",
-                      "productFamily3": "Asia",
+                      "id": "ee706b15-8943-406d-b997-f0a5d86afed5",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 100.0
+                    },
+                    {
+                      "id": "4ff66ccd-ddf8-4f3f-8093-e3e86d184087",
+                      "productFamily3": "Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 140.0
+                    },
+                    {
+                      "id": "79f28573-b0b3-4e55-84a3-8dfc00a9171a",
+                      "productFamily3": "North America",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 100.0
@@ -3158,32 +3172,11 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "79f28573-b0b3-4e55-84a3-8dfc00a9171a",
-                      "productFamily3": "North America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
                       "id": "bf90e382-1519-48b5-8780-486d6ee383ab",
                       "productFamily3": "Same Region",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
-                    },
-                    {
-                      "id": "475a3daf-5df6-4ed5-951d-c74468344cac",
-                      "productFamily3": "Middle East",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "ee706b15-8943-406d-b997-f0a5d86afed5",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
                     },
                     {
                       "id": "119ebe4d-173d-4b15-9f03-3da827d7159d",
@@ -3193,6 +3186,13 @@
                       "listPrice": 140.0
                     },
                     {
+                      "id": "475a3daf-5df6-4ed5-951d-c74468344cac",
+                      "productFamily3": "Middle East",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
                       "id": "59f84b0f-b90d-4da2-8af9-35fdf8abbad8",
                       "productFamily3": "Oceania",
                       "currency": "USD",
@@ -3200,11 +3200,11 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "4ff66ccd-ddf8-4f3f-8093-e3e86d184087",
-                      "productFamily3": "Africa",
+                      "id": "9ed72f4a-9934-422a-95cf-05e022f236f3",
+                      "productFamily3": "Asia",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 140.0
+                      "listPrice": 100.0
                     }
                   ]
                 },
@@ -3229,43 +3229,8 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "a17d9a38-7a8e-4a8a-aff2-a2bf758850f5",
-                      "productFamily3": "Asia Excluding Korea and Indonesia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "54430579-a785-4f83-9d61-6191b5a40e9e",
-                      "productFamily3": "Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "ee9e3f9d-6044-4a29-b4e5-4b3ce77b5cbf",
-                      "productFamily3": "Different Continent (excludes Oceania)",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
                       "id": "972712e4-6470-4ba0-9de2-35aaa83d02bb",
                       "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "d7986e3b-7609-4875-8eee-bd6663e4194f",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "a42b44f1-054a-424a-a77d-f9ff43647821",
-                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
@@ -3278,8 +3243,8 @@
                       "listPrice": 150.0
                     },
                     {
-                      "id": "34c641d4-d032-4b58-bcfc-931dee830637",
-                      "productFamily3": "North America",
+                      "id": "54430579-a785-4f83-9d61-6191b5a40e9e",
+                      "productFamily3": "Same Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
@@ -3290,6 +3255,41 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 230.0
+                    },
+                    {
+                      "id": "a42b44f1-054a-424a-a77d-f9ff43647821",
+                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
+                      "id": "34c641d4-d032-4b58-bcfc-931dee830637",
+                      "productFamily3": "North America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
+                    },
+                    {
+                      "id": "a17d9a38-7a8e-4a8a-aff2-a2bf758850f5",
+                      "productFamily3": "Asia Excluding Korea and Indonesia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
+                    },
+                    {
+                      "id": "ee9e3f9d-6044-4a29-b4e5-4b3ce77b5cbf",
+                      "productFamily3": "Different Continent (excludes Oceania)",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
+                    },
+                    {
+                      "id": "d7986e3b-7609-4875-8eee-bd6663e4194f",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
                     }
                   ]
                 },
@@ -3297,67 +3297,11 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "774aaa9f-a0a4-4e4e-b48e-67a043a2d43b",
-                      "productFamily3": "Indonesia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
-                      "id": "b73c314a-ac36-4efb-8e6b-2c08b031a5aa",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
-                      "id": "67da8d09-3be7-4240-a4ae-26a49011dbf4",
-                      "productFamily3": "Same Region",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    },
-                    {
                       "id": "dc5697bf-3899-47f3-9e65-0fcd6f12e11c",
                       "productFamily3": "Africa",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 110.0
-                    },
-                    {
-                      "id": "333f8e8b-7dfd-4d31-8eb5-514d5b8ca1d3",
-                      "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
-                      "id": "51f78df9-a80f-4d20-9bd0-ed43e37ea9ac",
-                      "productFamily3": "Asia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 80.0
-                    },
-                    {
-                      "id": "f9113225-7f2d-467d-b5a5-8a3b12b5cbc4",
-                      "productFamily3": "North America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 50.0
-                    },
-                    {
-                      "id": "485f8261-93b2-45cc-bc27-190511d66249",
-                      "productFamily3": "Middle East",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "a5177d44-c9bb-4492-aa33-cf25cf01dcbe",
-                      "productFamily3": "South America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 140.0
                     },
                     {
                       "id": "433417f8-3f1b-4da4-9481-0d91f4da8dbb",
@@ -3367,8 +3311,64 @@
                       "listPrice": 20.0
                     },
                     {
+                      "id": "a5177d44-c9bb-4492-aa33-cf25cf01dcbe",
+                      "productFamily3": "South America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 140.0
+                    },
+                    {
+                      "id": "f9113225-7f2d-467d-b5a5-8a3b12b5cbc4",
+                      "productFamily3": "North America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 50.0
+                    },
+                    {
+                      "id": "67da8d09-3be7-4240-a4ae-26a49011dbf4",
+                      "productFamily3": "Same Region",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    },
+                    {
+                      "id": "333f8e8b-7dfd-4d31-8eb5-514d5b8ca1d3",
+                      "productFamily3": "Oceania",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 100.0
+                    },
+                    {
+                      "id": "485f8261-93b2-45cc-bc27-190511d66249",
+                      "productFamily3": "Middle East",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
                       "id": "e14a4287-7aa8-4bbd-a509-80885fcd2ea1",
                       "productFamily3": "Different Continent (excludes Oceania)",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 80.0
+                    },
+                    {
+                      "id": "b73c314a-ac36-4efb-8e6b-2c08b031a5aa",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    },
+                    {
+                      "id": "774aaa9f-a0a4-4e4e-b48e-67a043a2d43b",
+                      "productFamily3": "Indonesia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 100.0
+                    },
+                    {
+                      "id": "51f78df9-a80f-4d20-9bd0-ed43e37ea9ac",
+                      "productFamily3": "Asia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 80.0
@@ -3396,13 +3396,6 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "e4c4b2ae-e31b-4aef-87d5-fed7ec1e9cc5",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
                       "id": "ce2d7473-86b4-4061-8877-4a138b6be284",
                       "productFamily3": "Middle East excl Saudi Arabia and Africa",
                       "currency": "USD",
@@ -3410,29 +3403,8 @@
                       "listPrice": 150.0
                     },
                     {
-                      "id": "241587db-10e0-40d9-85e4-614bbe795d8d",
-                      "productFamily3": "North America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "3aa00995-88ee-49e7-b8a7-1fbc5a26837a",
-                      "productFamily3": "Different Continent (excludes Oceania)",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "f20dc194-cf90-4c11-9f47-0d881889e7cd",
-                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "8981f173-7c97-4caf-bcb5-7361e11e16da",
-                      "productFamily3": "Asia Excluding Korea and Indonesia",
+                      "id": "9c73b0d8-8f5b-48f6-8a9f-27be75baba38",
+                      "productFamily3": "Same Continent",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
@@ -3445,11 +3417,25 @@
                       "listPrice": 230.0
                     },
                     {
-                      "id": "9c73b0d8-8f5b-48f6-8a9f-27be75baba38",
-                      "productFamily3": "Same Continent",
+                      "id": "e4c4b2ae-e31b-4aef-87d5-fed7ec1e9cc5",
+                      "productFamily3": "Europe",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
+                    },
+                    {
+                      "id": "241587db-10e0-40d9-85e4-614bbe795d8d",
+                      "productFamily3": "North America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
+                    },
+                    {
+                      "id": "f20dc194-cf90-4c11-9f47-0d881889e7cd",
+                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
                     },
                     {
                       "id": "27e64fc7-49c2-48f6-86fa-b3461939c763",
@@ -3457,6 +3443,20 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
+                    },
+                    {
+                      "id": "8981f173-7c97-4caf-bcb5-7361e11e16da",
+                      "productFamily3": "Asia Excluding Korea and Indonesia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
+                    },
+                    {
+                      "id": "3aa00995-88ee-49e7-b8a7-1fbc5a26837a",
+                      "productFamily3": "Different Continent (excludes Oceania)",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
                     }
                   ]
                 },
@@ -3464,18 +3464,18 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "0bd1228b-d0b8-49e5-a7ec-fca4a0ebf874",
-                      "productFamily3": "Africa",
+                      "id": "fdd77c67-0d24-41fc-b4c9-15757161b789",
+                      "productFamily3": "North America",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 110.0
+                      "listPrice": 50.0
                     },
                     {
-                      "id": "0a62ef15-7500-491d-a3ab-e490da669cf4",
-                      "productFamily3": "Asia",
+                      "id": "8dfcf69c-3a8c-4256-bc1e-c57d12d5843e",
+                      "productFamily3": "Oceania",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 80.0
+                      "listPrice": 100.0
                     },
                     {
                       "id": "b92a2093-008e-4ea2-bc35-d25d507bd070",
@@ -3485,11 +3485,11 @@
                       "listPrice": 110.0
                     },
                     {
-                      "id": "3b0ff5bd-f825-4da6-9aa2-9ad72dcb098e",
-                      "productFamily3": "South America",
+                      "id": "2c548525-faab-4d09-a11b-ab2e52004cee",
+                      "productFamily3": "Indonesia",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 140.0
+                      "listPrice": 100.0
                     },
                     {
                       "id": "9229e61a-185a-426b-b229-1cbe804cd207",
@@ -3497,6 +3497,27 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 20.0
+                    },
+                    {
+                      "id": "af288789-e57d-4fcf-ae39-64ac6ab28b35",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    },
+                    {
+                      "id": "0a62ef15-7500-491d-a3ab-e490da669cf4",
+                      "productFamily3": "Asia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 80.0
+                    },
+                    {
+                      "id": "0bd1228b-d0b8-49e5-a7ec-fca4a0ebf874",
+                      "productFamily3": "Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
                     },
                     {
                       "id": "da1bc51e-ba44-4b1d-bc07-08f8ec18d3e0",
@@ -3513,32 +3534,11 @@
                       "listPrice": 0.0
                     },
                     {
-                      "id": "2c548525-faab-4d09-a11b-ab2e52004cee",
-                      "productFamily3": "Indonesia",
+                      "id": "3b0ff5bd-f825-4da6-9aa2-9ad72dcb098e",
+                      "productFamily3": "South America",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
-                      "id": "af288789-e57d-4fcf-ae39-64ac6ab28b35",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    },
-                    {
-                      "id": "8dfcf69c-3a8c-4256-bc1e-c57d12d5843e",
-                      "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
-                      "id": "fdd77c67-0d24-41fc-b4c9-15757161b789",
-                      "productFamily3": "North America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 50.0
+                      "listPrice": 140.0
                     }
                   ]
                 },
@@ -3563,18 +3563,11 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "b4a4879d-7564-405e-bab1-f7b534d10dee",
-                      "productFamily3": "Same Continent",
+                      "id": "89196257-27a1-4576-8d18-9e768218c93e",
+                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "55d300bf-abb1-47db-ae0e-24873d71c913",
-                      "productFamily3": "Different Continent (excludes Oceania)",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
+                      "listPrice": 190.0
                     },
                     {
                       "id": "1cb1f954-b3a3-41c4-81e2-2145f4be52ab",
@@ -3591,6 +3584,27 @@
                       "listPrice": 120.0
                     },
                     {
+                      "id": "b4a4879d-7564-405e-bab1-f7b534d10dee",
+                      "productFamily3": "Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
+                    },
+                    {
+                      "id": "3707f647-f90f-4452-827d-bb863d9cd2ce",
+                      "productFamily3": "China Excluding Hong Kong",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 230.0
+                    },
+                    {
+                      "id": "66a7984e-ee09-4d30-8eeb-4b184f54d6cd",
+                      "productFamily3": "Oceania",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
                       "id": "33cbf121-6811-43e4-bd38-3db2df2411f2",
                       "productFamily3": "Asia Excluding Korea and Indonesia",
                       "currency": "USD",
@@ -3605,52 +3619,17 @@
                       "listPrice": 150.0
                     },
                     {
-                      "id": "3707f647-f90f-4452-827d-bb863d9cd2ce",
-                      "productFamily3": "China Excluding Hong Kong",
+                      "id": "55d300bf-abb1-47db-ae0e-24873d71c913",
+                      "productFamily3": "Different Continent (excludes Oceania)",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 230.0
-                    },
-                    {
-                      "id": "89196257-27a1-4576-8d18-9e768218c93e",
-                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "66a7984e-ee09-4d30-8eeb-4b184f54d6cd",
-                      "productFamily3": "Oceania",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
+                      "listPrice": 120.0
                     }
                   ]
                 },
                 {
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
-                    {
-                      "id": "f58df169-cc48-44a6-81cf-8bc54cae4f05",
-                      "productFamily3": "Indonesia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
-                      "id": "8f5812be-03a3-47c5-a96d-ddaeec683b24",
-                      "productFamily3": "Africa",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "804609e7-7d01-43f8-9ace-54f7277a7ddd",
-                      "productFamily3": "Different Region, Same Continent",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 10.0
-                    },
                     {
                       "id": "95d98579-12fc-4fa2-813f-548a700bd239",
                       "productFamily3": "Different Continent (excludes Oceania)",
@@ -3659,18 +3638,18 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "44e51bc1-2135-431b-82cb-06231ebb697c",
-                      "productFamily3": "Europe",
+                      "id": "ee0cd29f-5b94-4de9-bb18-e3759f954eae",
+                      "productFamily3": "South America",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 50.0
+                      "listPrice": 140.0
                     },
                     {
-                      "id": "9f997c3b-f5af-41f0-ac2d-21dbd60fa6f8",
-                      "productFamily3": "North America",
+                      "id": "88038b03-fe9f-4006-bad4-b792cf9af334",
+                      "productFamily3": "Asia",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 20.0
+                      "listPrice": 80.0
                     },
                     {
                       "id": "1567af0b-c0d8-4e66-a30d-7d9b7b5bc29a",
@@ -3678,13 +3657,6 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 100.0
-                    },
-                    {
-                      "id": "ee0cd29f-5b94-4de9-bb18-e3759f954eae",
-                      "productFamily3": "South America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 140.0
                     },
                     {
                       "id": "8f09bde5-2ff5-4c82-8417-1fde6385f046",
@@ -3701,11 +3673,39 @@
                       "listPrice": 110.0
                     },
                     {
-                      "id": "88038b03-fe9f-4006-bad4-b792cf9af334",
-                      "productFamily3": "Asia",
+                      "id": "44e51bc1-2135-431b-82cb-06231ebb697c",
+                      "productFamily3": "Europe",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 80.0
+                      "listPrice": 50.0
+                    },
+                    {
+                      "id": "8f5812be-03a3-47c5-a96d-ddaeec683b24",
+                      "productFamily3": "Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
+                      "id": "804609e7-7d01-43f8-9ace-54f7277a7ddd",
+                      "productFamily3": "Different Region, Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 10.0
+                    },
+                    {
+                      "id": "9f997c3b-f5af-41f0-ac2d-21dbd60fa6f8",
+                      "productFamily3": "North America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    },
+                    {
+                      "id": "f58df169-cc48-44a6-81cf-8bc54cae4f05",
+                      "productFamily3": "Indonesia",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 100.0
                     }
                   ]
                 },
@@ -3730,8 +3730,8 @@
                   "productFamily2": "To Different Cloud Provider or Internet",
                   "data": [
                     {
-                      "id": "ea0a6e62-1069-442e-bf16-fb9676d0f639",
-                      "productFamily3": "Different Continent (excludes Oceania)",
+                      "id": "e8e33e09-718b-4472-93c8-577191f4c123",
+                      "productFamily3": "Europe",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
@@ -3744,15 +3744,8 @@
                       "listPrice": 120.0
                     },
                     {
-                      "id": "a7b4e53b-3b0d-42b6-aaa4-3365b6176339",
-                      "productFamily3": "Asia Excluding Korea and Indonesia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 120.0
-                    },
-                    {
-                      "id": "28c26994-faf0-4018-a70a-b6e853ce5604",
-                      "productFamily3": "Oceania",
+                      "id": "a36f33ea-5d36-4af3-94e7-1ec3f6f9433a",
+                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 190.0
@@ -3765,22 +3758,15 @@
                       "listPrice": 230.0
                     },
                     {
-                      "id": "16829597-4178-4205-8caa-ace4f531584b",
-                      "productFamily3": "Same Continent",
+                      "id": "ea0a6e62-1069-442e-bf16-fb9676d0f639",
+                      "productFamily3": "Different Continent (excludes Oceania)",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
                     },
                     {
-                      "id": "a36f33ea-5d36-4af3-94e7-1ec3f6f9433a",
-                      "productFamily3": "Australia, Indonesia, Korea, South America, Saudi Arabia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 190.0
-                    },
-                    {
-                      "id": "e8e33e09-718b-4472-93c8-577191f4c123",
-                      "productFamily3": "Europe",
+                      "id": "a7b4e53b-3b0d-42b6-aaa4-3365b6176339",
+                      "productFamily3": "Asia Excluding Korea and Indonesia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 120.0
@@ -3791,6 +3777,20 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 150.0
+                    },
+                    {
+                      "id": "28c26994-faf0-4018-a70a-b6e853ce5604",
+                      "productFamily3": "Oceania",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 190.0
+                    },
+                    {
+                      "id": "16829597-4178-4205-8caa-ace4f531584b",
+                      "productFamily3": "Same Continent",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 120.0
                     }
                   ]
                 },
@@ -3798,32 +3798,18 @@
                   "productFamily2": "To Same Cloud Provider",
                   "data": [
                     {
-                      "id": "d519ee7a-04c5-4e51-aa59-e466a4740f8a",
-                      "productFamily3": "Africa",
+                      "id": "8d058c28-371b-43bb-8c4e-6cc7e4885ee8",
+                      "productFamily3": "Middle East",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 110.0
                     },
                     {
-                      "id": "96dc46fc-5249-4573-87a5-8ba1a34e3c04",
-                      "productFamily3": "North America",
+                      "id": "add045ce-81c3-42c2-b734-277a9169ded4",
+                      "productFamily3": "Same Region",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 50.0
-                    },
-                    {
-                      "id": "c5068bc8-7d91-477e-8788-7223c0b9a3f2",
-                      "productFamily3": "Indonesia",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    },
-                    {
-                      "id": "207fd9ba-0261-4464-8273-744b5777a5a1",
-                      "productFamily3": "Europe",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
+                      "listPrice": 0.0
                     },
                     {
                       "id": "95903218-0c61-4699-8285-5860d33c0f5f",
@@ -3833,25 +3819,18 @@
                       "listPrice": 80.0
                     },
                     {
-                      "id": "34fef238-2f0f-4a6d-a005-5c13b8a0dbb3",
-                      "productFamily3": "Oceania",
+                      "id": "c5068bc8-7d91-477e-8788-7223c0b9a3f2",
+                      "productFamily3": "Indonesia",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 100.0
                     },
                     {
-                      "id": "8d058c28-371b-43bb-8c4e-6cc7e4885ee8",
-                      "productFamily3": "Middle East",
+                      "id": "34fef238-2f0f-4a6d-a005-5c13b8a0dbb3",
+                      "productFamily3": "Oceania",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 110.0
-                    },
-                    {
-                      "id": "b368831f-9332-4b4f-b4cc-cff25b322de3",
-                      "productFamily3": "South America",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 140.0
+                      "listPrice": 100.0
                     },
                     {
                       "id": "9dadfdde-5da5-478d-ae9d-b76930cfdca4",
@@ -3861,6 +3840,27 @@
                       "listPrice": 80.0
                     },
                     {
+                      "id": "b368831f-9332-4b4f-b4cc-cff25b322de3",
+                      "productFamily3": "South America",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 140.0
+                    },
+                    {
+                      "id": "d519ee7a-04c5-4e51-aa59-e466a4740f8a",
+                      "productFamily3": "Africa",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 110.0
+                    },
+                    {
+                      "id": "207fd9ba-0261-4464-8273-744b5777a5a1",
+                      "productFamily3": "Europe",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    },
+                    {
                       "id": "7fb117b2-17e8-46d1-a9d5-ad440f2fc10f",
                       "productFamily3": "Different Region, Same Continent",
                       "currency": "USD",
@@ -3868,11 +3868,11 @@
                       "listPrice": 20.0
                     },
                     {
-                      "id": "add045ce-81c3-42c2-b734-277a9169ded4",
-                      "productFamily3": "Same Region",
+                      "id": "96dc46fc-5249-4573-87a5-8ba1a34e3c04",
+                      "productFamily3": "North America",
                       "currency": "USD",
                       "priceUnit": "TB",
-                      "listPrice": 0.0
+                      "listPrice": 50.0
                     }
                   ]
                 },
@@ -3935,18 +3935,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "64492638-1271-495c-93cf-aa7e7d191dcd",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -3957,69 +3945,16 @@
                       "listPrice": 0.0
                     }
                   ]
-                }
-              ]
-            },
-            {
-              "region": "Asia Pacific (Jakarta)",
-              "data": [
-                {
-                  "productFamily2": "To Same Cloud, Different Region",
-                  "data": [
-                    {
-                      "id": "52f136f2-a478-4c01-afee-d1344b7d9aba",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 100.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Different Cloud or Internet",
-                  "data": [
-                    {
-                      "id": "741beb1c-68fc-498a-a1da-b7bd3c1df06a",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 132.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "API Gateway, Private Endpoints",
-                  "data": [
-                    {
-                      "id": "78793f9d-023f-405b-aee5-45ed4547283e",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 10.0
-                    }
-                  ]
                 },
                 {
                   "productFamily2": "SPCS Internal Data Transfer",
                   "data": [
                     {
-                      "id": "2377ab7b-f126-4a45-843d-9e9f652f9b6c",
+                      "id": "64492638-1271-495c-93cf-aa7e7d191dcd",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Same Region",
-                  "data": [
-                    {
-                      "id": "f4881ed7-3d87-4b38-a886-fa5c6edce536",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
                     }
                   ]
                 }
@@ -4091,6 +4026,71 @@
               ]
             },
             {
+              "region": "Asia Pacific (Jakarta)",
+              "data": [
+                {
+                  "productFamily2": "To Same Cloud, Different Region",
+                  "data": [
+                    {
+                      "id": "52f136f2-a478-4c01-afee-d1344b7d9aba",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 100.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Different Cloud or Internet",
+                  "data": [
+                    {
+                      "id": "741beb1c-68fc-498a-a1da-b7bd3c1df06a",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 132.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "API Gateway, Private Endpoints",
+                  "data": [
+                    {
+                      "id": "78793f9d-023f-405b-aee5-45ed4547283e",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 10.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Region",
+                  "data": [
+                    {
+                      "id": "f4881ed7-3d87-4b38-a886-fa5c6edce536",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "2377ab7b-f126-4a45-843d-9e9f652f9b6c",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
+                    }
+                  ]
+                }
+              ]
+            },
+            {
               "region": "EU (Zurich)",
               "data": [
                 {
@@ -4130,18 +4130,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "To Same Region",
-                  "data": [
-                    {
-                      "id": "9624ac53-163d-4dcd-989a-be8a6352e57e",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "SPCS Internal Data Transfer",
                   "data": [
                     {
@@ -4150,6 +4138,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 3.07
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Region",
+                  "data": [
+                    {
+                      "id": "9624ac53-163d-4dcd-989a-be8a6352e57e",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     }
                   ]
                 }
@@ -4195,18 +4195,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "To Same Region",
-                  "data": [
-                    {
-                      "id": "c3a91ada-88b7-4972-a93a-619862466dd6",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "SPCS Internal Data Transfer",
                   "data": [
                     {
@@ -4215,6 +4203,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 3.07
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Region",
+                  "data": [
+                    {
+                      "id": "c3a91ada-88b7-4972-a93a-619862466dd6",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     }
                   ]
                 }
@@ -4390,18 +4390,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "To Same Region",
-                  "data": [
-                    {
-                      "id": "5b21e886-f017-451a-829a-286328ac7b8e",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "SPCS Internal Data Transfer",
                   "data": [
                     {
@@ -4410,6 +4398,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 7.17
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Region",
+                  "data": [
+                    {
+                      "id": "5b21e886-f017-451a-829a-286328ac7b8e",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
                     }
                   ]
                 }
@@ -4455,18 +4455,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "554622b0-3394-4c12-9e68-620e3b3f591c",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -4475,6 +4463,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "554622b0-3394-4c12-9e68-620e3b3f591c",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
                     }
                   ]
                 }
@@ -4650,18 +4650,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "6c9742e9-53b7-4de5-9ec2-5028ab440667",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -4670,6 +4658,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "6c9742e9-53b7-4de5-9ec2-5028ab440667",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
                     }
                   ]
                 }
@@ -4780,18 +4780,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "35425a16-5539-4ca7-b775-4ebc0fcbdeee",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -4802,65 +4790,12 @@
                       "listPrice": 0.0
                     }
                   ]
-                }
-              ]
-            },
-            {
-              "region": "US East 1 Commercial Gov",
-              "data": [
-                {
-                  "productFamily2": "To Same Cloud, Different Region",
-                  "data": [
-                    {
-                      "id": "e047afbd-1a3e-496a-9cfe-7a039dc94aff",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 20.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Different Cloud or Internet",
-                  "data": [
-                    {
-                      "id": "e2545791-625a-4ee6-878f-353d55673bd5",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 90.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "API Gateway, Private Endpoints",
-                  "data": [
-                    {
-                      "id": "8ea1298a-fea4-45f1-8e4c-49d33b719dcc",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 10.0
-                    }
-                  ]
-                },
-                {
-                  "productFamily2": "To Same Region",
-                  "data": [
-                    {
-                      "id": "821d85ac-2e8b-41be-8e97-746076ee2e83",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 0.0
-                    }
-                  ]
                 },
                 {
                   "productFamily2": "SPCS Internal Data Transfer",
                   "data": [
                     {
-                      "id": "de0f708b-a0c7-442a-bd05-e784731df122",
+                      "id": "35425a16-5539-4ca7-b775-4ebc0fcbdeee",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -4926,6 +4861,71 @@
                   "data": [
                     {
                       "id": "0f276bd0-210a-4789-9d30-d10a5a202b2b",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 0.0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "region": "US East 1 Commercial Gov",
+              "data": [
+                {
+                  "productFamily2": "To Same Cloud, Different Region",
+                  "data": [
+                    {
+                      "id": "e047afbd-1a3e-496a-9cfe-7a039dc94aff",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 20.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Different Cloud or Internet",
+                  "data": [
+                    {
+                      "id": "e2545791-625a-4ee6-878f-353d55673bd5",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 90.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "API Gateway, Private Endpoints",
+                  "data": [
+                    {
+                      "id": "8ea1298a-fea4-45f1-8e4c-49d33b719dcc",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 10.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "de0f708b-a0c7-442a-bd05-e784731df122",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "To Same Region",
+                  "data": [
+                    {
+                      "id": "821d85ac-2e8b-41be-8e97-746076ee2e83",
                       "productFamily3": "N/A",
                       "currency": "USD",
                       "priceUnit": "TB",
@@ -5040,18 +5040,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "de09d43d-d576-4eb9-b2b9-dd8392651fef",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -5060,6 +5048,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "de09d43d-d576-4eb9-b2b9-dd8392651fef",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
                     }
                   ]
                 }
@@ -5105,18 +5105,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "a2dcf42a-ad81-40a1-b171-0c5de40d18f9",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -5125,6 +5113,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "a2dcf42a-ad81-40a1-b171-0c5de40d18f9",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
                     }
                   ]
                 }
@@ -5300,18 +5300,6 @@
                   ]
                 },
                 {
-                  "productFamily2": "SPCS Internal Data Transfer",
-                  "data": [
-                    {
-                      "id": "1ca9a66f-35fd-44e7-916e-a3b6d01e9015",
-                      "productFamily3": "N/A",
-                      "currency": "USD",
-                      "priceUnit": "TB",
-                      "listPrice": 3.07
-                    }
-                  ]
-                },
-                {
                   "productFamily2": "To Same Region",
                   "data": [
                     {
@@ -5320,6 +5308,18 @@
                       "currency": "USD",
                       "priceUnit": "TB",
                       "listPrice": 0.0
+                    }
+                  ]
+                },
+                {
+                  "productFamily2": "SPCS Internal Data Transfer",
+                  "data": [
+                    {
+                      "id": "1ca9a66f-35fd-44e7-916e-a3b6d01e9015",
+                      "productFamily3": "N/A",
+                      "currency": "USD",
+                      "priceUnit": "TB",
+                      "listPrice": 3.07
                     }
                   ]
                 }
@@ -5957,10 +5957,10 @@
               ]
             },
             {
-              "region": "Europe West 2 (London)",
+              "region": "US East 4 (N. Virginia)",
               "data": [
                 {
-                  "id": "06effd5e-3825-40bb-bb3f-5ce8e4313283",
+                  "id": "7b82b13f-c4b0-48d1-b79e-b379d109bcb5",
                   "productFamily2": "Capacity Storage",
                   "productFamily3": "N/A",
                   "currency": "USD",
@@ -5971,10 +5971,10 @@
               ]
             },
             {
-              "region": "US East 4 (N. Virginia)",
+              "region": "Europe West 2 (London)",
               "data": [
                 {
-                  "id": "7b82b13f-c4b0-48d1-b79e-b379d109bcb5",
+                  "id": "06effd5e-3825-40bb-bb3f-5ce8e4313283",
                   "productFamily2": "Capacity Storage",
                   "productFamily3": "N/A",
                   "currency": "USD",
@@ -6172,6 +6172,20 @@
               ]
             },
             {
+              "region": "US East 1 Commercial Gov",
+              "data": [
+                {
+                  "id": "6c129d26-be42-4d30-abe8-26f747ee8622",
+                  "productFamily2": "Capacity Storage",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "TB/Month",
+                  "listPrice": 23.0,
+                  "externalKey": "STORAGE"
+                }
+              ]
+            },
+            {
               "region": "US East 2 (Ohio)",
               "data": [
                 {
@@ -6195,20 +6209,6 @@
                   "currency": "USD",
                   "priceUnit": "TB/Month",
                   "listPrice": 27.4,
-                  "externalKey": "STORAGE"
-                }
-              ]
-            },
-            {
-              "region": "US East 1 Commercial Gov",
-              "data": [
-                {
-                  "id": "6c129d26-be42-4d30-abe8-26f747ee8622",
-                  "productFamily2": "Capacity Storage",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "TB/Month",
-                  "listPrice": 23.0,
                   "externalKey": "STORAGE"
                 }
               ]
@@ -6242,20 +6242,6 @@
               ]
             },
             {
-              "region": "Middle East (UAE)",
-              "data": [
-                {
-                  "id": "4011871e-3d96-48eb-b2f0-15c7a4869959",
-                  "productFamily2": "Capacity Storage",
-                  "productFamily3": "N/A",
-                  "currency": "USD",
-                  "priceUnit": "TB/Month",
-                  "listPrice": 25.0,
-                  "externalKey": "STORAGE"
-                }
-              ]
-            },
-            {
               "region": "US Gov West 1 (DoD)",
               "data": [
                 {
@@ -6265,6 +6251,20 @@
                   "currency": "USD",
                   "priceUnit": "TB/Month",
                   "listPrice": 39.0,
+                  "externalKey": "STORAGE"
+                }
+              ]
+            },
+            {
+              "region": "Middle East (UAE)",
+              "data": [
+                {
+                  "id": "4011871e-3d96-48eb-b2f0-15c7a4869959",
+                  "productFamily2": "Capacity Storage",
+                  "productFamily3": "N/A",
+                  "currency": "USD",
+                  "priceUnit": "TB/Month",
+                  "listPrice": 25.0,
                   "externalKey": "STORAGE"
                 }
               ]
@@ -6783,81 +6783,6 @@
           ]
         },
         {
-          "subTypeName": "AI_INFERENCE_CACHED_WRITE_TOKENS_AI_COMPUTE",
-          "active": true,
-          "data": [
-            {
-              "functionName": "AI_COMPLETE",
-              "active": true,
-              "data": [
-                {
-                  "modelName": "claude-fable-5",
-                  "priceKey": "model_138",
-                  "creditConversionRate": 6.25,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-haiku-4-5",
-                  "priceKey": "model_89",
-                  "creditConversionRate": 0.625,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-opus-4-5",
-                  "priceKey": "model_101",
-                  "creditConversionRate": 3.125,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-opus-4-6",
-                  "priceKey": "model_107",
-                  "creditConversionRate": 3.125,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-opus-4-7",
-                  "priceKey": "model_121",
-                  "creditConversionRate": 3.125,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-opus-4-8",
-                  "priceKey": "model_133",
-                  "creditConversionRate": 3.125,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-sonnet-4-5",
-                  "priceKey": "model_78",
-                  "creditConversionRate": 1.875,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-sonnet-4-6",
-                  "priceKey": "model_109",
-                  "creditConversionRate": 1.875,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                },
-                {
-                  "modelName": "claude-sonnet-5",
-                  "priceKey": "model_150",
-                  "creditConversionRate": 1.25,
-                  "conversionUnit": 1000000,
-                  "conversionType": "Tokens"
-                }
-              ]
-            }
-          ]
-        },
-        {
           "subTypeName": "AI_INFERENCE_CACHED_READ_TOKENS_AI_COMPUTE",
           "active": true,
           "data": [
@@ -7037,6 +6962,81 @@
                   "modelName": "openai-gpt-5.5-long-context",
                   "priceKey": "model_123",
                   "creditConversionRate": 0.5,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "subTypeName": "AI_INFERENCE_CACHED_WRITE_TOKENS_AI_COMPUTE",
+          "active": true,
+          "data": [
+            {
+              "functionName": "AI_COMPLETE",
+              "active": true,
+              "data": [
+                {
+                  "modelName": "claude-fable-5",
+                  "priceKey": "model_138",
+                  "creditConversionRate": 6.25,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-haiku-4-5",
+                  "priceKey": "model_89",
+                  "creditConversionRate": 0.625,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-opus-4-5",
+                  "priceKey": "model_101",
+                  "creditConversionRate": 3.125,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-opus-4-6",
+                  "priceKey": "model_107",
+                  "creditConversionRate": 3.125,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-opus-4-7",
+                  "priceKey": "model_121",
+                  "creditConversionRate": 3.125,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-opus-4-8",
+                  "priceKey": "model_133",
+                  "creditConversionRate": 3.125,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-sonnet-4-5",
+                  "priceKey": "model_78",
+                  "creditConversionRate": 1.875,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-sonnet-4-6",
+                  "priceKey": "model_109",
+                  "creditConversionRate": 1.875,
+                  "conversionUnit": 1000000,
+                  "conversionType": "Tokens"
+                },
+                {
+                  "modelName": "claude-sonnet-5",
+                  "priceKey": "model_150",
+                  "creditConversionRate": 1.25,
                   "conversionUnit": 1000000,
                   "conversionType": "Tokens"
                 }
@@ -9703,8 +9703,8 @@
               "data": {
                 "id": "651cf45c-bea5-4466-96c0-818bf870631f",
                 "product_families": [
-                  "Business Critical",
                   "Standard",
+                  "Business Critical",
                   "Enterprise"
                 ]
               }
@@ -9714,9 +9714,9 @@
               "data": {
                 "id": "4dc9f893-e4b7-4679-bd04-c20c1af5e6b9",
                 "product_families": [
-                  "Enterprise",
+                  "Standard",
                   "Business Critical",
-                  "Standard"
+                  "Enterprise"
                 ]
               }
             },
@@ -9725,9 +9725,9 @@
               "data": {
                 "id": "86cdcef2-cf7e-467a-b74b-52a79f6b7a59",
                 "product_families": [
-                  "Enterprise",
                   "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Enterprise"
                 ]
               }
             },
@@ -9736,9 +9736,9 @@
               "data": {
                 "id": "05624a82-a6ea-4646-a9aa-0844c946a786",
                 "product_families": [
-                  "Standard",
                   "Enterprise",
-                  "Business Critical"
+                  "Business Critical",
+                  "Standard"
                 ]
               }
             },
@@ -9747,8 +9747,8 @@
               "data": {
                 "id": "9ee8f0bd-5675-4e7b-926f-d56eadee9ae6",
                 "product_families": [
-                  "Business Critical",
                   "Enterprise",
+                  "Business Critical",
                   "Standard"
                 ]
               }
@@ -9763,8 +9763,8 @@
               "data": {
                 "id": "94edfa51-4c26-4b9c-bff7-8348564adbeb",
                 "product_families": [
-                  "Business Critical",
                   "Standard",
+                  "Business Critical",
                   "Enterprise"
                 ]
               }
@@ -9774,9 +9774,9 @@
               "data": {
                 "id": "6a3023b4-d2e2-451b-9c7a-b14b61a75b8d",
                 "product_families": [
-                  "Enterprise",
                   "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Enterprise"
                 ]
               }
             },
@@ -9785,9 +9785,9 @@
               "data": {
                 "id": "4bc6b54e-d0e6-4f83-85a7-8b55ef5ec0a1",
                 "product_families": [
+                  "Enterprise",
                   "Business Critical",
-                  "Standard",
-                  "Enterprise"
+                  "Standard"
                 ]
               }
             },
@@ -9796,9 +9796,9 @@
               "data": {
                 "id": "3cf7007d-a706-4d45-923a-7e36aadcd3fd",
                 "product_families": [
-                  "Business Critical",
+                  "Enterprise",
                   "Standard",
-                  "Enterprise"
+                  "Business Critical"
                 ]
               }
             },
@@ -9807,8 +9807,8 @@
               "data": {
                 "id": "1bc557bd-5f36-4710-880b-39fdf7fe12e0",
                 "product_families": [
-                  "Business Critical",
                   "Enterprise",
+                  "Business Critical",
                   "Standard"
                 ]
               }
@@ -9823,9 +9823,9 @@
               "data": {
                 "id": "43a74222-63cb-4a76-90f4-7f5cf88ff171",
                 "product_families": [
-                  "Business Critical",
+                  "Standard",
                   "Enterprise",
-                  "Standard"
+                  "Business Critical"
                 ]
               }
             },
@@ -9834,9 +9834,9 @@
               "data": {
                 "id": "c69517d4-a904-493f-bc62-e4c3fdcddb9d",
                 "product_families": [
-                  "Standard",
                   "Business Critical",
-                  "Enterprise"
+                  "Enterprise",
+                  "Standard"
                 ]
               }
             },
@@ -9845,8 +9845,8 @@
               "data": {
                 "id": "94199b44-d88c-47ba-96a2-79a897789617",
                 "product_families": [
-                  "Standard",
                   "Enterprise",
+                  "Standard",
                   "Business Critical"
                 ]
               }
@@ -9856,8 +9856,8 @@
               "data": {
                 "id": "6744cd56-716e-4f47-8d90-eacd34a0af24",
                 "product_families": [
-                  "Enterprise",
                   "Standard",
+                  "Enterprise",
                   "Business Critical"
                 ]
               }
@@ -9867,9 +9867,9 @@
               "data": {
                 "id": "13b70c22-cffb-4b10-bd16-70864867f4a2",
                 "product_families": [
-                  "Standard",
                   "Enterprise",
-                  "Business Critical"
+                  "Business Critical",
+                  "Standard"
                 ]
               }
             },
@@ -9878,9 +9878,9 @@
               "data": {
                 "id": "514ada35-0fe9-426a-ab37-42c7a1348a53",
                 "product_families": [
+                  "Enterprise",
                   "Business Critical",
-                  "Standard",
-                  "Enterprise"
+                  "Standard"
                 ]
               }
             },
@@ -9889,8 +9889,8 @@
               "data": {
                 "id": "4cf069a6-05e1-425b-8350-9cca9f7b1bd6",
                 "product_families": [
-                  "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             },
@@ -9899,8 +9899,8 @@
               "data": {
                 "id": "831a9af1-9ef5-4b6a-a4be-614c3b8bbe5c",
                 "product_families": [
-                  "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             },
@@ -9909,8 +9909,8 @@
               "data": {
                 "id": "dc63c9ab-d3dd-4867-87d0-3126802d2cbe",
                 "product_families": [
-                  "Business Critical",
                   "Standard",
+                  "Business Critical",
                   "Enterprise"
                 ]
               }
@@ -9925,9 +9925,9 @@
               "data": {
                 "id": "a7b40143-9b52-4879-8de9-543c5ac46268",
                 "product_families": [
-                  "Business Critical",
                   "Standard",
-                  "Enterprise"
+                  "Enterprise",
+                  "Business Critical"
                 ]
               }
             }
@@ -9947,8 +9947,8 @@
                 "id": "85c774d9-2e43-423a-8e6c-26349d3b8f87",
                 "product_families": [
                   "Enterprise",
-                  "Standard",
-                  "Business Critical"
+                  "Business Critical",
+                  "Standard"
                 ]
               }
             }
@@ -9962,9 +9962,9 @@
               "data": {
                 "id": "b864f5bc-0627-4484-818f-dcc12e5501a6",
                 "product_families": [
-                  "Enterprise",
                   "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Enterprise"
                 ]
               }
             },
@@ -9973,9 +9973,9 @@
               "data": {
                 "id": "04b6ef17-25c3-4541-81c5-dc353fa3d9cc",
                 "product_families": [
-                  "Enterprise",
                   "Standard",
-                  "Business Critical"
+                  "Business Critical",
+                  "Enterprise"
                 ]
               }
             },
@@ -9985,8 +9985,8 @@
                 "id": "009eb997-be54-4813-8cba-e5857a14b205",
                 "product_families": [
                   "Standard",
-                  "Business Critical",
-                  "Enterprise"
+                  "Enterprise",
+                  "Business Critical"
                 ]
               }
             }
@@ -10000,9 +10000,9 @@
               "data": {
                 "id": "75b7e3d1-808c-48de-aa09-0776ae0d70da",
                 "product_families": [
-                  "Enterprise",
                   "Standard",
-                  "Business Critical"
+                  "Business Critical",
+                  "Enterprise"
                 ]
               }
             },
@@ -10011,9 +10011,9 @@
               "data": {
                 "id": "20089569-2a6c-4e22-8e9b-6154ca6396da",
                 "product_families": [
-                  "Business Critical",
+                  "Standard",
                   "Enterprise",
-                  "Standard"
+                  "Business Critical"
                 ]
               }
             }
@@ -10048,9 +10048,9 @@
               "data": {
                 "id": "eb2f3f85-bb25-474e-8e09-35efa942c53a",
                 "product_families": [
-                  "Enterprise",
                   "Standard",
-                  "Business Critical"
+                  "Business Critical",
+                  "Enterprise"
                 ]
               }
             }
@@ -10076,8 +10076,8 @@
                 "id": "292b7915-a426-461f-abda-72eb92a705cc",
                 "product_families": [
                   "Standard",
-                  "Business Critical",
-                  "Enterprise"
+                  "Enterprise",
+                  "Business Critical"
                 ]
               }
             },
@@ -10086,9 +10086,9 @@
               "data": {
                 "id": "d33d0c18-c367-412d-a2f9-796ebbff394b",
                 "product_families": [
-                  "Standard",
+                  "Business Critical",
                   "Enterprise",
-                  "Business Critical"
+                  "Standard"
                 ]
               }
             },
@@ -10098,8 +10098,8 @@
                 "id": "f5e74aa1-5ac6-42fb-b597-0322a5e91507",
                 "product_families": [
                   "Business Critical",
-                  "Enterprise",
-                  "Standard"
+                  "Standard",
+                  "Enterprise"
                 ]
               }
             },
@@ -10108,9 +10108,9 @@
               "data": {
                 "id": "a698111d-3700-4fe5-9f41-d53228250fcd",
                 "product_families": [
-                  "Business Critical",
                   "Standard",
-                  "Enterprise"
+                  "Enterprise",
+                  "Business Critical"
                 ]
               }
             },
@@ -10119,9 +10119,9 @@
               "data": {
                 "id": "1e090e23-e827-4f56-b9a8-5a075260dcdb",
                 "product_families": [
+                  "Business Critical",
                   "Enterprise",
-                  "Standard",
-                  "Business Critical"
+                  "Standard"
                 ]
               }
             },
@@ -10130,9 +10130,9 @@
               "data": {
                 "id": "16fca6bd-cec6-41a4-9a88-0f762697fc77",
                 "product_families": [
-                  "Enterprise",
+                  "Business Critical",
                   "Standard",
-                  "Business Critical"
+                  "Enterprise"
                 ]
               }
             },
@@ -10141,9 +10141,9 @@
               "data": {
                 "id": "5c97dd7d-332e-45d4-96c4-1975be380709",
                 "product_families": [
-                  "Enterprise",
                   "Standard",
-                  "Business Critical"
+                  "Business Critical",
+                  "Enterprise"
                 ]
               }
             },
@@ -10152,9 +10152,9 @@
               "data": {
                 "id": "46eb45bc-3fdf-42df-876c-628436abd3d5",
                 "product_families": [
-                  "Business Critical",
+                  "Standard",
                   "Enterprise",
-                  "Standard"
+                  "Business Critical"
                 ]
               }
             }
@@ -10168,8 +10168,8 @@
               "data": {
                 "id": "a2896082-1bf1-403a-b06e-8a3cc5918322",
                 "product_families": [
-                  "Enterprise",
                   "Standard",
+                  "Enterprise",
                   "Business Critical"
                 ]
               }
@@ -10213,8 +10213,8 @@
                 "id": "1b59e39c-2fea-4b73-b3eb-51b2c81c0fc7",
                 "product_families": [
                   "Enterprise",
-                  "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             },
@@ -10223,9 +10223,9 @@
               "data": {
                 "id": "c0702878-d3ca-4fcc-894b-fdb8049be1b5",
                 "product_families": [
-                  "Business Critical",
                   "Enterprise",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             }
@@ -10239,8 +10239,8 @@
               "data": {
                 "id": "63101f5c-8713-443e-9ccb-aa31862dfac1",
                 "product_families": [
-                  "Enterprise",
                   "Business Critical",
+                  "Enterprise",
                   "Standard"
                 ]
               }
@@ -10270,9 +10270,9 @@
               "data": {
                 "id": "aa5e2b9c-094f-4d23-b467-c95fe46da535",
                 "product_families": [
+                  "Business Critical",
                   "Standard",
-                  "Enterprise",
-                  "Business Critical"
+                  "Enterprise"
                 ]
               }
             },
@@ -10291,8 +10291,8 @@
               "data": {
                 "id": "cc05101d-7688-4676-9a87-96d3509b1c7b",
                 "product_families": [
-                  "Standard",
-                  "Business Critical"
+                  "Business Critical",
+                  "Standard"
                 ]
               }
             },
@@ -10301,8 +10301,8 @@
               "data": {
                 "id": "dcae9c0b-4c95-4182-a3c9-d441b2b61ebc",
                 "product_families": [
-                  "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             },
@@ -10311,8 +10311,8 @@
               "data": {
                 "id": "be5d951f-7983-4f18-887f-8842cbae9c40",
                 "product_families": [
-                  "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             },
@@ -10321,8 +10321,8 @@
               "data": {
                 "id": "910bd852-aa45-4b83-b76e-0af285974923",
                 "product_families": [
-                  "Business Critical",
-                  "Standard"
+                  "Standard",
+                  "Business Critical"
                 ]
               }
             },
@@ -10347,9 +10347,9 @@
               "data": {
                 "id": "8f621382-8888-4e10-94d1-f25bc913211b",
                 "product_families": [
-                  "Standard",
                   "Business Critical",
-                  "Enterprise"
+                  "Enterprise",
+                  "Standard"
                 ]
               }
             },
@@ -10359,8 +10359,8 @@
                 "id": "a39d5607-8575-4990-928b-32a845053f78",
                 "product_families": [
                   "Standard",
-                  "Business Critical",
-                  "Enterprise"
+                  "Enterprise",
+                  "Business Critical"
                 ]
               }
             }
@@ -10374,8 +10374,8 @@
               "data": {
                 "id": "bb0da34c-2a58-47d3-bd73-ce2b95aeb0a6",
                 "product_families": [
-                  "Standard",
                   "Business Critical",
+                  "Standard",
                   "Enterprise"
                 ]
               }
